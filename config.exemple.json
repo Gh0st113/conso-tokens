@@ -1,0 +1,6 @@
+{
+  "dossierDonnees": "~/conso-tokens-donnees",
+  "renommerProjets": [["projet-a-masquer", "masqué"]],
+  "resets": { "2026-01-04": "reset utilisé le mardi soir" },
+  "trous": [["2026-01-10", "2026-01-12", "journaux perdus (exemple)"]]
+}

@@ -1,0 +1,717 @@
+<meta name="dash-one-writer">
+<style>
+  .cc { display: grid; gap: var(--cds-gap-lg); font-family: var(--font-anthropic-sans); font-variant-numeric: tabular-nums; }
+  .cc h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); margin: 0; text-wrap: balance; }
+  .cc h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+  .cc p { margin: 0; max-width: 70ch; }
+  .cc .cc-muted { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+  .cc .cc-lead b, .cc .cc-reset b { font-weight: 600; }
+  .cc-reset { display: grid; gap: var(--cds-gap-xs); padding: var(--cds-pad-md) var(--cds-pad-lg); border: 1px solid var(--color-border-line); border-left: 4px solid var(--cds-chart-reference); border-radius: var(--cds-radius); background: var(--color-panel); }
+  .cc-tiles { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
+  .cc-tile { display: grid; gap: var(--cds-gap-xs); align-content: start; padding: var(--cds-pad-md) var(--cds-pad-lg); background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); }
+  .cc-tile .cc-big { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); }
+  .cc-grid { display: grid; gap: var(--cds-gap-md); grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); }
+  .cc-card { display: grid; gap: var(--cds-gap-sm); align-content: start; min-width: 0; background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); }
+  .cc-chart { position: relative; min-height: 240px; }
+  .cc-chart.cc-short { min-height: 160px; }
+  .cc-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm) var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .cc-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .cc-legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .cc-legend .cc-hollow { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--color-fg); background: transparent; box-sizing: border-box; }
+  .cc-legend .cc-hollow.cc-dash { border-style: dotted; }
+  .cc-legend .cc-rule { width: 14px; height: 0; border-top: 2px dashed var(--cds-chart-reference); border-radius: 0; }  .cc-tip { position: absolute; pointer-events: none; z-index: 2; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); white-space: nowrap; }
+  .cc-tip .cc-tip-head { color: var(--cds-text-secondary); }
+  .cc-tip i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; margin-right: 6px; }
+  .cc-split { display: grid; gap: var(--cds-gap-sm); }
+  .cc-split-row { display: grid; gap: 4px; }
+  .cc-split-bars { display: grid; grid-template-columns: 5.5rem 1fr 3.5rem; gap: 4px var(--cds-gap-sm); align-items: center; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .cc-bar { height: 10px; border-radius: 2px; }
+  .cc-table-box { max-height: 26rem; overflow: auto; }
+  .cc-defil { overflow-x: auto; overflow-y: hidden; }
+  .cc-defil svg { display: block; }
+  /* Un élément de grille ne rétrécit pas sous son contenu (min-width: auto) : sans ceci, un graphe large ou un tableau
+     élargit sa carte puis la page entière au lieu de défiler dans son cadre (vu sur téléphone le 13/11). */
+  .cc { grid-template-columns: minmax(0, 1fr); }
+  .cc > *, .cc-card > *, .cc-grid > * { min-width: 0; }
+  .cc-axe-fixe { position: absolute; left: 0; top: 0; background: var(--color-panel); pointer-events: none; }
+  .cc table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-caption); }
+  .cc th { position: sticky; top: 0; background: var(--color-panel); text-align: left; font-weight: var(--cds-font-weight-medium); padding: 6px 8px; border-bottom: 1px solid var(--color-border-line); }
+  .cc td { padding: 6px 8px; border-bottom: 1px solid var(--color-border-line); }
+  .cc .cc-num { text-align: right; }
+  .cc .cc-hide-narrow { }
+  @media (max-width: 520px) { .cc .cc-hide-narrow { display: none; } }
+  [data-dash-source-state=empty] { color: transparent; }
+  [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+  .cc ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; max-width: 75ch; }
+  .cc-unite { display: flex; flex-wrap: wrap; align-items: center; gap: var(--cds-gap-sm); }
+  .cc-seg { display: inline-flex; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); overflow: hidden; }
+  .cc-seg button { font: inherit; font-size: var(--cds-font-size-caption); padding: 4px 12px; border: 0; background: var(--color-panel); color: var(--color-fg-muted); cursor: pointer; }
+  .cc-seg button + button { border-left: 1px solid var(--color-border-line); }
+  .cc-seg button[aria-pressed=true] { background: var(--color-fg); color: var(--color-panel); }
+  .cc-unite > [data-jet] { flex: 1 1 100%; max-width: 75ch; }
+  .cc-titre { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--cds-gap-sm); }
+  .cc-ctrl { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); }
+  .cc-pastille { font-size: var(--cds-font-size-caption); padding: 1px 8px; border-radius: var(--cds-radius); border: 1px solid currentColor; white-space: nowrap; }
+  .cc-pastille.cc-ok { color: var(--color-ok); }
+  .cc-pastille.cc-ko { color: var(--color-warn); }
+  .cc th[data-tri] { cursor: pointer; user-select: none; }
+  .cc th[data-tri]:hover, .cc th[data-tri]:focus-visible { color: var(--color-fg); text-decoration: underline; }
+  .cc th[aria-sort=ascending]::after { content: " ▲"; font-size: 0.75em; }
+  .cc th[aria-sort=descending]::after { content: " ▼"; font-size: 0.75em; }
+</style>
+
+<div class="cc">
+  <header style="display:grid;gap:var(--cds-gap-sm)">
+    <h1 id="titre">Conso Claude Code</h1>
+    <p class="cc-lead">Semaine de forfait en cours (depuis le <b data-draw="semDebut" data-source="semCourante" data-field="debut">—</b>, 10 h UTC) : <b data-draw="semCout" data-source="semCourante" data-field="cout">—</b> <span data-jet="jetons">en équivalent API</span>, contre <b data-draw="semPrec" data-source="semCourante" data-field="prec">—</b> sur toute la semaine précédente.</p>
+    <div class="cc-unite">
+      <span class="cc-muted">Afficher en</span>
+      <span class="cc-seg" role="group" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true">dollars</button><button type="button" data-unite="jetons" aria-pressed="false">jetons</button></span>
+      <span class="cc-muted" data-jet="Jetons = entrée + écriture et lecture du cache + sortie ; la relecture du cache en fait plus de 90 %, la courbe suit donc surtout la longueur des sessions. Les deux plafonds passent en jetons de sortie (les jetons totaux n'ont pas de sens pour un plafond) ; les pentes restent en dollars."></span>
+    </div>
+  </header>
+
+  <section class="cc-reset" id="reset" aria-label="Remise à zéro du forfait">
+    <h2>Le forfait repart à zéro chaque dimanche à 10 h UTC</h2>
+    <p>Soit 11 h à Paris en hiver et midi en été : le cycle dure exactement 7 × 24 h et ne suit pas le changement d'heure. Prochaine remise à zéro : <b data-draw="prochain">—</b>.</p>
+    <p class="cc-muted">Heure lue dans l'appli (/usage) ; heure non réglable pour l'instant (README, « Limites »). Chaque barre du graphe hebdomadaire couvre une fenêtre de forfait, d'un dimanche 10 h UTC au suivant. Sur le graphe par jour, les traits pointillés marquent ces remises à zéro. Ces fenêtres ne comptent que ce PC (Claude Code et, sous Windows, Cowork local), alors que le forfait compte aussi claude.ai, le téléphone et Cowork distant.</p>
+  </section>
+
+  <section class="cc-card" id="pentes">
+    <div class="cc-titre"><h2>Le plafond hebdo baisse-t-il ?</h2><span class="cc-muted">en dollars seulement</span></div>
+    <p>Prix de 100 % hebdo mesuré entre deux relevés du % de la même semaine : coût consommé entre les deux ÷ écart de %. C'est la mesure la plus fiable, car ce qui a été consommé hors de ces journaux avant le premier relevé (claude.ai, téléphone, autre PC) ne compte pas.</p>
+    <p class="cc-muted">Les relevés viennent de l'appli elle-même (événements de limite enregistrés dans les journaux Cowork et Claude Code) et des relevés ajoutés à la main. Point plein : intervalle de 12 h ou moins, le plus fiable. Point creux : intervalle plus long, où un usage non mesuré pendant l'intervalle peut fausser le chiffre. Quand le % monte d'au moins 1 point en plus d'une heure presque sans dépense sur ce PC (Cowork distant, claude.ai, téléphone), aucune pente n'enjambe cette période. Point en pointillé : plus d'une heure sans relevé alors que ce PC consommait plus de 5 $ (relevé arrêté, ex. sonar fermé) ; un usage hors PC pendant ce silence passerait inaperçu, le chiffre est alors au mieux une borne basse, à prendre avec prudence.</p>
+    <div class="cc-legend"><span><i class="cc-sw" data-i="0"></i>intervalle de 12 h ou moins</span><span><i class="cc-hollow"></i>intervalle plus long</span><span><i class="cc-hollow cc-dash"></i>relevés manquants</span></div>
+    <div class="cc-chart cc-short dash-skeleton" data-draw="chPentes" data-source="pentes"></div>
+  </section>
+
+  <section class="cc-card" id="plafond">
+    <div class="cc-titre"><h2>Plafond hebdo, semaine par semaine</h2><span class="cc-seg" role="group" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true">dollars</button><button type="button" data-unite="jetons" aria-pressed="false">jetons</button></span></div>
+    <p class="cc-muted"><span data-jet="En vue jetons : barre et point en jetons de sortie (réponses et réflexion), le tableau garde les deux unités."></span> Barre : ce que Claude Code et, sous Windows, Cowork local ont consommé dans la semaine. Point plein : coût cumulé au moment du message « You've hit your weekly limit ». Point creux : projection depuis le dernier relevé du % de la semaine (coût ÷ %). Les points repérés comme consommés hors de ce PC (même règle que pour les pentes) sont retirés du % avant le calcul : l'infobulle en donne le nombre. Pas de point quand le plafond est trop incertain (voir sous le tableau). Un usage hors journaux non repéré, par exemple avant le premier relevé de la semaine, fait encore paraître le plafond plus bas que la réalité. Une semaine sans point n'a pas atteint 100 % ou n'a pas de relevé.</p>
+    <div class="cc-legend">
+      <span><i class="cc-sw" data-i="4"></i>consommé (Claude Code)</span><span><i class="cc-sw" data-i="0"></i>plafond atteint</span><span><i class="cc-hollow"></i>plafond projeté</span>
+    </div>
+    <div class="cc-chart dash-skeleton" data-draw="chPlafond" data-source="plafondsHebdo"></div>
+    <div class="cc-table-box">
+      <table data-source="plafondsHebdo" data-row-key="semaine">
+        <thead><tr>
+          <th data-field="semaine">Semaine dès le</th><th data-field="statut">100 % hebdo</th><th data-field="consomme" class="cc-num">Consommé</th>
+          <th data-field="horsEstime" class="cc-num">Hors PC (repéré)</th><th data-field="plafond" class="cc-num">Plafond en $</th><th data-field="sortie" class="cc-num cc-hide-narrow">Plafond en jetons de sortie</th>
+        </tr></thead>
+        <tbody data-draw="tabPlafond" data-source="plafondsHebdo"></tbody>
+      </table>
+    </div>
+    <p class="cc-muted">« Hors PC (repéré) » : part du % hebdo prise ailleurs que sur ce PC, par exemple Cowork quand il tourne côté Anthropic sans laisser de journal ici, claude.ai ou le téléphone. C'est une déduction, pas une mesure : aucun compteur du Cowork distant n'est lisible ici. Règle : entre deux relevés espacés de plus d'une heure, une hausse d'au moins 1 point avec moins de 0,50 $ dépensés sur ce PC par point de hausse est comptée hors PC (hausse − coût local ÷ 2,44 $, soit au moins 0,8 point compté hors PC par point de hausse). Le % étant arrondi à l'entier inférieur, chaque période vaut ±1 point : quand de telles périodes sont repérées, le statut donne le plafond en <strong>fourchette</strong> (part payée sur ce PC ± 1 point par période). Si la fourchette dépasse 25 % du plafond, il n'y a pas de plafond (« plafond incertain ») ; de même si la part payée sur ce PC est sous 10 %. Ce que la règle ne voit pas : l'usage hors PC fait en même temps que Claude Code (il fait paraître le point moins cher) et celui d'avant le premier relevé.</p>
+    <p class="cc-muted">Biais restants : claude.ai, le téléphone et les autres PC ne sont pas dans ces journaux ; le « $ équivalent API » n'est pas forcément la pondération d'Anthropic.</p>
+  </section>
+
+  <section class="cc-card" id="plafond5h">
+    <div class="cc-titre"><h2>Plafond des fenêtres de 5 h</h2><span class="cc-seg" role="group" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true">dollars</button><button type="button" data-unite="jetons" aria-pressed="false">jetons</button></span></div>
+    <p class="cc-muted"><span data-jet="En vue jetons : jetons de sortie (réponses et réflexion) au même moment ; l'infobulle garde les dollars."></span> Coût cumulé dans la fenêtre au moment du message « You've hit your session limit » (point plein), ou projeté depuis un relevé du % (point creux). Mêmes biais que ci-dessus.</p>
+    <div class="cc-chart cc-short dash-skeleton" data-draw="chPlafond5h" data-source="plafonds5h"></div>
+  </section>
+
+  <section class="cc-tiles" aria-label="Chiffres clés">
+    <div class="cc-tile"><span class="cc-muted" data-jet="Jetons, depuis le début des données">Équivalent API, depuis le début des données</span><span class="cc-big" data-draw="tCout" data-source="totaux" data-field="cout">—</span><span class="cc-muted" data-jet="cache compris, relu à chaque message">ce que coûterait la même conso payée à l'API</span></div>
+    <div class="cc-tile"><span class="cc-muted">Réponses de Claude, depuis le début des données</span><span class="cc-big" data-draw="tAppels" data-source="totaux" data-field="appels">—</span><span class="cc-muted">appels au modèle, sous-agents compris</span></div>
+    <div class="cc-tile"><span class="cc-muted" data-jet="Part d'Opus dans les jetons, depuis le début des données">Part d'Opus dans le coût, depuis le début des données</span><span class="cc-big" data-draw="tOpus" data-source="partOpus" data-field="part">—</span><span class="cc-muted">tous les modèles Opus</span></div>
+    <div class="cc-tile"><span class="cc-muted">Appels avec plus de 150k de contexte, depuis le début des données</span><span class="cc-big" data-draw="tGros" data-source="grosContexte" data-field="part">—</span><span class="cc-muted">repère : moins de 50 %</span></div>
+  </section>
+
+  <section class="cc-card" id="semaines">
+    <div class="cc-titre"><h2 data-jet="Jetons par semaine de forfait">Coût par semaine de forfait</h2><span class="cc-seg" role="group" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true">dollars</button><button type="button" data-unite="jetons" aria-pressed="false">jetons</button></span></div>
+    <p class="cc-muted" data-jet="Jetons consommés, par modèle. La dernière barre, plus claire, est la semaine en cours.">Équivalent API en dollars, par modèle. La dernière barre, plus claire, est la semaine en cours.</p>
+    <div class="cc-legend" id="legSemaines"></div>
+    <div class="cc-chart dash-skeleton" data-draw="chSemaines" data-source="semaines"></div>
+  </section>
+
+  <section class="cc-card" id="jours">
+    <div class="cc-titre"><h2 data-jet="Jetons par jour">Coût par jour</h2><span class="cc-seg" role="group" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true">dollars</button><button type="button" data-unite="jetons" aria-pressed="false">jetons</button></span></div>
+    <p class="cc-muted" data-jet="Jetons consommés, jour calendaire à l'heure de Paris.">Équivalent API en dollars, jour calendaire à l'heure de Paris.</p>
+    <div class="cc-legend"><span><i class="cc-rule"></i>remise à zéro du forfait (dimanche 10 h UTC)</span></div>
+    <div class="cc-chart dash-skeleton" data-draw="chJours" data-source="jours"></div>
+  </section>
+
+  <div class="cc-grid">
+    <section class="cc-card" id="types">
+      <h2>Où partent les jetons</h2>
+      <p class="cc-muted">La relecture du cache fait presque tout le volume, mais pèse beaucoup moins dans le coût : chaque message renvoie tout le contexte, relu à prix réduit.</p>
+      <div class="cc-legend"><span><i class="cc-sw" data-i="4"></i>part des jetons</span><span><i class="cc-sw" data-i="0"></i>part du coût</span></div>
+      <div class="cc-split dash-skeleton" data-draw="chTypes" data-source="types"></div>
+    </section>
+    <section class="cc-card" id="contexte">
+      <div class="cc-titre"><h2>Taille du contexte à chaque appel</h2><span class="cc-seg" role="group" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false">7 j</button><button type="button" data-periode="30" aria-pressed="true">30 j</button><button type="button" data-periode="tout" aria-pressed="false">tout</button></span></div>
+      <p class="cc-muted">Nombre d'appels selon le contexte envoyé (cache compris), <span data-per="7" hidden>sur les 7 derniers jours de données</span><span data-per="30">sur les 30 derniers jours de données</span><span data-per="tout" hidden>depuis le début des données</span>. Au-delà de 150k, chaque message coûte cher.</p>
+      <p>Sur cette période : <b data-draw="ctxPart" data-source="ctxPeriodes" data-field="part">—</b> des appels au-delà de 150k <span class="cc-pastille cc-ok" data-obj="ok" hidden>objectif atteint (moins de 50 %)</span><span class="cc-pastille cc-ko" data-obj="ko" hidden>objectif (moins de 50 %) pas atteint</span><span data-draw="ctxObj" data-source="ctxPeriodes"></span></p>
+      <div class="cc-chart cc-short dash-skeleton" data-draw="chContexte" data-source="contexte"></div>
+    </section>
+    <section class="cc-card" id="projets">
+      <div class="cc-titre"><h2>Par dossier de travail</h2><span class="cc-ctrl"><span class="cc-seg" role="group" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false">7 j</button><button type="button" data-periode="30" aria-pressed="true">30 j</button><button type="button" data-periode="tout" aria-pressed="false">tout</button></span><span class="cc-seg" role="group" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true">dollars</button><button type="button" data-unite="jetons" aria-pressed="false">jetons</button></span></span></div>
+      <p class="cc-muted"><span data-jet="Jetons consommés">Équivalent API en dollars</span>, <span data-per="7" hidden>sur les 7 derniers jours de données</span><span data-per="30">sur les 30 derniers jours de données</span><span data-per="tout" hidden>depuis le début des données</span> (jours en heure de Paris).</p>
+      <div class="cc-chart cc-short dash-skeleton" data-draw="chProjets" data-source="projets"></div>
+    </section>
+    <section class="cc-card" id="modeles">
+      <div class="cc-titre"><h2>Par modèle</h2><span class="cc-ctrl"><span class="cc-seg" role="group" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false">7 j</button><button type="button" data-periode="30" aria-pressed="true">30 j</button><button type="button" data-periode="tout" aria-pressed="false">tout</button></span><span class="cc-seg" role="group" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true">dollars</button><button type="button" data-unite="jetons" aria-pressed="false">jetons</button></span></span></div>
+      <p class="cc-muted"><span data-jet="Jetons consommés">Équivalent API en dollars</span>, <span data-per="7" hidden>sur les 7 derniers jours de données</span><span data-per="30">sur les 30 derniers jours de données</span><span data-per="tout" hidden>depuis le début des données</span>.</p>
+      <div class="cc-chart cc-short dash-skeleton" data-draw="chModeles" data-source="modeles"></div>
+    </section>
+  </div>
+
+  <section class="cc-card" id="sessions">
+    <div class="cc-titre"><h2>Les 30 sessions les plus coûteuses</h2><span class="cc-ctrl"><span class="cc-seg" role="group" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false">7 j</button><button type="button" data-periode="30" aria-pressed="true">30 j</button><button type="button" data-periode="tout" aria-pressed="false">tout</button></span><span class="cc-seg" role="group" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true">dollars</button><button type="button" data-unite="jetons" aria-pressed="false">jetons</button></span></span></div>
+    <p class="cc-muted"><span data-per="7" hidden>Sessions commencées dans les 7 derniers jours de données.</span><span data-per="30">Sessions commencées dans les 30 derniers jours de données.</span><span data-per="tout" hidden>Toutes les sessions depuis le début des données.</span> <span>Identifiant court de la session, dossier, début (heure UTC), contexte maximal atteint dans la conversation principale. Cliquer un en-tête pour trier, un 2e clic inverse l'ordre.</span> <span data-jet="Les 30 retenues restent les plus chères en dollars ; la dernière colonne donne leurs jetons, sous-agents compris."></span></p>
+    <div class="cc-table-box">
+      <table data-source="sessions" data-row-key="session">
+        <thead><tr>
+          <th data-field="session" data-tri="asc" tabindex="0" aria-sort="none">Session</th><th data-field="projet" data-tri="asc" tabindex="0" aria-sort="none">Dossier</th><th data-field="debut" data-tri="desc" tabindex="0" aria-sort="none" class="cc-hide-narrow">Début</th>
+          <th data-field="modele" data-tri="asc" tabindex="0" aria-sort="none" class="cc-hide-narrow">Modèle principal</th><th data-field="appels" data-tri="desc" tabindex="0" aria-sort="none" class="cc-num">Appels</th>
+          <th data-field="ctxMax" data-tri="desc" tabindex="0" aria-sort="none" class="cc-num">Contexte max</th><th data-field="cout" data-tri="desc" tabindex="0" aria-sort="descending" class="cc-num" data-jet="Jetons">Coût</th>
+        </tr></thead>
+        <tbody data-draw="tabSessions" data-source="sessions"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="cc-card" id="methode">
+    <h2>Comment ces chiffres sont faits</h2>
+    <ul class="cc-muted">
+      <li>Source : les journaux des sessions Claude Code (dossier projects de Claude Code) et, sous Windows, Cowork (sessions locales de Claude Desktop) de ce PC ; les sessions Cowork d'un Mac ou de Linux ne sont pas lues. Seuls les compteurs de jetons et les relevés de limite sont lus, jamais le contenu des échanges.</li>
+      <li>Une réponse occupe souvent plusieurs lignes du journal, et une session reprise recopie l'historique : chaque réponse n'est comptée qu'une fois, par son identifiant.</li>
+      <li>Hors périmètre : discussions claude.ai et application mobile (stockées chez Anthropic), sessions d'autres PC (ajoutables avec --journaux).</li>
+      <li>Un jour sans barre n'a aucune réponse dans les journaux de ce PC. Une bande orange, s'il y en a, marque une période dont on sait que les journaux manquent.</li>
+      <li>Claude Code efface par défaut les sessions non modifiées depuis 30 jours (réglage cleanupPeriodDays). Une archive des compteurs garde chaque réponse déjà comptée, même si son journal disparaît.</li>
+      <li>« Équivalent API » : tarifs publics par million de jetons, écriture en cache 1 h comptée deux fois le prix d'entrée. Le forfait ne se facture pas ainsi : c'est un ordre de grandeur pour comparer les semaines, pas le pourcentage affiché par /usage.</li>
+      <li>Vue « jetons » (bouton en haut) : somme de l'entrée neuve, de l'écriture et de la lecture du cache et de la sortie. Le forfait suit plutôt un coût pondéré, proche de la vue en dollars : la vue en jetons montre surtout le poids du contexte relu. Le choix est gardé dans ce navigateur seulement.</li>
+      <li>Mise à jour : relancer node agreger.mjs puis node exporter.mjs, puis recharger les fichiers du dossier export (voir le README du dépôt conso-tokens).</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+  // Outils partagés par les drawings de la page
+  const CC = window.CC = {};
+  CC.usd = v => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD', currencyDisplay: 'narrowSymbol', maximumFractionDigits: 0 }).format(v);
+  CC.compact = v => new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 }).format(v);
+  CC.int = v => new Intl.NumberFormat('fr-FR').format(v);
+  // Pente qui enjambe un silence des relevés (08/11) ; absent dans les anciennes données = false
+  CC.silence = r => r.silence === true || r.silence === 'true';
+  CC.pct = v => new Intl.NumberFormat('fr-FR', { style: 'percent', maximumFractionDigits: 0 }).format(v);
+  CC.jourCourt = s => new Date(s + 'T12:00:00Z').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+  CC.jourLong = s => new Date(s + 'T12:00:00Z').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+  // Séries de modèles (légende dynamique, 13/11) : lues dans les colonnes de « semaines » (une colonne c + sa jumelle jc en jetons).
+  // Ordre connu d'abord (couleurs stables), puis les autres par coût décroissant ; une série jamais utilisée n'est pas affichée.
+  // Clé inconnue = modèle hors de GROUPES d'exporter.mjs : « m_opus_4-6 » s'affiche « Opus 4.6 », sans toucher à la page.
+  CC.ORDRE = [['opus55', 'Opus 5.5'], ['opus48', 'Opus 4.8'], ['sonnet', 'Sonnet'], ['haiku', 'Haiku'], ['fable', 'Fable']];
+  CC.nomSerie = c => (CC.ORDRE.find(s => s[0] === c) ?? [])[1]
+    ?? c.replace(/^m_/, '').replace(/(\d)-(\d)/g, '$1.$2').replace(/_/g, ' ').replace(/^./, x => x.toUpperCase());
+  // Rend [clé, nom, n° de couleur]. La couleur suit la clé (rang dans l'ordre complet, séries vides comprises) : elle ne
+  // change ni avec l'unité ni quand une autre série apparaît. Masquage selon l'unité affichée (relecture DeepSeek, 13/11).
+  CC.series = rows => {
+    const usd = new Map(), jet = new Map();
+    for (const r of rows) for (const k of Object.keys(r)) if (('j' + k) in r) {
+      usd.set(k, (usd.get(k) ?? 0) + (Number(r[k]) || 0)); jet.set(k, (jet.get(k) ?? 0) + (Number(r['j' + k]) || 0));
+    }
+    const rang = c => { const i = CC.ORDRE.findIndex(s => s[0] === c); return i < 0 ? Infinity : i; };
+    const ordre = [...usd.keys()].sort((a, b) => rang(a) - rang(b) || usd.get(b) - usd.get(a) || jet.get(b) - jet.get(a) || (a < b ? -1 : 1));
+    const vu = CC.enJetons() ? jet : usd;
+    return ordre.map((c, i) => [c, CC.nomSerie(c), i]).filter(([c]) => vu.get(c) > 0);
+  };
+  CC.couleur = i => dash.colors[i % dash.colors.length];
+
+  // Unité d'affichage (dollars ou jetons) : gardée dans ce navigateur, l'accès au stockage peut échouer
+  CC.unite = 'usd';
+  try { if (localStorage.getItem('cc-unite') === 'jetons') CC.unite = 'jetons'; } catch (e) {}
+  CC.enJetons = () => CC.unite === 'jetons';
+  CC.champ = () => CC.enJetons() ? 'jetons' : 'cout';             // champ à tracer
+  CC.fmt = v => CC.enJetons() ? CC.compact(v) : CC.usd(v);        // format de la valeur tracée
+  CC.serie = c => CC.enJetons() ? 'j' + c : c;                    // opus55 → jopus55 en jetons
+  // Drawings qui dépendent de l'unité : gardés pour être redessinés au changement
+  CC.vues = new Map();
+  CC.draw = (nom, fn) => dash.draw(nom, el => { CC.vues.set(nom, [el, fn]); fn(el); });
+  // Libellés : data-jet = texte en vue jetons, le texte d'origine est celui des dollars
+  CC.libelles = () => document.querySelectorAll('[data-jet]').forEach(el => {
+    if (el.dataset.usd === undefined) el.dataset.usd = el.textContent;
+    el.textContent = CC.enJetons() ? el.dataset.jet : el.dataset.usd;
+  });
+  CC.choisir = u => {
+    CC.unite = u;
+    try { localStorage.setItem('cc-unite', u); } catch (e) {}
+    document.querySelectorAll('[data-unite]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.unite === u)));
+    CC.libelles();
+    for (const [el, fn] of CC.vues.values()) fn(el);
+  };
+  document.querySelectorAll('[data-unite]').forEach(b => b.addEventListener('click', () => CC.choisir(b.dataset.unite)));
+  CC.choisir(CC.unite);
+
+  // Période des sections « dossiers » et « sessions » (07/11) : 7 j, 30 j ou tout, comptés jusqu'au dernier jour
+  // présent dans les données (pas jusqu'à aujourd'hui : le tableau n'est rechargé qu'à la demande). Gardée dans ce navigateur.
+  CC.PERIODES = ['7', '30', 'tout'];
+  CC.periode = '30';
+  try { const p = localStorage.getItem('cc-periode'); if (CC.PERIODES.includes(p)) CC.periode = p; } catch (e) {}
+  // Lignes dont le champ `jour` (AAAA-MM-JJ, heure de Paris) tombe dans la période. Fin de période = max de `ref` :
+  // `jour` pour les dossiers, `jourFin` pour les sessions (dernière réponse), soit le même dernier jour des données
+  CC.dansPeriode = (rows, ref = 'jour') => {
+    if (CC.periode === 'tout' || !rows.length) return rows;
+    const dernier = rows.reduce((m, r) => String(r[ref] ?? '') > m ? String(r[ref]) : m, '');
+    const t = Date.parse(dernier + 'T12:00:00Z');
+    if (!Number.isFinite(t)) return rows; // données sans jour (ancien format) : pas de filtre plutôt qu'une erreur
+    const borne = new Date(t - (Number(CC.periode) - 1) * 864e5).toISOString().slice(0, 10);
+    return rows.filter(r => r.jour >= borne);
+  };
+  CC.choisirPeriode = p => {
+    CC.periode = p;
+    try { localStorage.setItem('cc-periode', p); } catch (e) {}
+    document.querySelectorAll('[data-periode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.periode === p)));
+    document.querySelectorAll('[data-per]').forEach(el => { el.hidden = el.dataset.per !== p; });
+    // Redessin par la plateforme (dash.draw(nom) relance le drawing), pas par un appel direct
+    for (const nom of ['chProjets', 'chModeles', 'chContexte', 'ctxPart', 'ctxObj', 'tabSessions']) if (CC.vues.has(nom)) dash.draw(nom);
+  };
+  document.querySelectorAll('[data-periode]').forEach(b => b.addEventListener('click', () => CC.choisirPeriode(b.dataset.periode)));
+  CC.choisirPeriode(CC.periode);
+
+  // Tri de la table des sessions par clic sur un en-tête (data-tri = sens du 1er clic) ; défaut : coût décroissant
+  CC.tri = { champ: 'cout', sens: -1 };
+  CC.trier = th => {
+    const champ = th.dataset.field;
+    CC.tri = CC.tri.champ === champ ? { champ, sens: -CC.tri.sens } : { champ, sens: th.dataset.tri === 'asc' ? 1 : -1 };
+    document.querySelectorAll('th[data-tri]').forEach(t => t.setAttribute('aria-sort',
+      t.dataset.field !== CC.tri.champ ? 'none' : CC.tri.sens > 0 ? 'ascending' : 'descending'));
+    if (CC.vues.has('tabSessions')) dash.draw('tabSessions');
+  };
+  document.querySelectorAll('th[data-tri]').forEach(th => {
+    th.addEventListener('click', () => CC.trier(th));
+    th.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); CC.trier(th); } });
+  });
+
+  // Remise à zéro : dimanche 10 h UTC, cycle fixe de 7 × 24 h
+  CC.RESET_HEURE_UTC = 10;
+  CC.resetDu = jour => new Date(jour + 'T' + String(CC.RESET_HEURE_UTC).padStart(2, '0') + ':00:00Z');
+  CC.heureParis = d => d.toLocaleTimeString('fr-FR', { timeZone: 'Europe/Paris', hour: 'numeric', minute: '2-digit' });
+  CC.prochainReset = () => {
+    const d = new Date();
+    let avance = (7 - d.getUTCDay()) % 7;
+    if (avance === 0 && d.getUTCHours() >= CC.RESET_HEURE_UTC) avance = 7;
+    d.setUTCDate(d.getUTCDate() + avance);
+    return CC.resetDu(d.toISOString().slice(0, 10));
+  };
+
+  // Graphe en barres plus large que sa place (13/11 : une barre de plus chaque semaine ou chaque jour) : largeur minimale
+  // par barre, défilement horizontal dans un cadre à part (l'infobulle reste dans el, hors du défilement), ouvert sur la
+  // fin (le plus récent). x()/y() : position d'un point du dessin dans el, en px, défilement compris.
+  CC.largeur = (el, n, parBarre, m) => Math.max(el.clientWidth || 600, Math.ceil(m.l + m.r + n * parBarre));
+  // Graphe large : axe vertical recopié dans un calque fixe à gauche (le premier <g> du dessin = l'axe, ses lignes de
+  // grille coupées par la largeur du calque), infobulle cachée dès qu'on fait défiler (sinon elle resterait sur
+  // l'ancienne barre). Échelle lue sur le rendu réel du svg (une règle CSS pourrait le réduire).
+  CC.defil = (el, W, m, H) => {
+    const box = document.createElement('div'); box.className = 'cc-defil'; el.append(box);
+    const large = W > (el.clientWidth || 600);
+    if (large) {
+      box.addEventListener('scroll', () => { const t = el.querySelector('.cc-tip'); if (t) t.hidden = true; }, { passive: true });
+      requestAnimationFrame(() => {
+        box.scrollLeft = box.scrollWidth;
+        const axe = box.querySelector('svg > g');
+        if (!axe) return;
+        const calque = d3.select(el).insert('svg', '.cc-tip').attr('class', 'cc-axe-fixe').attr('width', m.l + 4).attr('height', H)
+          .attr('viewBox', `0 0 ${m.l + 4} ${H}`).attr('aria-hidden', 'true');
+        calque.node().append(axe.cloneNode(true));
+      });
+    }
+    const k = () => { const s = box.querySelector('svg'); return s ? s.getBoundingClientRect().width / W || 1 : 1; };
+    return { box, largeur: large ? W : '100%', x: v => v * k() - box.scrollLeft, y: v => v * k() };
+  };
+
+  CC.tip = el => {
+    let t = el.querySelector('.cc-tip');
+    if (!t) { t = document.createElement('div'); t.className = 'cc-tip'; t.hidden = true; el.append(t); }
+    return {
+      show(head, lignes, x, y) {
+        t.replaceChildren();
+        const h = document.createElement('div'); h.className = 'cc-tip-head'; h.textContent = head; t.append(h);
+        for (const [couleur, nom, val] of lignes) {
+          const l = document.createElement('div');
+          if (couleur) { const i = document.createElement('i'); i.style.background = couleur; l.append(i); }
+          l.append(document.createTextNode(nom ? `${nom} : ${val}` : val)); t.append(l);
+        }
+        t.hidden = false;
+        const w = t.offsetWidth, W = el.clientWidth;
+        t.style.left = Math.max(0, Math.min(W - w, x - w / 2)) + 'px';
+        t.style.top = Math.max(0, y - t.offsetHeight - 8) + 'px';
+      },
+      hide() { t.hidden = true; },
+    };
+  };
+
+  CC.axe = (g, axe) => { g.call(axe).attr('font-size', null).attr('font-family', null); g.selectAll('text').attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)'); g.selectAll('.domain').attr('stroke', 'var(--cds-chart-axis)'); g.selectAll('.tick line').attr('stroke', 'var(--cds-chart-grid)'); };
+
+  // Barres horizontales : une ligne par élément, libellé à gauche, valeur au bout
+  CC.hbars = (el, rows, cle, val, fmt, couleur) => {
+    el.replaceChildren(); el.classList.remove('dash-skeleton');
+    const W = el.clientWidth || 320, ligne = 28, H = rows.length * ligne + 4;
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    const lab = svg.append('g').selectAll('text').data(rows).join('text').text(d => d[cle])
+      .attr('y', (d, i) => i * ligne + 18).attr('fill', 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)');
+    let gauche = 0; lab.each(function () { gauche = Math.max(gauche, this.getComputedTextLength()); });
+    gauche += 10;
+    const vals = svg.append('g').selectAll('text').data(rows).join('text').text(d => fmt(d[val]))
+      .attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)');
+    let droite = 0; vals.each(function () { droite = Math.max(droite, this.getComputedTextLength()); });
+    const x = d3.scaleLinear([0, d3.max(rows, d => d[val]) || 1], [0, Math.max(10, W - gauche - droite - 10)]);
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', gauche).attr('y', (d, i) => i * ligne + 6)
+      .attr('width', d => Math.max(1, x(d[val]))).attr('height', 16).attr('rx', 3).attr('fill', couleur);
+    vals.attr('x', d => gauche + x(d[val]) + 6).attr('y', (d, i) => i * ligne + 18);
+  };
+
+  dash.onData(() => {
+    document.querySelectorAll('.cc-sw').forEach(i => { i.style.background = dash.colors[+i.dataset.i]; });
+  });
+</script>
+
+<script>
+  dash.calc('totaux', {
+    title: 'Totaux depuis le début', description: 'Somme du coût et des réponses sur toutes les semaines.',
+    inputs: ['semaines'],
+    fn: (semaines) => [{ cout: semaines.reduce((s, r) => s + Number(r.cout), 0), jetons: semaines.reduce((s, r) => s + Number(r.jetons), 0), appels: semaines.reduce((s, r) => s + Number(r.appels), 0) }],
+  });
+  dash.calc('semCourante', {
+    title: 'Semaine en cours et précédente', description: 'Dernière semaine de forfait et coût de la semaine d’avant.',
+    inputs: ['semaines'],
+    fn: (semaines) => {
+      const n = semaines.length;
+      return n ? [{ debut: semaines[n - 1].debut, cout: Number(semaines[n - 1].cout), prec: n > 1 ? Number(semaines[n - 2].cout) : 0,
+        jetons: Number(semaines[n - 1].jetons), precJetons: n > 1 ? Number(semaines[n - 2].jetons) : 0 }] : [];
+    },
+  });
+  dash.calc('partOpus', {
+    title: 'Part d’Opus dans le coût', description: 'Coût des modèles Opus divisé par le coût total.',
+    inputs: ['modeles'],
+    fn: (modeles) => {
+      const tot = modeles.reduce((s, r) => s + Number(r.cout), 0);
+      const opus = modeles.filter(r => r.modele.startsWith('Opus')).reduce((s, r) => s + Number(r.cout), 0);
+      const totJ = modeles.reduce((s, r) => s + Number(r.jetons), 0);
+      const opusJ = modeles.filter(r => r.modele.startsWith('Opus')).reduce((s, r) => s + Number(r.jetons), 0);
+      return [{ part: tot ? opus / tot : 0, partJetons: totJ ? opusJ / totJ : 0 }];
+    },
+  });
+  dash.calc('grosContexte', {
+    title: 'Appels au-delà de 150k', description: 'Part des appels dont le contexte dépasse 150 000 jetons.',
+    inputs: ['contexte'],
+    fn: (contexte) => {
+      const tot = contexte.reduce((s, r) => s + Number(r.appels), 0);
+      const gros = contexte.filter(r => r.tranche === '150k à 250k' || r.tranche === 'plus de 250k').reduce((s, r) => s + Number(r.appels), 0);
+      return [{ part: tot ? gros / tot : 0 }];
+    },
+  });
+  dash.calc('ctxPeriodes', {
+    title: 'Appels au-delà de 150k par période', description: 'Même part que la case du haut, sur les 7 et 30 derniers jours de données et sur tout.',
+    inputs: ['contexte'],
+    fn: (contexte) => {
+      const dernier = contexte.reduce((m, r) => String(r.jour) > m ? String(r.jour) : m, '');
+      const t = Date.parse(dernier + 'T12:00:00Z');
+      return [['7', 7], ['30', 30], ['tout', 0]].map(([periode, n]) => {
+        const borne = n && Number.isFinite(t) ? new Date(t - (n - 1) * 864e5).toISOString().slice(0, 10) : '';
+        const lignes = contexte.filter(r => String(r.jour) >= borne);
+        const tot = lignes.reduce((s, r) => s + Number(r.appels), 0);
+        const gros = lignes.filter(r => r.tranche === '150k à 250k' || r.tranche === 'plus de 250k').reduce((s, r) => s + Number(r.appels), 0);
+        return { periode, part: tot ? gros / tot : 0, appels: tot };
+      });
+    },
+  });
+  // Part > 150k de la période choisie : la ligne lue change avec la période, data-where suit
+  CC.OBJECTIF_CONTEXTE = 0.5; // repère : moins de 50 % des appels au-delà de 150k
+  CC.ctxLigne = () => { const g = dash.data('ctxPeriodes'); return g.status === 'ok' ? g.data.find(r => r.periode === CC.periode) : null; };
+  CC.draw('ctxPart', el => {
+    const r = CC.ctxLigne();
+    el.dataset.where = 'periode=' + CC.periode;
+    el.textContent = r && r.appels ? CC.pct(r.part) : '—';
+  });
+  CC.draw('ctxObj', el => {
+    const r = CC.ctxLigne(), etat = !r || !r.appels ? '' : r.part < CC.OBJECTIF_CONTEXTE ? 'ok' : 'ko';
+    el.parentElement?.querySelectorAll('[data-obj]').forEach(s => { s.hidden = s.dataset.obj !== etat; });
+  });
+
+  const texte = (nom, src, f) => CC.draw(nom, el => {
+    const g = dash.data(src);
+    el.textContent = g.status === 'ok' && g.data.length ? f(g.data[0]) : '—';
+  });
+  texte('semDebut', 'semCourante', r => CC.jourLong(r.debut));
+  texte('semCout', 'semCourante', r => CC.fmt(r[CC.champ()]));
+  texte('semPrec', 'semCourante', r => CC.fmt(CC.enJetons() ? r.precJetons : r.prec));
+  texte('tCout', 'totaux', r => CC.fmt(r[CC.champ()]));
+  texte('tAppels', 'totaux', r => CC.int(r.appels));
+  texte('tOpus', 'partOpus', r => CC.pct(CC.enJetons() ? r.partJetons : r.part));
+  texte('tGros', 'grosContexte', r => CC.pct(r.part));
+  dash.draw('prochain', el => {
+    const r = CC.prochainReset();
+    el.textContent = `${CC.jourLong(r.toISOString().slice(0, 10))} à ${CC.heureParis(r)} (heure de Paris)`;
+  });
+</script>
+
+<script>
+  // Semaines : barres empilées par modèle
+  CC.draw('chSemaines', el => {
+    const g = dash.data('semaines');
+    if (g.status !== 'ok') { el.replaceChildren(); return; }
+    el.replaceChildren(); el.classList.remove('dash-skeleton');
+    // cout = valeur tracée (dollars ou jetons selon l'unité), usd = coût en dollars pour l'infobulle
+    const rows = g.data.map(r => ({ ...r, usd: Number(r.cout), cout: Number(r[CC.champ()]) }));
+    const m = { t: 22, r: 8, b: 26, l: 48 }, W = CC.largeur(el, rows.length, 28, m), H = 240;
+    const enCours = r => new Date(r.debut + 'T12:00:00Z').getTime() + 7 * 864e5 > Date.now();
+    const SERIES = CC.series(g.data);
+    const leg = document.getElementById('legSemaines');
+    if (leg) leg.replaceChildren(...SERIES.map(([, n, ci]) => { const s = document.createElement('span'), p = document.createElement('i'); p.style.background = CC.couleur(ci); s.append(p, n); return s; }));
+    const pile = d3.stack().keys(SERIES.map(s => CC.serie(s[0]))).value((d, k) => Number(d[k]) || 0)(rows);
+    const x = d3.scaleBand(rows.map(r => r.debut), [m.l, W - m.r]).padding(0.25);
+    const y = d3.scaleLinear([0, d3.max(rows, r => r.cout) * 1.1 || 1], [H - m.b, m.t]).nice();
+    const defil = CC.defil(el, W, m, H);
+    const svg = d3.select(defil.box).append('svg').attr('width', defil.largeur).attr('viewBox', `0 0 ${W} ${H}`);
+    CC.axe(svg.append('g').attr('transform', `translate(${m.l},0)`), d3.axisLeft(y).ticks(5).tickSize(-(W - m.l - m.r)).tickFormat(CC.fmt));
+    svg.select('.domain').remove();
+    const pas = Math.ceil(rows.length / Math.max(1, Math.floor((W - m.l) / 60)));
+    CC.axe(svg.append('g').attr('transform', `translate(0,${H - m.b})`), d3.axisBottom(x).tickSize(0).tickPadding(8).tickFormat((d, i) => i % pas ? '' : CC.jourCourt(d)));
+    svg.append('g').selectAll('g').data(pile).join('g').attr('fill', (d, i) => CC.couleur(SERIES[i][2]))
+      .selectAll('rect').data(d => d).join('rect')
+      .attr('x', d => x(d.data.debut)).attr('width', x.bandwidth())
+      .attr('y', d => y(d[1])).attr('height', d => Math.max(0, y(d[0]) - y(d[1])))
+      .attr('opacity', d => enCours(d.data) ? 0.45 : 1);
+    const der = rows[rows.length - 1];
+    svg.append('g').selectAll('text').data(rows.filter(r => r.manque && !enCours(r))).join('text').text('incomplète')
+      .attr('x', r => x(r.debut) + x.bandwidth() / 2).attr('y', r => y(r.cout) - 6).attr('text-anchor', 'middle')
+      .attr('fill', 'var(--color-warn)').style('font-size', 'var(--cds-font-size-caption)');
+    if (der && enCours(der)) svg.append('text').text('en cours').attr('x', x(der.debut) + x.bandwidth() / 2).attr('y', y(der.cout) - 6)
+      .attr('text-anchor', 'middle').attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)');
+    const tip = CC.tip(el);
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', r => x(r.debut)).attr('width', x.bandwidth())
+      .attr('y', m.t).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', (ev, r) => {
+        const fin = new Date(new Date(r.debut + 'T12:00:00Z').getTime() + 7 * 864e5).toISOString().slice(0, 10);
+        tip.show(`Du dim. ${CC.jourCourt(r.debut)} ${CC.heureParis(CC.resetDu(r.debut))} au dim. ${CC.jourCourt(fin)} ${CC.heureParis(CC.resetDu(fin))} (Paris)`,
+          [[null, 'Total', CC.fmt(r.cout)], ...SERIES.map(([c, n, ci]) => [CC.couleur(ci), n, CC.fmt(Number(r[CC.serie(c)]) || 0)]),
+           ...(CC.enJetons() ? [[null, 'Coût', CC.usd(r.usd)]] : []), [null, 'Réponses', CC.int(r.appels)], ...(r.manque ? [[null, null, `Incomplète : ${r.manque}`]] : [])],
+          defil.x(x(r.debut) + x.bandwidth() / 2), defil.y(y(r.cout)));
+      })
+      .on('pointerleave', () => tip.hide());
+  });
+
+  // Jours : barres + traits de remise à zéro le dimanche à 11 h
+  CC.draw('chJours', el => {
+    const g = dash.data('jours');
+    if (g.status !== 'ok') { el.replaceChildren(); return; }
+    el.replaceChildren(); el.classList.remove('dash-skeleton');
+    const rows = g.data.map(r => ({ ...r, cout: Number(r.cout), v: Number(r[CC.champ()]) }));
+    const m = { t: 12, r: 8, b: 26, l: 48 }, W = CC.largeur(el, rows.length, 7, m), H = 240;
+    const x = d3.scaleBand(rows.map(r => r.jour), [m.l, W - m.r]).padding(0.2);
+    const y = d3.scaleLinear([0, d3.max(rows, r => r.v) * 1.05 || 1], [H - m.b, m.t]).nice();
+    const defil = CC.defil(el, W, m, H);
+    const svg = d3.select(defil.box).append('svg').attr('width', defil.largeur).attr('viewBox', `0 0 ${W} ${H}`);
+    CC.axe(svg.append('g').attr('transform', `translate(${m.l},0)`), d3.axisLeft(y).ticks(5).tickSize(-(W - m.l - m.r)).tickFormat(CC.fmt));
+    svg.select('.domain').remove();
+    const dimanche = j => new Date(j + 'T12:00:00Z').getUTCDay() === 0;
+    const pas = Math.max(1, Math.ceil(rows.filter(r => dimanche(r.jour)).length / Math.max(1, Math.floor((W - m.l) / 70))));
+    let n = 0;
+    CC.axe(svg.append('g').attr('transform', `translate(0,${H - m.b})`), d3.axisBottom(x).tickSize(0).tickPadding(8)
+      .tickFormat(d => dimanche(d) && (n++ % pas === 0) ? CC.jourCourt(d) : ''));
+    // Trait à l'heure de Paris de la remise à zéro (11 h l'hiver, 12 h l'été)
+    const posReset = r => x(r.jour) + x.step() * parseInt(CC.heureParis(CC.resetDu(r.jour)), 10) / 24;
+    svg.append('g').selectAll('line').data(rows.filter(r => dimanche(r.jour))).join('line')
+      .attr('x1', posReset).attr('x2', posReset)
+      .attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3');
+    // Jours sans journaux (effacés) : bande pleine hauteur, pour ne pas les confondre avec des jours calmes
+    svg.append('g').selectAll('rect').data(rows.filter(r => r.manque)).join('rect').attr('x', r => x(r.jour) - x.step() * 0.1).attr('width', x.step())
+      .attr('y', m.t).attr('height', H - m.t - m.b).attr('fill', 'var(--color-warn)').attr('opacity', 0.25);
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', r => x(r.jour)).attr('width', x.bandwidth())
+      .attr('y', r => y(r.v)).attr('height', r => Math.max(0, y(0) - y(r.v))).attr('rx', 2).attr('fill', dash.colors[0]);
+    const tip = CC.tip(el);
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', r => x(r.jour) - x.step() * 0.1).attr('width', x.step())
+      .attr('y', m.t).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', (ev, r) => {
+        tip.show(CC.jourLong(r.jour) + (dimanche(r.jour) ? ` (remise à zéro à ${CC.heureParis(CC.resetDu(r.jour))})` : ''),
+          [[null, 'Coût', CC.usd(r.cout)], [null, 'Réponses', CC.int(r.appels)], [null, 'Jetons', CC.compact(r.jetons)], ...(r.manque ? [[null, null, `Incomplet : ${r.manque}`]] : [])],
+          defil.x(x(r.jour) + x.bandwidth() / 2), defil.y(y(r.v)));
+      })
+      .on('pointerleave', () => tip.hide());
+  });
+
+  // Types de jetons : part du volume contre part du coût
+  dash.draw('chTypes', el => {
+    const g = dash.data('types');
+    el.replaceChildren();
+    if (g.status !== 'ok') return;
+    el.classList.remove('dash-skeleton');
+    const rows = g.data.map(r => ({ ...r, jetons: Number(r.jetons), cout: Number(r.cout) }));
+    const tj = d3.sum(rows, r => r.jetons) || 1, tc = d3.sum(rows, r => r.cout) || 1;
+    for (const r of rows) {
+      const bloc = document.createElement('div'); bloc.className = 'cc-split-row';
+      const t = document.createElement('div'); t.textContent = `${r.type} : ${CC.compact(r.jetons)} jetons, ${CC.usd(r.cout)}`; bloc.append(t);
+      const bars = document.createElement('div'); bars.className = 'cc-split-bars';
+      for (const [nom, part, c] of [['jetons', r.jetons / tj, dash.colors[4]], ['coût', r.cout / tc, dash.colors[0]]]) {
+        const l = document.createElement('span'); l.textContent = nom;
+        const piste = document.createElement('div'); const b = document.createElement('div'); b.className = 'cc-bar';
+        b.style.width = Math.max(0.5, part * 100) + '%'; b.style.background = c; piste.append(b);
+        const v = document.createElement('span'); v.textContent = CC.pct(part); v.style.textAlign = 'right';
+        bars.append(l, piste, v);
+      }
+      bloc.append(bars); el.append(bloc);
+    }
+  });
+
+  CC.draw('chContexte', el => {
+    const g = dash.data('contexte');
+    if (g.status !== 'ok') { el.replaceChildren(); return; }
+    // Une ligne par jour et par tranche : somme par tranche sur la période, dans l'ordre des tranches
+    const somme = new Map(['moins de 50k', '50k à 100k', '100k à 150k', '150k à 250k', 'plus de 250k'].map(t => [t, 0]));
+    for (const r of CC.dansPeriode(g.data)) if (somme.has(r.tranche)) somme.set(r.tranche, somme.get(r.tranche) + Number(r.appels));
+    const rows = [...somme].map(([tranche, appels]) => ({ tranche, appels }));
+    CC.hbars(el, rows, 'tranche', 'appels', CC.int, dash.colors[0]);
+    d3.select(el).selectAll('svg g:nth-of-type(3) rect').attr('fill', d => (d.tranche === '150k à 250k' || d.tranche === 'plus de 250k') ? 'var(--cds-chart-status-critical)' : dash.colors[0]);
+  });
+  // Barres par dossier et par modèle : triées sur l'unité affichée
+  const parUnite = rows => rows.map(r => ({ ...r, v: Number(r[CC.champ()]) })).sort((a, b) => b.v - a.v);
+  CC.draw('chProjets', el => {
+    const g = dash.data('projets');
+    if (g.status !== 'ok') { el.replaceChildren(); return; }
+    // Une ligne par jour et par dossier : somme par dossier sur la période choisie
+    const somme = new Map();
+    for (const r of CC.dansPeriode(g.data)) {
+      const t = somme.get(r.projet) ?? { projet: r.projet, cout: 0, jetons: 0 };
+      t.cout += Number(r.cout); t.jetons += Number(r.jetons); somme.set(r.projet, t);
+    }
+    CC.hbars(el, parUnite([...somme.values()]), 'projet', 'v', CC.fmt, dash.colors[0]);
+  });
+  CC.draw('chModeles', el => {
+    const g = dash.data('modeles');
+    if (g.status !== 'ok') { el.replaceChildren(); return; }
+    const somme = new Map();
+    for (const r of CC.dansPeriode(g.data)) {
+      const t = somme.get(r.modele) ?? { modele: r.modele, cout: 0, jetons: 0 };
+      t.cout += Number(r.cout); t.jetons += Number(r.jetons); somme.set(r.modele, t);
+    }
+    CC.hbars(el, parUnite([...somme.values()]), 'modele', 'v', CC.fmt, dash.colors[0]);
+  });
+
+  // Plafond hebdo : barre du consommé, point du plafond (plein = atteint, creux = projeté)
+  // En vue jetons : jetons de sortie (consommeSortie, sortie) ; les jetons totaux n'auraient pas de sens pour un plafond
+  CC.draw('chPlafond', el => {
+    const g = dash.data('plafondsHebdo');
+    if (g.status !== 'ok') { el.replaceChildren(); return; }
+    el.replaceChildren(); el.classList.remove('dash-skeleton');
+    const j = CC.enJetons(), num = v => v == null ? null : Number(v);
+    const rows = g.data.map(r => ({ ...r, usd: Number(r.consomme), consomme: j ? num(r.consommeSortie) ?? 0 : Number(r.consomme), plafond: num(j ? r.sortie : r.plafond) }));
+    // 44 px par semaine : place pour une étiquette de prix au-dessus de chaque point
+    const m = { t: 22, r: 8, b: 26, l: 48 }, W = CC.largeur(el, rows.length, 44, m), H = 240;
+    const x = d3.scaleBand(rows.map(r => r.semaine), [m.l, W - m.r]).padding(0.3);
+    const y = d3.scaleLinear([0, d3.max(rows, r => Math.max(r.consomme, r.plafond ?? 0)) * 1.15 || 1], [H - m.b, m.t]).nice();
+    const defil = CC.defil(el, W, m, H);
+    const svg = d3.select(defil.box).append('svg').attr('width', defil.largeur).attr('viewBox', `0 0 ${W} ${H}`);
+    CC.axe(svg.append('g').attr('transform', `translate(${m.l},0)`), d3.axisLeft(y).ticks(5).tickSize(-(W - m.l - m.r)).tickFormat(CC.fmt));
+    svg.select('.domain').remove();
+    const pas = Math.ceil(rows.length / Math.max(1, Math.floor((W - m.l) / 60)));
+    CC.axe(svg.append('g').attr('transform', `translate(0,${H - m.b})`), d3.axisBottom(x).tickSize(0).tickPadding(8).tickFormat((d, i) => i % pas ? '' : CC.jourCourt(d)));
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', r => x(r.semaine)).attr('width', x.bandwidth())
+      .attr('y', r => y(r.consomme)).attr('height', r => Math.max(0, y(0) - y(r.consomme))).attr('rx', 2).attr('fill', dash.colors[4]).attr('opacity', 0.55);
+    const pts = rows.filter(r => r.plafond != null);
+    const cx = r => x(r.semaine) + x.bandwidth() / 2;
+    svg.append('path').datum(pts).attr('fill', 'none').attr('stroke', dash.colors[0]).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round')
+      .attr('d', d3.line().x(cx).y(r => y(r.plafond)));
+    svg.append('g').selectAll('circle').data(pts).join('circle').attr('cx', cx).attr('cy', r => y(r.plafond)).attr('r', 5)
+      .attr('fill', r => r.statut.startsWith('atteint') ? dash.colors[0] : 'var(--color-panel)').attr('stroke', dash.colors[0]).attr('stroke-width', 2);
+    svg.append('g').selectAll('text').data(pts).join('text').text(r => CC.fmt(r.plafond)).attr('x', cx).attr('y', r => y(r.plafond) - 10)
+      .attr('text-anchor', 'middle').attr('fill', 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)');
+    const tip = CC.tip(el);
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', r => x(r.semaine)).attr('width', x.bandwidth())
+      .attr('y', m.t).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', (ev, r) => {
+        tip.show(`Semaine du dim. ${CC.jourCourt(r.semaine)}`,
+          [[null, '100 % hebdo', r.statut], [null, j ? 'Consommé (sortie)' : 'Consommé', CC.fmt(r.consomme)], ...(j ? [[null, 'Consommé en $', CC.usd(r.usd)]] : []),
+           ...(r.horsEstime == null ? [] : [[null, 'Hors PC (repéré)', `≈ ${String(r.horsEstime).replace('.', ',')} pts sur ${r.pctFin} %`]]), [null, j ? 'Plafond (sortie)' : 'Plafond', r.plafond == null ? `au moins ${CC.fmt(r.consomme)}` : CC.fmt(r.plafond)]],
+          defil.x(cx(r)), defil.y(y(Math.max(r.consomme, r.plafond ?? 0))));
+      })
+      .on('pointerleave', () => tip.hide());
+  });
+
+  dash.draw('tabPlafond', tb => {
+    const g = dash.data('plafondsHebdo');
+    tb.replaceChildren();
+    if (g.status !== 'ok') return;
+    for (const r of g.data) {
+      const tr = document.createElement('tr'); tr.dataset.key = r.semaine;
+      const cel = [[r.semaine], [r.statut], [CC.usd(Number(r.consomme)), 'cc-num'],
+        [r.horsEstime == null ? '' : `≈ ${String(r.horsEstime).replace('.', ',')} pts sur ${r.pctFin} %`, 'cc-num'],
+        [r.plafond == null ? '' : CC.usd(Number(r.plafond)), 'cc-num'], [r.sortie == null ? '' : CC.compact(Number(r.sortie)), 'cc-num cc-hide-narrow']];
+      for (const [v, c] of cel) { const td = document.createElement('td'); td.textContent = v; if (c) td.className = c; tr.append(td); }
+      tb.append(tr);
+    }
+  });
+
+  // Pentes : un point par intervalle entre deux relevés, plein si 12 h ou moins
+  dash.draw('chPentes', el => {
+    const g = dash.data('pentes');
+    if (g.status !== 'ok') { el.replaceChildren(); return; }
+    el.replaceChildren(); el.classList.remove('dash-skeleton');
+    const rows = g.data.map(r => ({ ...r, t: new Date(r.fin + ':00Z'), plafond: Number(r.plafond), heures: Number(r.heures) }));
+    const W = el.clientWidth || 400, H = 200, m = { t: 12, r: 12, b: 26, l: 48 };
+    const x = d3.scaleUtc(d3.extent(rows, r => r.t), [m.l, W - m.r]);
+    const y = d3.scaleLinear([0, d3.max(rows, r => r.plafond) * 1.05 || 1], [H - m.b, m.t]).nice();
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    CC.axe(svg.append('g').attr('transform', `translate(${m.l},0)`), d3.axisLeft(y).ticks(4).tickSize(-(W - m.l - m.r)).tickFormat(CC.usd));
+    svg.select('.domain').remove();
+    CC.axe(svg.append('g').attr('transform', `translate(0,${H - m.b})`), d3.axisBottom(x).ticks(Math.max(2, Math.floor(W / 90))).tickSize(0).tickPadding(8)
+      .tickFormat(d => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' })));
+    svg.append('g').selectAll('circle').data(rows).join('circle').attr('cx', r => x(r.t)).attr('cy', r => y(r.plafond)).attr('r', 4.5)
+      .attr('fill', r => r.heures <= 12 && !CC.silence(r) ? dash.colors[0] : 'var(--color-panel)').attr('stroke', dash.colors[0]).attr('stroke-width', 2)
+      .attr('stroke-dasharray', r => CC.silence(r) ? '2 2' : null);
+    const tip = CC.tip(el);
+    svg.append('g').selectAll('circle').data(rows).join('circle').attr('cx', r => x(r.t)).attr('cy', r => y(r.plafond)).attr('r', 12).attr('fill', 'transparent')
+      .on('pointermove', (ev, r) => {
+        const k = el.clientWidth / W;
+        const f = s => new Date(s + ':00Z').toLocaleString('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        tip.show(`${f(r.debut)} → ${f(r.fin)}`, [[null, '100 % hebdo', CC.usd(r.plafond)], [null, 'Écart de %', `${r.ecart} points en ${CC.int(Math.round(r.heures))} h`],
+          ...(CC.silence(r) ? [[null, 'Relevés manquants', 'à prendre avec prudence']] : [])], x(r.t) * k, y(r.plafond) * k);
+      })
+      .on('pointerleave', () => tip.hide());
+  });
+
+  // Plafond 5 h : un point par fenêtre pleine ou relevée, dans le temps
+  CC.draw('chPlafond5h', el => {
+    const g = dash.data('plafonds5h');
+    if (g.status !== 'ok') { el.replaceChildren(); return; }
+    el.replaceChildren(); el.classList.remove('dash-skeleton');
+    // plafond = valeur tracée (dollars, ou jetons de sortie en vue jetons), usd = dollars pour l'infobulle
+    const rows = g.data.map(r => ({ ...r, t: new Date(r.moment + ':00Z'), usd: Number(r.plafond), plafond: Number(CC.enJetons() ? r.sortie : r.plafond) }));
+    const W = el.clientWidth || 400, H = 180, m = { t: 12, r: 12, b: 26, l: 44 };
+    const x = d3.scaleUtc(d3.extent(rows, r => r.t), [m.l, W - m.r]);
+    const y = d3.scaleLinear([0, d3.max(rows, r => r.plafond) * 1.1 || 1], [H - m.b, m.t]).nice();
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    CC.axe(svg.append('g').attr('transform', `translate(${m.l},0)`), d3.axisLeft(y).ticks(4).tickSize(-(W - m.l - m.r)).tickFormat(CC.fmt));
+    svg.select('.domain').remove();
+    CC.axe(svg.append('g').attr('transform', `translate(0,${H - m.b})`), d3.axisBottom(x).ticks(Math.max(2, Math.floor(W / 90))).tickSize(0).tickPadding(8)
+      .tickFormat(d => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' })));
+    svg.append('g').selectAll('circle').data(rows).join('circle').attr('cx', r => x(r.t)).attr('cy', r => y(r.plafond)).attr('r', 4.5)
+      .attr('fill', r => r.statut.startsWith('atteint') ? dash.colors[0] : 'var(--color-panel)').attr('stroke', dash.colors[0]).attr('stroke-width', 2);
+    const tip = CC.tip(el);
+    svg.append('g').selectAll('circle').data(rows).join('circle').attr('cx', r => x(r.t)).attr('cy', r => y(r.plafond)).attr('r', 12).attr('fill', 'transparent')
+      .on('pointermove', (ev, r) => {
+        const k = el.clientWidth / W;
+        tip.show(r.t.toLocaleString('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
+          [[null, '', r.statut], [null, 'Plafond', CC.usd(r.usd)], [null, 'Jetons de sortie', CC.compact(Number(r.sortie))]], x(r.t) * k, y(r.plafond) * k);
+      })
+      .on('pointerleave', () => tip.hide());
+  });
+
+  CC.draw('tabSessions', tb => {
+    const g = dash.data('sessions');
+    tb.replaceChildren();
+    if (g.status !== 'ok') return;
+    // Les 30 plus chères (en dollars) de la période, puis le tri choisi ; en vue jetons, la colonne « cout » trie les jetons
+    const top = CC.dansPeriode(g.data, 'jourFin').slice().sort((a, b) => Number(b.cout) - Number(a.cout)).slice(0, 30);
+    const champ = CC.tri.champ === 'cout' ? CC.champ() : CC.tri.champ;
+    const nombre = ['appels', 'ctxMax', 'cout', 'jetons'].includes(champ);
+    const cmp = (a, b) => nombre ? Number(a[champ] ?? 0) - Number(b[champ] ?? 0) : String(a[champ] ?? '').localeCompare(String(b[champ] ?? ''), 'fr');
+    top.sort((a, b) => cmp(a, b) * CC.tri.sens);
+    for (const r of top) {
+      const tr = document.createElement('tr'); tr.dataset.key = r.session;
+      const cel = [[r.session], [r.projet], [r.debut, 'cc-hide-narrow'], [r.modele, 'cc-hide-narrow'], [CC.int(r.appels), 'cc-num'], [CC.compact(r.ctxMax), 'cc-num'], [CC.enJetons() ? (r.jetons == null ? '' : CC.compact(r.jetons)) : CC.usd(r.cout), 'cc-num']];
+      for (const [v, c] of cel) { const td = document.createElement('td'); td.textContent = v; if (c) td.className = c; tr.append(td); }
+      tb.append(tr);
+    }
+  });
+</script>
