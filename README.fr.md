@@ -13,6 +13,10 @@ Projet compagnon : [**sonar**](https://github.com/Gh0st113/sonar), un mod pour l
 journal de quota (`~/.claude/sonar/quota-log.jsonl`) donne à ce tableau les relevés de pourcentage dont il a besoin pour
 estimer le plafond hebdo. Sans sonar, seuls les relevés que Claude Code écrit dans ses propres journaux servent (moins nombreux).
 
+![Tuiles de synthèse et coût par semaine de forfait, empilé par modèle](docs/apercu-semaines.png)
+
+<sub>Captures faites avec des **données simulées** (voir [Essayer avec des données simulées](#essayer-avec-des-données-simulées)), pas un usage réel.</sub>
+
 ## Ce que vous obtenez
 
 - Coût par semaine de forfait, empilé par modèle (la légende suit les modèles présents dans vos journaux).
@@ -23,6 +27,10 @@ estimer le plafond hebdo. Sans sonar, seuls les relevés que Claude Code écrit 
   retiré quand le pourcentage monte sans dépense ici.
 - Taille du contexte à chaque appel (part des appels au-delà de 150k jetons).
 - Contrôles de cohérence après chaque export : une ligne, `CONTRÔLES : OK`, ou la liste précise de ce qui cloche.
+
+![Plafond hebdo semaine par semaine, avec le tableau des plafonds atteints et projetés](docs/apercu-plafond.png)
+
+![Prix de 100 % de la limite hebdo, mesuré entre deux relevés](docs/apercu-pentes.png)
 
 ## Prérequis
 
@@ -90,6 +98,21 @@ navigateur n'affiche rien**.
 3. Après chaque nouvel export : *« Recharge les 10 données de mon tableau depuis `donnees/export/` »*.
 
 Gardez l'artefact privé : qui l'ouvre peut lire les fichiers (noms de dossiers, coûts, sessions).
+
+## Essayer avec des données simulées
+
+`demo/generer-demo.mjs` écrit un faux dossier personnel : huit semaines de journaux Claude Code (dossiers inventés,
+tirage à graine fixe) et le journal de quota sonar qui va avec, pour un plafond hebdo d'environ 180 $. C'est ainsi
+qu'ont été faites les captures ci-dessus. À lancer dans une **copie** de ce dépôt sans `config.local.json`, pour que
+les résultats aillent dans le `donnees/` de la copie et pas dans votre dossier de données :
+
+```powershell
+node demo/generer-demo.mjs ../demo-home
+$env:USERPROFILE = (Resolve-Path ../demo-home); node agreger.mjs; node exporter.mjs
+```
+
+Sous macOS / Linux : `HOME=../demo-home node agreger.mjs && HOME=../demo-home node exporter.mjs`. Afficher ensuite
+`donnees/export/` comme décrit plus haut. Fermer cette fenêtre PowerShell après coup (son `USERPROFILE` est modifié).
 
 ## Limites
 

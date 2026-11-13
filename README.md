@@ -15,6 +15,10 @@ weekly cap. Without sonar, only the readings Claude Code writes into its own log
 
 > The code, comments and dashboard text are in French.
 
+![Summary tiles and cost per plan week, stacked by model](docs/apercu-semaines.png)
+
+<sub>Screenshots made from **simulated data** (see [Try it with simulated data](#try-it-with-simulated-data)), not real usage.</sub>
+
 ## What you get
 
 - Cost per plan week, stacked by model (the legend follows whatever models appear in your logs).
@@ -25,6 +29,10 @@ weekly cap. Without sonar, only the readings Claude Code writes into its own log
   removed when the percentage rises while nothing is spent here.
 - Context size per call (share of calls above 150k tokens).
 - Consistency checks run after every export: one line, `CONTRÔLES : OK`, or a precise list of what is wrong.
+
+![Weekly cap, week by week, with the table of reached and projected caps](docs/apercu-plafond.png)
+
+![Price of 100 % of the weekly limit, measured between two readings](docs/apercu-pentes.png)
 
 ## Requirements
 
@@ -88,6 +96,21 @@ chart library and data loader that claude.ai provides, so **opening it directly 
 3. After each new export: *"Reload the 10 datasets of my dashboard from `donnees/export/`"*.
 
 Keep the artifact private: whoever opens it can read the files (folder names, costs, sessions).
+
+## Try it with simulated data
+
+`demo/generer-demo.mjs` writes a fake home folder: eight weeks of Claude Code logs (invented folders, fixed random
+seed) and a matching sonar quota log, with a weekly cap of about 180 $. It is how the screenshots above were made.
+Run it in a **copy** of this repository without `config.local.json`, so the results land in the copy's `donnees/`,
+not in your own data folder:
+
+```powershell
+node demo/generer-demo.mjs ../demo-home
+$env:USERPROFILE = (Resolve-Path ../demo-home); node agreger.mjs; node exporter.mjs
+```
+
+On macOS / Linux: `HOME=../demo-home node agreger.mjs && HOME=../demo-home node exporter.mjs`. Then display
+`donnees/export/` as described above. Close that PowerShell window afterwards (its `USERPROFILE` is changed).
 
 ## Limits
 
