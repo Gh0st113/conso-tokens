@@ -1,0 +1,20 @@
+# Réglages et données personnels : jamais dans git
+config.local.json
+config.local.json.*
+donnees/
+page/index.doc.json
+*.tmp
+.env*
+node_modules/
+# Fichiers du système et des éditeurs
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.bak
+*~
+desktop.ini
+.vscode/
+.idea/
+# Relevés posés par erreur à la racine (leur place : le dossier des données)
+/releves.json
