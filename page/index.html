@@ -461,7 +461,7 @@
     const g = dash.data(src);
     el.textContent = g.status === 'ok' && g.data.length ? f(g.data[0]) : '—';
   });
-  texte('semDebut', 'semCourante', r => CC.jourLong(CC.jourParis(CC.resetDu(r.debut))));
+  texte('semDebut', 'semCourante', r => CC.jourLong(r.debut));
   texte('semCout', 'semCourante', r => CC.fmt(r[CC.champ()]));
   texte('semPrec', 'semCourante', r => CC.fmt(CC.enJetons() ? r.precJetons : r.prec));
   texte('tCout', 'totaux', r => CC.fmt(r[CC.champ()]));

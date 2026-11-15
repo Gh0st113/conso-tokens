@@ -55,6 +55,7 @@ test('valeurs invalides : erreur claire, jamais de repli silencieux', () => {
   assert.throws(() => lireCycle({ jour: 'lunid', heureUTC: '08:00' }), /« jour »/);
   assert.throws(() => lireCycle({ jour: 'lundi', heureUTC: '8h' }), /« heureUTC »/);
   assert.throws(() => lireCycle({ jour: 'lundi', heureUTC: '25:00' }), /« heureUTC »/);
+  assert.throws(() => lireCycle({ jour: 'lundi', heureUTC: '8:00' }), /« heureUTC »/);
   assert.throws(() => lireCycle({ heureUTC: '08:00' }), /« jour »/);
   assert.throws(() => lireCycle({ jour: 'constructor', heureUTC: '08:00' }), /« jour »/);
   assert.throws(() => lireCycle('lundi'), /doit être un objet/);
