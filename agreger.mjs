@@ -254,11 +254,13 @@ const plafonds = [...limites.values()].sort((a, b) => a.ts < b.ts ? -1 : 1).map(
   const reset = l.type === 'hebdo'
     ? instantDebut(debutSemaine(atteinte + 7 * 864e5))
     : parisVersUtc(atteinte, l.h, l.min);
-  if (reset === null || vus.has(l.type + reset)) return null; // même fenêtre déjà comptée (message répété)
-  vus.add(l.type + reset);
+  if (reset === null) return null;
   const debut = reset - (l.type === 'hebdo' ? 7 * 864e5 : 5 * 36e5);
   // Coût compté depuis le début du segment où la limite est atteinte (= début de fenêtre sans reset précis)
   const debutSeg = l.type === 'hebdo' ? segmentDe(atteinte, debut) : debut;
+  // Même segment déjà compté : message répété. Par segment (pas par fenêtre) : un second message après un reset précis compte (relecture 2, 16/11)
+  if (vus.has(l.type + debutSeg)) return null;
+  vus.add(l.type + debutSeg);
   const dans = tri.filter(a => { const t = Date.parse(a.ts); return t >= debutSeg && t <= atteinte; });
   return { type: l.type, atteinte: l.ts, debutFenetre: ISO(debut), debutSegment: ISO(debutSeg), reset: ISO(reset),
     cout: Math.round(dans.reduce((s, a) => s + a.cout, 0) * 100) / 100, appels: dans.length,
