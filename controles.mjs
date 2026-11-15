@@ -35,6 +35,13 @@ const segmentRetenu = (d, r) => {
   return (d.segmentsHebdo ?? []).find(s => s.semaine === r.semaine && jjmm(s.debut) === m[1]) ?? null;
 };
 
+// Forfait d'une semaine (clé forfaits, 15/11) : libellé de la dernière entrée dont la semaine est ≤ celle-ci, « » si aucune
+// (inconnu). entrees = table « forfaits » (triée par date). Même règle que forfaitDe dans page/index.html (la page ne peut
+// pas importer ce module) : aucun test ne les compare, à garder d'accord à la main.
+export const forfaitDe = (entrees, semaine) => entrees.reduce((f, e) => e.semaine <= semaine ? e.forfait : f, '');
+// Suffixe du statut d'une semaine de changement de forfait (écrit par exporter.mjs, contrôlé ici)
+export const SUFFIXE_INDICATIF = 'plafond indicatif : mêle deux forfaits';
+
 // `debutSemaine` : même fonction que celle de l'export (exporter.mjs) ; par défaut, cycle de config par défaut
 export function controler(d, tables, { maintenant = Date.now(), groupes = [], debutSemaine = fabriquer(CYCLE_DEFAUT).debutSemaine } = {}) {
   const anomalies = [], aVerifier = [];
@@ -84,11 +91,17 @@ export function controler(d, tables, { maintenant = Date.now(), groupes = [], de
   }
 
   // 5. Comparatif hebdo : mêmes semaines que « semaines », même consommé, statut d'accord avec ses colonnes
+  // Semaines de changement de forfait (table « forfaits », 15/11) : leur plafond est indicatif, leurs pentes sont exclues du contrôle 6
+  const entrees = tables.forfaits ?? [], chg = new Set(entrees.filter(e => e.changement === true).map(e => e.semaine));
   const hebdo = tables.plafondsHebdo ?? [], parDebut = new Map((tables.semaines ?? []).map(s => [s.debut, s]));
   const sH = hebdo.map(r => r.semaine).join(), sS = [...parDebut.keys()].join();
   if (sH !== sS) anomalies.push(`semaines du comparatif hebdo (${hebdo.length}) ≠ semaines de « semaines » (${parDebut.size})`);
   for (const r of hebdo) {
     if (typeof r.statut !== 'string') { anomalies.push(`semaine ${r.semaine} : statut absent`); continue; }
+    // Suffixe « indicatif » : celui des semaines de changement de forfait, et seulement celles-là (15/11)
+    const indicatif = r.statut.includes(SUFFIXE_INDICATIF);
+    if (chg.has(r.semaine) && !indicatif) anomalies.push(`semaine ${r.semaine} : changement de forfait sans suffixe « ${SUFFIXE_INDICATIF} »`);
+    if (!chg.has(r.semaine) && indicatif) anomalies.push(`semaine ${r.semaine} : suffixe « ${SUFFIXE_INDICATIF} » hors d'une semaine de changement`);
     const s = parDebut.get(r.semaine);
     if (s && Math.abs(s.cout - r.consomme) > 0.01) anomalies.push(`semaine ${r.semaine} : consommé ${fr(r.consomme)} $ ≠ coût de la semaine ${fr(s.cout)} $`);
     const m = r.statut.match(/dont ([\d,]+) pts hors de ce PC/);
@@ -111,12 +124,25 @@ export function controler(d, tables, { maintenant = Date.now(), groupes = [], de
   // 6. Plausibilité (2 dernières semaines seulement) : plafonds et pentes dans la bande autour de la médiane des pentes
   const pentes = tables.pentes ?? [];
   pentes.forEach((p, i) => { if (!(p.ecart >= 8) || !(p.heures > 0) || !(p.plafond > 0)) anomalies.push(`pentes[${i}] (${p.debut}) : écart ${p.ecart}, ${p.heures} h, ${p.plafond} $ (attendu : écart ≥ 8, durée et plafond > 0)`); });
-  const med = medianne(pentes.filter(p => !p.silence).map(p => p.plafond));
-  if (med) {
-    const [bas, haut] = BANDE.map(k => k * med), recent = Date.parse(debutCourante) - 7 * 864e5;
-    const hors = (v, quoi) => { if (v < bas || v > haut) aVerifier.push(`${quoi} = ${Math.round(v)} $, loin de la médiane des pentes (${Math.round(med)} $ ; plage plausible ${Math.round(bas)} à ${Math.round(haut)} $)`); };
-    for (const r of hebdo) if (Date.parse(r.semaine) >= recent && r.plafond != null) hors(r.plafond, `plafond de la semaine ${r.semaine}`);
-    for (const p of pentes) if (dateUTC(p.debut) >= recent) hors(p.plafond, `pente ${p.debut} → ${p.fin}${p.silence ? ' (silence)' : ''}`);
+  // Médiane PAR FORFAIT (15/11) : pentes sans silence, hors semaines de changement. Sans table « forfaits », un seul groupe (« ») : comme avant
+  const parForfait = new Map();
+  for (const p of pentes) {
+    const sem = debutSemaine(dateUTC(p.debut)), f = forfaitDe(entrees, sem);
+    // Clé sans casse : « Pro » puis « pro » (même forfait, pas de changement) forment un seul groupe (relecture DeepSeek, 16/11)
+    const cle = f.toLowerCase();
+    if (!p.silence && !chg.has(sem)) parForfait.set(cle, [...(parForfait.get(cle) ?? []), p.plafond]);
+  }
+  const recent = Date.parse(debutCourante) - 7 * 864e5;
+  const hors = (v, quoi, f) => {
+    const med = medianne(parForfait.get(f.toLowerCase()) ?? []);
+    if (!med) return; // aucune pente de ce forfait : pas de contrôle pour lui
+    const [bas, haut] = BANDE.map(k => k * med), nom = f ? ` du forfait « ${f} »` : '';
+    if (v < bas || v > haut) aVerifier.push(`${quoi} = ${Math.round(v)} $, loin de la médiane des pentes${nom} (${Math.round(med)} $ ; plage plausible ${Math.round(bas)} à ${Math.round(haut)} $)`);
+  };
+  for (const r of hebdo) if (Date.parse(r.semaine) >= recent && r.plafond != null && !chg.has(r.semaine)) hors(r.plafond, `plafond de la semaine ${r.semaine}`, forfaitDe(entrees, r.semaine));
+  for (const p of pentes) {
+    const sem = debutSemaine(dateUTC(p.debut));
+    if (dateUTC(p.debut) >= recent && !chg.has(sem)) hors(p.plafond, `pente ${p.debut} → ${p.fin}${p.silence ? ' (silence)' : ''}`, forfaitDe(entrees, sem));
   }
 
   // 7. Fraîcheur : relevé hebdo (sonar) récent si ce PC a consommé aujourd'hui. Pas d'alerte « jour sans données » :
@@ -137,7 +163,8 @@ export function controler(d, tables, { maintenant = Date.now(), groupes = [], de
   for (const v of Object.values(parFenetre)) {
     v.sort((x, y) => x.releve < y.releve ? -1 : 1);
     const semaine = v[0].debutFenetre.slice(0, 10);
-    if (declares.semaines?.[semaine] !== undefined) continue;
+    // Semaine de changement de forfait sautée (15/11) : la baisse du % vient du changement, comme une semaine à l'ancienne forme
+    if (declares.semaines?.[semaine] !== undefined || chg.has(semaine)) continue;
     for (let i = 1; i < v.length - 1; i++) {
       const [a, b, c] = [v[i - 1], v[i], v[i + 1]], ta = Date.parse(a.releve), tb = Date.parse(b.releve), tc = Date.parse(c.releve);
       // Maximum pris dans le segment de b seulement (décision 5 corrigée, 15/11) : un reset précis déclaré avant b remet le

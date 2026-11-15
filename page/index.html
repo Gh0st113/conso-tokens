@@ -91,7 +91,7 @@
     <div class="cc-titre"><h2>Plafond hebdo, semaine par semaine</h2><span class="cc-seg" role="group" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true">dollars</button><button type="button" data-unite="jetons" aria-pressed="false">jetons</button></span></div>
     <p class="cc-muted"><span data-jet="En vue jetons : barre et point en jetons de sortie (réponses et réflexion), le tableau garde les deux unités."></span> Barre : ce que Claude Code et, sous Windows, Cowork local (journaux jusqu'à fin octobre 2026 seulement) ont consommé dans la semaine. Point plein : coût cumulé au moment du message « You've hit your weekly limit ». Point creux : projection depuis le dernier relevé du % de la semaine (coût ÷ %). Les points repérés comme consommés hors de ce PC (même règle que pour les pentes) sont retirés du % avant le calcul : l'infobulle en donne le nombre. Pas de point quand le plafond est trop incertain (voir sous le tableau). Un usage hors journaux non repéré, par exemple avant le premier relevé de la semaine, fait encore paraître le plafond plus bas que la réalité. Une semaine sans point n'a pas atteint 100 % ou n'a pas de relevé.</p>
     <div class="cc-legend">
-      <span><i class="cc-sw" data-i="4"></i>consommé (Claude Code et Cowork local)</span><span><i class="cc-sw" data-i="0"></i>plafond atteint</span><span><i class="cc-hollow"></i>plafond projeté</span>
+      <span><i class="cc-sw" data-i="4"></i>consommé (Claude Code et Cowork local)</span><span><i class="cc-sw" data-i="0"></i>plafond atteint</span><span><i class="cc-hollow"></i>plafond projeté</span><span data-forfait-legende style="display:none"><i class="cc-rule"></i>changement de forfait</span><span data-forfait-legende style="display:none"><i class="cc-hollow cc-dash"></i>plafond indicatif (deux forfaits)</span>
     </div>
     <div class="cc-chart dash-skeleton" data-draw="chPlafond" data-source="plafondsHebdo"></div>
     <div class="cc-table-box">
@@ -485,6 +485,8 @@
   });
   // Ce qui dépend du cycle est redessiné à chaque arrivée de données (« reglages » peut arriver après « jours »)
   dash.onData(() => ['chJours', 'prochain', 'cycleJour', 'heureReset', 'cycleRepli'].forEach(n => dash.draw(n)));
+  // Plafond hebdo redessiné aussi quand la table « forfaits » arrive après « plafondsHebdo » (15/11)
+  dash.onData(() => dash.draw('chPlafond'));
 </script>
 
 <script>
@@ -651,7 +653,13 @@
     if (g.status !== 'ok') { el.replaceChildren(); return; }
     el.replaceChildren(); el.classList.remove('dash-skeleton');
     const j = CC.enJetons(), num = v => v == null ? null : Number(v);
-    const rows = g.data.map(r => ({ ...r, usd: Number(r.consomme), consomme: j ? num(r.consommeSortie) ?? 0 : Number(r.consomme), plafond: num(j ? r.sortie : r.plafond) }));
+    // Forfaits déclarés (table « forfaits », 15/11) : forfaitDe = même règle que controles.mjs. Table absente : aucun forfait, rien de plus dessiné
+    const fo = dash.data('forfaits'), entrees = fo.status === 'ok' ? fo.data : [];
+    const forfaitDe = s => entrees.reduce((f, e) => e.semaine <= s ? e.forfait : f, '');
+    const chg = new Set(entrees.filter(e => e.changement === true || e.changement === 'true').map(e => e.semaine));
+    const rows = g.data.map(r => ({ ...r, usd: Number(r.consomme), consomme: j ? num(r.consommeSortie) ?? 0 : Number(r.consomme), plafond: num(j ? r.sortie : r.plafond),
+      forfait: forfaitDe(r.semaine), changement: chg.has(r.semaine) }));
+    document.querySelectorAll('[data-forfait-legende]').forEach(s => { s.style.display = rows.some(r => r.changement) ? '' : 'none'; });
     // 44 px par semaine : place pour une étiquette de prix au-dessus de chaque point
     const m = { t: 22, r: 8, b: 26, l: 48 }, W = CC.largeur(el, rows.length, 44, m), H = 240;
     const x = d3.scaleBand(rows.map(r => r.semaine), [m.l, W - m.r]).padding(0.3);
@@ -664,21 +672,34 @@
     CC.axe(svg.append('g').attr('transform', `translate(0,${H - m.b})`), d3.axisBottom(x).tickSize(0).tickPadding(8).tickFormat((d, i) => i % pas ? '' : CC.jourCourt(d)));
     svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', r => x(r.semaine)).attr('width', x.bandwidth())
       .attr('y', r => y(r.consomme)).attr('height', r => Math.max(0, y(0) - y(r.consomme))).attr('rx', 2).attr('fill', dash.colors[4]).attr('opacity', 0.55);
+    // Trait pointillé au bord gauche de chaque semaine de changement de forfait (15/11)
+    svg.append('g').selectAll('line').data(rows.filter(r => r.changement)).join('line').attr('x1', r => x(r.semaine)).attr('x2', r => x(r.semaine))
+      .attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--color-fg-muted)').attr('stroke-dasharray', '4 3');
+    // Ligne du plafond : une suite par forfait ; un point de changement n'est relié ni avant ni après (estompé, hors de toute ligne)
     const pts = rows.filter(r => r.plafond != null);
     const cx = r => x(r.semaine) + x.bandwidth() / 2;
-    svg.append('path').datum(pts).attr('fill', 'none').attr('stroke', dash.colors[0]).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round')
+    const suites = [];
+    let suite = null;
+    for (const r of rows) {
+      if (r.changement) { suite = null; continue; } // avant le test de plafond : une semaine de changement sans plafond coupe aussi
+      if (r.plafond == null) continue;
+      if (!suite || suite.forfait !== r.forfait.toLowerCase()) suites.push(suite = { forfait: r.forfait.toLowerCase(), pts: [] });
+      suite.pts.push(r);
+    }
+    for (const s of suites) svg.append('path').datum(s.pts).attr('fill', 'none').attr('stroke', dash.colors[0]).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round')
       .attr('d', d3.line().x(cx).y(r => y(r.plafond)));
     svg.append('g').selectAll('circle').data(pts).join('circle').attr('cx', cx).attr('cy', r => y(r.plafond)).attr('r', 5)
-      .attr('fill', r => r.statut.startsWith('atteint') ? dash.colors[0] : 'var(--color-panel)').attr('stroke', dash.colors[0]).attr('stroke-width', 2);
+      .attr('fill', r => r.changement ? (r.statut.startsWith('atteint') ? 'var(--color-fg-muted)' : 'var(--color-panel)') : r.statut.startsWith('atteint') ? dash.colors[0] : 'var(--color-panel)')
+      .attr('stroke', r => r.changement ? 'var(--color-fg-muted)' : dash.colors[0]).attr('stroke-width', 2).attr('stroke-dasharray', r => r.changement ? '3 2' : null);
     svg.append('g').selectAll('text').data(pts).join('text').text(r => CC.fmt(r.plafond)).attr('x', cx).attr('y', r => y(r.plafond) - 10)
-      .attr('text-anchor', 'middle').attr('fill', 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)');
+      .attr('text-anchor', 'middle').attr('fill', r => r.changement ? 'var(--color-fg-muted)' : 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)');
     const tip = CC.tip(el);
     svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', r => x(r.semaine)).attr('width', x.bandwidth())
       .attr('y', m.t).attr('height', H - m.t - m.b).attr('fill', 'transparent')
       .on('pointermove', (ev, r) => {
         tip.show(`Semaine du dim. ${CC.jourCourt(r.semaine)}`,
-          [[null, '100 % hebdo', r.statut], [null, j ? 'Consommé (sortie)' : 'Consommé', CC.fmt(r.consomme)], ...(j ? [[null, 'Consommé en $', CC.usd(r.usd)]] : []),
-           ...(r.horsEstime == null ? [] : [[null, 'Hors PC (repéré)', `≈ ${String(r.horsEstime).replace('.', ',')} pts sur ${r.pctFin} %`]]), [null, j ? 'Plafond (sortie)' : 'Plafond', r.plafond == null ? `au moins ${CC.fmt(r.consomme)}` : CC.fmt(r.plafond)]],
+          [[null, '100 % hebdo', r.statut], ...(r.forfait ? [[null, 'Forfait', r.forfait]] : []), [null, j ? 'Consommé (sortie)' : 'Consommé', CC.fmt(r.consomme)], ...(j ? [[null, 'Consommé en $', CC.usd(r.usd)]] : []),
+           ...(r.horsEstime == null ? [] : [[null, 'Hors PC (repéré)', `≈ ${String(r.horsEstime).replace('.', ',')} pts sur ${r.pctFin} %`]]), [null, (r.changement ? 'Plafond indicatif (deux forfaits)' : 'Plafond') + (j ? ' (sortie)' : ''), r.plafond == null ? `au moins ${CC.fmt(r.consomme)}` : CC.fmt(r.plafond)]],
           defil.x(cx(r)), defil.y(y(Math.max(r.consomme, r.plafond ?? 0))));
       })
       .on('pointerleave', () => tip.hide());

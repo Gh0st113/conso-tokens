@@ -3,8 +3,8 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { controler, rapport, suffixeCoupee } from './controles.mjs';
-import { DONNEES, RESETS, RESETS_PRECIS, TROUS, REMISE_A_ZERO, ici } from './config.mjs';
+import { controler, rapport, suffixeCoupee, forfaitDe, SUFFIXE_INDICATIF } from './controles.mjs';
+import { DONNEES, RESETS, RESETS_PRECIS, FORFAITS, TROUS, REMISE_A_ZERO, ici } from './config.mjs';
 import { fabriquer } from './semaine.mjs';
 import { execFileSync } from 'node:child_process';
 
@@ -180,6 +180,15 @@ const ligneHebdo = (debut, debutSegment, coutSeg, { atteint, proj }, v) => {
   };
 };
 
+// Semaine de changement de forfait (clé forfaits, 15/11, décision 5) : statut suffixé « plafond indicatif (A → B) » (A = forfait
+// de la semaine d'avant, « inconnu » si aucun). Ni comparée aux autres semaines ni contrôlée côté plafond : controles.mjs et la page le savent
+const changementsSemaines = new Set(FORFAITS.filter(f => f.changement).map(f => f.semaine));
+const indicatif = (debut, ligne) => {
+  if (!changementsSemaines.has(debut)) return ligne;
+  const avant = forfaitDe(FORFAITS, new Date(Date.parse(debut + 'T12:00:00Z') - 7 * 864e5).toISOString().slice(0, 10)) || 'inconnu';
+  return { ...ligne, statut: ligne.statut + ` ; ${SUFFIXE_INDICATIF} (${avant} → ${forfaitDe(FORFAITS, debut)})` };
+};
+
 // Coût par groupe = somme des coûts calculés appel par appel (agreger.mjs) ; colonnes j… = jetons, jamais un coût
 const tables = {
   // Toutes les semaines de la première à la dernière : une semaine sans réponse vaut 0 au lieu de disparaître
@@ -212,7 +221,7 @@ const tables = {
   // Semaine coupée par un reset précis (15/11) : une ligne quand même, sur le segment retenu (suffixe dans le statut)
   plafondsHebdo: semainesContinues().map(([debut, v]) => {
     const reset = RESETS[debut];
-    if (reset) return { semaine: debut, statut: `reset utilisé (${reset})`, plafond: null, sortie: null, consomme: r2(v.cout), consommeSortie: v.sortie };
+    if (reset) return indicatif(debut, { semaine: debut, statut: `reset utilisé (${reset})`, plafond: null, sortie: null, consomme: r2(v.cout), consommeSortie: v.sortie });
     const coupees = segmentsDe(debut);
     const segs = coupees.length ? coupees.map(s => ({ debutSegment: s.debut, cout: s.cout })) : [{ debutSegment: ISO(instantDebut(debut)), cout: v.cout }];
     // Segment retenu : plus grand % local ; à égalité, le plus récent. Aucun relevé ni limite : le dernier segment, sans plafond
@@ -224,7 +233,7 @@ const tables = {
     choisi ??= { ...segs.at(-1), etat: {} };
     const ligne = ligneHebdo(debut, choisi.debutSegment, choisi.cout, choisi.etat, v);
     if (coupees.length) ligne.statut += suffixeDe(debut, choisi.debutSegment);
-    return ligne;
+    return indicatif(debut, ligne);
   }),
   plafonds5h: [
     ...d.plafonds.filter(p => p.type === '5h').map(p => ({ moment: p.atteinte.slice(0, 16), statut: 'atteint', plafond: p.cout, sortie: p.jetonsSortie })),
@@ -265,6 +274,8 @@ const tables = {
     ...Object.entries(RESETS).map(([semaine, note]) => ({ quand: '', type: 'hebdo', note: String(note), semaine })),
     ...RESETS_PRECIS.map(p => ({ quand: ISO(p.quand).slice(0, 16), type: p.type, note: p.note, semaine: p.semaine })),
   ].sort((a, b) => a.semaine < b.semaine ? -1 : a.semaine > b.semaine ? 1 : a.quand < b.quand ? -1 : a.quand > b.quand ? 1 : 0),
+  // Forfaits déclarés à la main (13e table, 15/11) : une ligne par entrée de la clé forfaits, triée par date. Sans clé : liste vide
+  forfaits: FORFAITS.map(f => ({ date: f.date, semaine: f.semaine, forfait: f.forfait, changement: f.changement })),
 };
 
 for (const [nom, rows] of Object.entries(tables)) writeFileSync(join(sortie, `${nom}.json`), JSON.stringify(rows));

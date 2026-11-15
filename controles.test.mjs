@@ -8,7 +8,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { DONNEES, REMISE_A_ZERO } from './config.mjs';
 import { fabriquer } from './semaine.mjs';
-import { controler, rapport, suffixeCoupee } from './controles.mjs';
+import { controler, rapport, suffixeCoupee, forfaitDe, SUFFIXE_INDICATIF } from './controles.mjs';
 
 const ici = DONNEES;
 const sansDonnees = !existsSync(join(ici, 'donnees.json')) || !existsSync(join(ici, 'export'));
@@ -248,4 +248,72 @@ tester('suffixe de coupure : aller-retour exporter → contrôle (le segment ret
 });
 tester('semaine coupée : consommé du segment retenu (50 $ > plafond 40 $) → anomalie', () => {
   assert.ok(coupee(50).anomalies.some(a => a.includes('consommé 50 $ > plafond 40 $')), JSON.stringify(coupee(50)));
+});
+
+// ---- Forfaits déclarés (15/11, plan #2) : données fabriquées. Pro jusqu'à la semaine du 18/10, Max 5x depuis celle du 25/10 (changement) ----
+const FORF = [
+  { date: '2026-10-18', semaine: '2026-10-18', forfait: 'Pro', changement: false },
+  { date: '2026-10-25', semaine: '2026-10-25', forfait: 'Max 5x', changement: true },
+];
+const pente = (debut, plafond, silence = false) => ({ debut, fin: debut.slice(0, 11) + '20:00', ecart: 10, heures: 10, plafond, silence });
+const ligneHebdo = (semaine, statut, plafond = null, consomme = 0) =>
+  ({ semaine, statut, plafond, consomme, horsEstime: null, pctFin: null, sortie: null, consommeSortie: 0 });
+const semainesVides = (...debuts) => debuts.map(debut => ({ debut, cout: 0, appels: 0, jetons: 0 }));
+
+tester('forfaitDe : « » avant la première entrée, libellé de l’entrée sur sa semaine et après', () => {
+  assert.equal(forfaitDe(FORF, '2026-10-11'), '');
+  assert.equal(forfaitDe(FORF, '2026-10-18'), 'Pro');
+  assert.equal(forfaitDe(FORF, '2026-10-25'), 'Max 5x');
+  assert.equal(forfaitDe(FORF, '2026-11-08'), 'Max 5x');
+  assert.equal(forfaitDe([], '2026-11-01'), '');
+});
+
+tester('bande par forfait : une pente d’un autre forfait ne déclenche pas À VÉRIFIER', () => {
+  // Médiane unique (100, 100, 300) = 100 $ → 300 $ hors bande ; par forfait, Max 5x n’a que cette pente (300 $) : rien à signaler
+  const v = controler(dFab([]), { forfaits: FORF, semaines: [], plafondsHebdo: [],
+    pentes: [pente('2026-10-20T10:00', 100), pente('2026-10-21T10:00', 100), pente('2026-11-02T10:00', 300)] }, { maintenant: MAINT });
+  assert.ok(!v.aVerifier.some(a => a.includes('300 $')), JSON.stringify(v));
+});
+
+tester('bande par forfait : un écart reste signalé dans son propre forfait', () => {
+  // Max 5x (semaine du 01/11) : 300, 310, 1000 $ → médiane 310 $, 1000 $ hors bande ; nommé « du forfait « Max 5x » »
+  const v = controler(dFab([]), { forfaits: FORF, semaines: [], plafondsHebdo: [],
+    pentes: [pente('2026-11-02T10:00', 300), pente('2026-11-03T10:00', 310), pente('2026-11-04T10:00', 1000)] }, { maintenant: MAINT });
+  assert.ok(v.aVerifier.some(a => a.includes('1000 $') && a.includes('du forfait « Max 5x »')), JSON.stringify(v));
+});
+
+tester('semaine de changement : son plafond indicatif et ses pentes ne sont ni comparés ni dans la médiane', () => {
+  const v = controler(dFab([]), { forfaits: FORF,
+    semaines: [...semainesVides('2026-11-01'), { debut: '2026-10-25', cout: 10, appels: 1, jetons: 0 }],
+    plafondsHebdo: [ligneHebdo('2026-10-25', `projeté (50 %) ; ${SUFFIXE_INDICATIF} (Pro → Max 5x)`, 5000, 10), ligneHebdo('2026-11-01', 'en cours')],
+    pentes: [pente('2026-10-20T10:00', 100), pente('2026-10-21T10:00', 100), pente('2026-10-27T10:00', 5000)] }, { maintenant: MAINT });
+  assert.ok(!v.aVerifier.some(a => a.includes('5000')), JSON.stringify(v));
+  assert.ok(!v.anomalies.some(a => a.includes('suffixe') || a.includes('changement de forfait')), JSON.stringify(v));
+});
+
+tester('suffixe « plafond indicatif » : manquant sur une semaine de changement, ou présent ailleurs → anomalie', () => {
+  const v = controler(dFab([]), { forfaits: FORF, semaines: semainesVides('2026-10-25', '2026-11-01'),
+    plafondsHebdo: [ligneHebdo('2026-10-25', 'en cours'), ligneHebdo('2026-11-01', `en cours ; ${SUFFIXE_INDICATIF} (Pro → Max 5x)`)] }, { maintenant: MAINT });
+  assert.ok(v.anomalies.some(a => a.includes('semaine 2026-10-25 : changement de forfait sans suffixe')), JSON.stringify(v));
+  assert.ok(v.anomalies.some(a => a.includes('semaine 2026-11-01 : suffixe') && a.includes("hors d'une semaine de changement")), JSON.stringify(v));
+});
+
+tester('baisse du % dans une semaine de changement : pas de « reset probable » ; hors changement : signalée', () => {
+  const pr = [releve('08', 40), releve('09', 60), releve('10', 30), releve('11', 28)];
+  assert.ok(!aSignal(controler(dFab(pr), { forfaits: FORF }, { maintenant: MAINT })));
+  assert.ok(aSignal(controler(dFab(pr), { forfaits: [] }, { maintenant: MAINT })));
+});
+
+test('sans table « forfaits » (export ancien) : mêmes contrôles qu’avec une table vide', () => {
+  const vide = lire(); vide.tables.forfaits = [];
+  const x = lire(); delete x.tables.forfaits;
+  assert.deepEqual(verifier(x), verifier(vide));
+});
+
+tester('libellés « Pro » puis « pro » (même forfait, sans changement) : une seule médiane', () => {
+  // Groupe Pro = 100, 100 $ ; la pente récente de « pro » (300 $) doit être comparée à ce groupe, donc signalée
+  const v = controler(dFab([]), { forfaits: [{ date: '2026-10-18', semaine: '2026-10-18', forfait: 'Pro', changement: false },
+    { date: '2026-10-25', semaine: '2026-10-25', forfait: 'pro', changement: false }], semaines: [], plafondsHebdo: [],
+    pentes: [pente('2026-10-20T10:00', 100), pente('2026-10-21T10:00', 100), pente('2026-11-02T10:00', 300)] }, { maintenant: MAINT });
+  assert.ok(v.aVerifier.some(a => a.includes('300 $') && a.includes('du forfait « pro »')), JSON.stringify(v));
 });
