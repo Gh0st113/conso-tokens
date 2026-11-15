@@ -74,7 +74,7 @@
   <section class="cc-reset" id="reset" aria-label="Remise à zéro du forfait">
     <h2>Le forfait repart à zéro chaque dimanche à 10 h UTC</h2>
     <p>Soit 11 h à Paris en hiver et midi en été : le cycle dure exactement 7 × 24 h et ne suit pas le changement d'heure. Prochaine remise à zéro : <b data-draw="prochain">—</b>.</p>
-    <p class="cc-muted">Heure lue dans l'appli (/usage) ; heure non réglable pour l'instant (README, « Limites »). Chaque barre du graphe hebdomadaire couvre une fenêtre de forfait, d'un dimanche 10 h UTC au suivant. Sur le graphe par jour, les traits pointillés marquent ces remises à zéro. Ces fenêtres ne comptent que ce PC (Claude Code et, sous Windows, Cowork local seulement s'il a laissé des journaux, soit jusqu'à fin octobre 2026), alors que le forfait compte aussi claude.ai, le téléphone et Cowork distant.</p>
+    <p class="cc-muted">Heure lue dans l'appli (/usage) ; heure non réglable pour l'instant (README, « Limites »). Chaque barre du graphe hebdomadaire couvre une fenêtre de forfait, d'un dimanche 10 h UTC au suivant. Sur le graphe par jour, les traits pointillés marquent ces remises à zéro. Ces fenêtres ne comptent que ce PC (Claude Code et, sous Windows, Cowork local, journaux jusqu'à fin octobre 2026), alors que le forfait compte aussi claude.ai, le téléphone et Cowork distant.</p>
   </section>
 
   <section class="cc-card" id="pentes">
@@ -175,7 +175,7 @@
   <section class="cc-card" id="methode">
     <h2>Comment ces chiffres sont faits</h2>
     <ul class="cc-muted">
-      <li>Source : les journaux des sessions Claude Code (dossier projects de Claude Code) et, sous Windows, Cowork (sessions locales de Claude Desktop, présentes seulement pour l'historique jusqu'à fin octobre 2026) de ce PC ; les sessions Cowork d'un Mac ou de Linux ne sont pas lues. Seuls les compteurs de jetons et les relevés de limite sont lus, jamais le contenu des échanges.</li>
+      <li>Source : les journaux des sessions Claude Code (dossier projects de Claude Code) et, sous Windows, Cowork (sessions locales de Claude Desktop, écrites jusqu'à fin octobre 2026, lues pour l'historique) de ce PC ; les sessions Cowork d'un Mac ou de Linux ne sont pas lues. Seuls les compteurs de jetons et les relevés de limite sont lus, jamais le contenu des échanges.</li>
       <li>Une réponse occupe souvent plusieurs lignes du journal, et une session reprise recopie l'historique : chaque réponse n'est comptée qu'une fois, par son identifiant.</li>
       <li>Hors périmètre : discussions claude.ai et application mobile (stockées chez Anthropic), sessions d'autres PC (ajoutables avec --journaux).</li>
       <li>Un jour sans barre n'a aucune réponse dans les journaux de ce PC. Une bande orange, s'il y en a, marque une période dont on sait que les journaux manquent.</li>
