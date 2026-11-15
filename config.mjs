@@ -4,7 +4,7 @@ import { readFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve, relative, isAbsolute, sep } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { lireCycle, lireResets } from './reglages.mjs';
+import { lireCycle, lireResets, lireForfaits } from './reglages.mjs';
 import { fabriquer } from './semaine.mjs';
 
 export const ici = dirname(fileURLToPath(import.meta.url));
@@ -63,6 +63,10 @@ let resets;
 try { resets = lireResets(c.resets ?? undefined, fabriquer(REMISE_A_ZERO).debutSemaine); } catch (e) { erreur(`resets ${e.message}`); }
 export const RESETS = resets.semaines;
 export const RESETS_PRECIS = resets.precis;
+// Forfaits déclarés à la main (clé forfaits, 15/11) : [{ date, semaine, forfait, changement }] triée par date (validation dans reglages.mjs)
+let forfaits;
+try { forfaits = lireForfaits(c.forfaits, REMISE_A_ZERO, fabriquer(REMISE_A_ZERO).debutSemaine); } catch (e) { erreur(`forfaits ${e.message}`); }
+export const FORFAITS = forfaits;
 // Périodes où l'on SAIT que les journaux manquent : [[premier jour, dernier jour, raison], …] (bande orange sur la page)
 export const TROUS = c.trous ?? [];
 if (!Array.isArray(TROUS) || TROUS.some(t => !Array.isArray(t) || t.length !== 3)) erreur('« trous » doit être une liste [[début, fin, raison], …]');

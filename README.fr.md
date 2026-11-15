@@ -44,7 +44,7 @@ estimer le plafond hebdo. Sans sonar, seuls les relevés écrits dans les journa
 git clone https://github.com/Gh0st113/conso-tokens
 cd conso-tokens
 node agreger.mjs        # lit les journaux → donnees/donnees.json (et une archive des compteurs)
-node exporter.mjs       # → donnees/export/*.json (12 tables) + la ligne CONTRÔLES
+node exporter.mjs       # → donnees/export/*.json (13 tables) + la ligne CONTRÔLES
 node --test             # tests
 ```
 
@@ -65,6 +65,7 @@ Réglages facultatifs : copier `config.exemple.json` en `config.local.json` (ign
 | `remiseAZero` | jour et heure UTC de la remise à zéro hebdo : `{ "jour": "lundi", "heureUTC": "08:00" }` (nom du jour en français ou en anglais, `HH:MM`). Défaut : dimanche 10:00 UTC. Un changement redécoupe tout l'historique : les clés de `resets` doivent alors être des débuts de semaine du nouveau cycle |
 | `resets` | resets de limite utilisés, deux formes (voir ci-dessous) : `{ "AAAA-MM-JJ": "quand" }` (semaine entière) ou une liste `[{ "quand": "AAAA-MM-JJTHH:MMZ", "type": "hebdo", "note": "…" }]` (heure exacte, découpage) |
 | `trous` | périodes dont vous savez que les journaux manquent : `[["premier jour", "dernier jour", "raison"]]` |
+| `forfaits` | changements de forfait déclarés à la main : `{ "AAAA-MM-JJ": "forfait" }`, appliqués à toute la semaine qui contient la date (voir ci-dessous) |
 
 **Resets de limite** (`resets`). L'ancienne forme (objet `{ "AAAA-MM-JJ": "quand" }`) marque la semaine entière comme « reset utilisé », sans plafond : c'est le comportement d'origine. La nouvelle forme donne l'heure exacte, en UTC, avec le `Z` :
 
@@ -79,6 +80,19 @@ Réglages facultatifs : copier `config.exemple.json` en `config.local.json` (ign
 Une valeur invalide arrête le script avec un message `config.local.json : resets…`. Avec la nouvelle forme, **la semaine est découpée** en segments, un par reset : le plafond et la sortie de la semaine sont calculés sur le segment retenu (celui qui a le plus grand % local, à égalité le plus récent), avec son propre coût ; les pentes ne relient jamais deux segments ; le statut de la semaine indique la coupure. Hypothèse retenue : un reset à la demande ne déplace pas la fin de la semaine (un seul cas observé).
 
 **Détection** : si le % hebdo baisse de 3 points ou plus sans reset déclaré, et que le relevé suivant confirme la baisse, `CONTRÔLES` signale `reset probable … non déclaré dans « resets »`. Une baisse isolée (un seul relevé) n'est pas signalée. Rien n'est corrigé automatiquement. Le plus haut % est pris dans le segment seulement : un reset déclaré remet le maximum à zéro pour les relevés qui le suivent.
+
+**Changements de forfait** (`forfaits`). Le forfait (Pro, Max 5x…) n'est **pas détecté automatiquement** : les journaux ne le contiennent pas, et aucun fichier d'identifiants n'est lu. Déclarez chaque changement vous-même, avec le premier jour du nouveau forfait ; toute la semaine qui contient ce jour est le nouveau forfait :
+
+```json
+"forfaits": { "2026-01-04": "Pro", "2026-01-13": "Max 5x" }
+```
+
+- La semaine d'une date suit l'heure de remise à zéro de ce jour-là : avec le cycle par défaut (dimanche 10:00 UTC), un jour de remise à zéro appartient à la **nouvelle** semaine, quelle que soit l'heure du cycle.
+- Le libellé est un texte libre : 1 à 40 caractères, lettres, chiffres, espaces et `. + -` (ni parenthèse ni `%`, qui fausseraient les contrôles qui lisent le statut). Les espaces de bord sont ignorés, et `Pro` / `pro` désignent le même forfait. Le libellé **est publié sur la page** : n'y mettez jamais un nom personnel (employeur, client…).
+- Un **changement** (libellé différent de l'entrée précédente) fait de sa semaine une *semaine de changement*. Son plafond est calculé comme d'habitude mais marqué `plafond indicatif : mêle deux forfaits (A → B)` : la semaine mêle deux limites, le chiffre est affiché mais **jamais comparé** aux autres semaines (ni dans la bande de plausibilité, ni dans la ligne du plafond de la page). Pour un plafond propre à cette semaine, déclarez l'heure du changement comme reset précis dans `resets` : la semaine est alors coupée, et la marque « indicatif » reste.
+- Les semaines avant la première entrée n'ont pas de forfait (`inconnu` dans le statut). Sans la clé, rien ne change.
+- Forfaits **Team** : la limite dépend du siège (Standard ou Premium) ; écrivez-le dans le libellé (`"Team Premium"`). **Enterprise** (usage au tarif de l'API) et tout forfait sans limite hebdo en % : sans relevé de %, aucun plafond n'est estimé ; le tableau montre le montant consommé, comme avant.
+- Une entrée invalide arrête le script avec un message `config.local.json : forfaits…`.
 
 Journaux d'un autre PC : `node agreger.mjs --journaux <chemin vers son .claude/projects>` (répétable).
 
@@ -109,8 +123,8 @@ navigateur n'affiche rien**.
 1. Dans l'appli Claude, ouvrir l'onglet **Code** dans ce dossier.
 2. Demander : *« Crée un artefact Dashboard privé à partir de `page/index.html`, avec comme données les 12 fichiers de
    `donnees/export/`, chacun nommé comme son fichier »* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`,
-   `contexte`, `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`).
-3. Après chaque nouvel export : *« Recharge les 12 données de mon tableau depuis `donnees/export/` »*.
+   `contexte`, `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `forfaits`).
+3. Après chaque nouvel export : *« Recharge les 13 données de mon tableau depuis `donnees/export/` »*.
 
 Gardez l'artefact privé : qui l'ouvre peut lire les fichiers (noms de dossiers, coûts, sessions).
 
@@ -138,6 +152,7 @@ Sous macOS / Linux : `HOME=../demo-home node agreger.mjs && HOME=../demo-home no
   plafond hebdo est donné en fourchette, sinon en estimation unique ; aucun plafond quand la part payée sur ce PC est sous
   10 % ou que la fourchette dépasse 25 % du plafond.
 - Limites connues de la détection de reset : les relevés sous 10 % sont ignorés, donc une baisse qui laisse le % sous 10 jusqu'à la fin de la semaine n'est pas signalée ; une ligne de relevé aberrante isolée reste dans les pentes ; un relevé isolé anormalement **haut** (ex. 40, 100, 30, 28 %) peut donner un « reset probable » à tort (c'est un « à vérifier », jamais une correction). Un reset déclaré à l'instant exact de la remise à zéro du cycle est ignoré (il ne coupe rien).
+- Les changements de forfait (`forfaits`) sont datés à la semaine, pas à l'heure : la semaine entière sort des comparaisons et son plafond n'est qu'indicatif. Un changement non déclaré n'est pas détecté : les forfaits se mêlent, comme avant.
 
 ## Licence
 

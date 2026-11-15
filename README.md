@@ -45,7 +45,7 @@ weekly cap. Without sonar, only the readings written into the Claude Code logs a
 git clone https://github.com/Gh0st113/conso-tokens
 cd conso-tokens
 node agreger.mjs        # reads the logs → donnees/donnees.json (and a counter archive)
-node exporter.mjs       # → donnees/export/*.json (12 tables) + the CONTRÔLES line
+node exporter.mjs       # → donnees/export/*.json (13 tables) + the CONTRÔLES line
 node --test             # tests
 ```
 
@@ -65,6 +65,7 @@ Optional settings: copy `config.exemple.json` to `config.local.json` (ignored by
 | `remiseAZero` | day and UTC hour of the weekly reset: `{ "jour": "monday", "heureUTC": "08:00" }` (day name in French or English, `HH:MM`). Default: Sunday 10:00 UTC. A change re-cuts the whole history: the keys of `resets` must then be week starts of the new cycle |
 | `resets` | limit resets you used, two forms (see below): `{ "YYYY-MM-DD": "when" }` (whole week) or a list `[{ "quand": "YYYY-MM-DDTHH:MMZ", "type": "hebdo", "note": "…" }]` (exact time, week cut) |
 | `trous` | periods whose logs you know are missing: `[["first day", "last day", "reason"]]` |
+| `forfaits` | plan changes you declare by hand: `{ "YYYY-MM-DD": "plan" }`, applied to the whole week containing the date (see below) |
 
 **Limit resets** (`resets`). The old form (an object `{ "YYYY-MM-DD": "when" }`) marks the whole week as "reset used", with no cap: that is the original behaviour. The new form gives the exact time, in UTC, with the `Z`:
 
@@ -79,6 +80,19 @@ Optional settings: copy `config.exemple.json` to `config.local.json` (ignored by
 An invalid value stops the script with a `config.local.json : resets…` message. With the new form, **the week is cut** into segments, one per reset: the cap and the output of the week are computed on the retained segment (the one with the largest local %, the most recent on a tie), with its own cost; slopes never join two segments; the status of the week mentions the cut. Assumption: a reset on demand does not move the end of the week (one case observed).
 
 **Detection**: if the weekly % drops by 3 points or more without a declared reset, and the next reading confirms the drop, `CONTRÔLES` reports `reset probable … non déclaré dans « resets »` (the French wording is kept on purpose: the check output is in French). An isolated drop (a single reading) is not reported. Nothing is corrected automatically. The highest % is taken within the segment only: a declared reset starts a new maximum for the readings that follow it.
+
+**Plan changes** (`forfaits`). The plan (Pro, Max 5x…) is **not detected automatically**: the logs do not contain it, and no credentials file is read. Declare each change yourself, with the first day of the new plan; the whole week containing that day is the new plan:
+
+```json
+"forfaits": { "2026-01-04": "Pro", "2026-01-13": "Max 5x" }
+```
+
+- The week of a date uses the reset time of that day: with the default Sunday 10:00 UTC cycle, a reset day belongs to the **new** week, whatever the hour of the cycle.
+- The label is free text: 1 to 40 characters, letters, digits, spaces and `. + -` (no parenthesis nor `%`, which would confuse the checks reading the status). Edge spaces are ignored and `Pro` / `pro` are the same plan. The label **is published on the page**: never put a personal name (employer, client…) in it.
+- A **change** (a label different from the previous entry) makes its week a *change week*. Its cap is computed as usual but marked `plafond indicatif : mêle deux forfaits (A → B)`: the week mixes two limits, so the figure is shown but **never compared** with the other weeks (neither in the plausibility band nor in the cap line of the page). To get a clean cap for that week, declare the reset hour of the change as a precise reset in `resets`: the week is then cut, and the indicative mark stays.
+- Weeks before the first entry have no plan (`inconnu` in the status). Without the key, nothing changes.
+- **Team** plans: the limit depends on the seat (Standard or Premium), so write it in the label (`"Team Premium"`). **Enterprise** (usage at API prices) and any plan without a weekly % limit: without a % reading, no cap is estimated; the table shows the amount consumed, as before.
+- An invalid entry stops the script with a `config.local.json : forfaits…` message.
 
 Logs from another PC: `node agreger.mjs --journaux <path to its .claude/projects>` (repeatable).
 
@@ -105,10 +119,10 @@ want a long history.
 chart library and data loader that claude.ai provides, so **opening it directly in a browser shows nothing**.
 
 1. In the Claude desktop app, open the **Code** tab in this folder.
-2. Ask: *"Create a private Dashboard artifact from `page/index.html`, with the 12 files of `donnees/export/` as its
+2. Ask: *"Create a private Dashboard artifact from `page/index.html`, with the 13 files of `donnees/export/` as its
    datasets, each named after its file"* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`, `contexte`,
-   `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`).
-3. After each new export: *"Reload the 12 datasets of my dashboard from `donnees/export/`"*.
+   `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `forfaits`).
+3. After each new export: *"Reload the 13 datasets of my dashboard from `donnees/export/`"*.
 
 Keep the artifact private: whoever opens it can read the files (folder names, costs, sessions).
 
@@ -136,6 +150,7 @@ On macOS / Linux: `HOME=../demo-home node agreger.mjs && HOME=../demo-home node 
   weekly cap is given as a range, otherwise as a single estimate; no cap at all when the share paid on this PC is under
   10 % or the range is wider than 25 % of the cap.
 - Known limits of the reset detection: readings under 10 % are ignored, so a drop that leaves the % under 10 until the end of the week is not reported; a single odd reading stays in the slopes; a single abnormally **high** reading (e.g. 40, 100, 30, 28 %) can wrongly give a "probable reset" (a "to check" line, never a correction). A reset declared at the exact instant of the cycle's own reset is ignored (it cuts nothing).
+- Plan changes (`forfaits`) are dated to the week, not to the hour: the whole week is left out of the comparisons and its cap is only indicative. An undeclared plan change is not detected: the plans are mixed, as before.
 
 ## License
 
