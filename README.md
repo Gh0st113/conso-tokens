@@ -6,7 +6,7 @@ A local dashboard of your Claude Code usage: what your sessions would cost at pu
 per day, per working folder, per model and per session, plus an estimate of your **weekly plan cap in dollars** built
 from the usage percentage the app shows.
 
-It reads only the token counters and timestamps of the Claude Code logs on your machine, **never the content of your
+It reads only the token counters and timestamps of the Claude Code logs (and, on Windows, the Cowork local ones) on your machine, **never the content of your
 conversations**, and everything stays on your machine (except what you choose to publish).
 
 Companion project: [**sonar**](https://github.com/Gh0st113/sonar), a mod for the Code tab of Claude Desktop. Its

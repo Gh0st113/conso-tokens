@@ -6,7 +6,7 @@ Un tableau de bord local de votre usage de Claude Code : ce que vos sessions co�
 semaine de forfait, par jour, par dossier de travail, par modèle et par session, plus une estimation du **plafond hebdo
 de votre forfait en dollars**, tirée du pourcentage d'usage qu'affiche l'appli.
 
-Il ne lit que les compteurs de jetons et les horodatages des journaux de Claude Code de votre machine, **jamais le
+Il ne lit que les compteurs de jetons et les horodatages des journaux de Claude Code (et, sous Windows, de Cowork local) de votre machine, **jamais le
 contenu de vos conversations**, et tout reste sur votre machine (sauf ce que vous choisissez de publier).
 
 Projet compagnon : [**sonar**](https://github.com/Gh0st113/sonar), un mod pour l'onglet Code de Claude Desktop. Son

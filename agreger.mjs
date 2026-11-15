@@ -121,7 +121,7 @@ const heure = ts => Number(new Date(ts).toLocaleString('en-GB', { timeZone: 'Eur
 
 const appels = new Map(); // clé = message.id : une réponse peut occuper plusieurs lignes
 const limites = new Map(); // clé = horodatage + type : un même message peut être recopié par une reprise de session
-// Relevés du % écrits par l'appli (rate_limit_event, surtout dans les journaux Cowork d'avant fin octobre 2026) : clé = uuid
+// Relevés du % écrits par l'appli (rate_limit_event, surtout dans les journaux Cowork jusqu'à fin octobre 2026) : clé = uuid
 const relevesAuto = new Map();
 let lignes = 0, illisibles = 0;
 
