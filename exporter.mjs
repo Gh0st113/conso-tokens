@@ -4,17 +4,26 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { controler, rapport } from './controles.mjs';
-import { DONNEES, RESETS, TROUS, ici } from './config.mjs';
+import { DONNEES, RESETS, TROUS, REMISE_A_ZERO, ici } from './config.mjs';
+import { fabriquer } from './semaine.mjs';
 import { execFileSync } from 'node:child_process';
 
 const d = JSON.parse(readFileSync(join(DONNEES, 'donnees.json'), 'utf8'));
 const sortie = join(DONNEES, 'export');
 mkdirSync(sortie, { recursive: true });
 
-// Un seul « maintenant » pour tout l'export et ses contrôles (13/11) : sinon, autour du dimanche 10:00 UTC, l'export
+// Un seul « maintenant » pour tout l'export et ses contrôles (13/11) : sinon, autour de la remise à zéro hebdo, l'export
 // et les contrôles pourraient voir deux semaines différentes
 const MAINTENANT = Date.now();
 const r2 = n => Math.round(n * 100) / 100;
+const { debutSemaine, instantDebut } = fabriquer(REMISE_A_ZERO);
+// Jour de Paris (AAAA-MM-JJ) d'un instant : les jours calendaires restent en heure de Paris
+const jourParis = ts => new Date(ts).toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
+// Jours de Paris d'une semaine, du jour de sa remise à zéro à celui de la suivante (inclus)
+const joursParis = debut => {
+  const a = Date.parse(jourParis(instantDebut(debut)) + 'T12:00:00Z'), b = Date.parse(jourParis(instantDebut(debut) + 7 * 864e5) + 'T12:00:00Z');
+  return Array.from({ length: Math.round((b - a) / 864e5) + 1 }, (_, i) => new Date(a + i * 864e5).toISOString().slice(0, 10));
+};
 // Format du 07/11 (dossiers par jour, jours des sessions) : donnees.json plus ancien → relancer agreger.mjs d'abord
 if (!d.jourProjet || !d.jourModeleTotal || !d.jourTailles || d.sessions.some(s => !s.jour || !s.jourFin)) {
   console.error('ERREUR : donnees.json vient d\'une ancienne version d\'agreger.mjs (champs par jour ou jour des sessions absents) : relancer node agreger.mjs');
@@ -37,8 +46,8 @@ const semainesContinues = () => {
   const cles = Object.keys(d.parSemaine).sort(), out = [];
   const zero = { cout: 0, appels: 0, entree: 0, ecritureCache: 0, lectureCache: 0, sortie: 0, modeles: {} };
   if (!cles.length) return out;
-  // Jusqu'à la semaine en cours, même sans réponse encore (juste après la remise à zéro du dimanche 10 h UTC)
-  const n = new Date(MAINTENANT - 10 * 36e5), enCours = new Date(n - n.getUTCDay() * 864e5).toISOString().slice(0, 10);
+  // Jusqu'à la semaine en cours, même sans réponse encore (juste après la remise à zéro du cycle)
+  const enCours = debutSemaine(MAINTENANT);
   const fin = Math.max(Date.parse(cles.at(-1) + 'T12:00:00Z'), Date.parse(enCours + 'T12:00:00Z'));
   for (let t = Date.parse(cles[0] + 'T12:00:00Z'); t <= fin; t += 7 * 864e5) {
     const debut = new Date(t).toISOString().slice(0, 10);
@@ -111,8 +120,8 @@ const tables = {
     debut, cout: r2(v.cout), appels: v.appels, jetons: jetons(v), ...parGroupe(v.modeles),
     // Jetons par groupe de modèles (jopus55…), pour la vue « jetons » de la page
     ...parGroupe(v.jetonsModeles ?? {}, 'j', Math.round),
-    // Semaine touchée par un trou : jours de la fenêtre (dimanche 10 h UTC → dimanche suivant) dans TROUS
-    manque: [...Array(8).keys()].map(i => trou(new Date(Date.parse(debut + 'T12:00:00Z') + i * 864e5).toISOString().slice(0, 10))).find(Boolean) ?? '',
+    // Semaine touchée par un trou : jours de Paris de la fenêtre (remise à zéro → remise à zéro suivante) dans TROUS
+    manque: joursParis(debut).map(trou).find(Boolean) ?? '',
   })),
   jours: joursContinus(),
   // Une ligne par jour (heure de Paris) et par dossier : la page additionne sur la période choisie (7 j, 30 j, tout ; 07/11)
@@ -132,11 +141,11 @@ const tables = {
   // Comparatif hebdo : une ligne par semaine, plafond atteint, projeté depuis un relevé, ou seulement borne basse.
   // Semaine où un reset a été utilisé : le compteur repart de zéro sans que la fin bouge, coût ÷ % n'a plus
   // de sens → pas de plafond.
-  // Semaines continues (08/11) : la semaine neuve apparaît « en cours » même sans appel depuis le reset du dimanche
+  // Semaines continues (08/11) : la semaine neuve apparaît « en cours » même sans appel depuis la dernière remise à zéro
   plafondsHebdo: semainesContinues().map(([debut, v]) => {
     const reset = RESETS[debut];
     if (reset) return { semaine: debut, statut: `reset utilisé (${reset})`, plafond: null, sortie: null, consomme: r2(v.cout), consommeSortie: v.sortie };
-    const fin = new Date(Date.parse(debut + 'T10:00:00Z') + 7 * 864e5).toISOString();
+    const fin = new Date(instantDebut(debut) + 7 * 864e5).toISOString();
     const atteint = d.plafonds.find(p => p.type === 'hebdo' && p.reset === fin);
     const proj = d.projections.filter(p => p.type === 'hebdo' && p.debutFenetre.slice(0, 10) === debut).at(-1);
     const enCours = Date.parse(fin) > MAINTENANT;
@@ -206,13 +215,15 @@ const tables = {
     ctxMax: s.ctxMax, cout: r2(s.cout), jetons: jetons(s),
     modele: Object.entries(s.modeles).sort((a, b) => b[1] - a[1])[0][0],
   })),
+  // Réglages (11e table) : une seule ligne, valable pour tout le tableau (jour et heure UTC de la remise à zéro)
+  reglages: [{ jour: REMISE_A_ZERO.jour, jourNum: REMISE_A_ZERO.jourNum, heureUTC: REMISE_A_ZERO.heureUTC, fuseau: 'UTC' }],
 };
 
 for (const [nom, rows] of Object.entries(tables)) writeFileSync(join(sortie, `${nom}.json`), JSON.stringify(rows));
 console.log(Object.entries(tables).map(([n, r]) => `${n}: ${r.length}`).join(', '), '->', sortie);
 if (inconnus.size) console.log(`Info : modèle(s) hors de GROUPES, chacun en série à part sur la page : ${[...inconnus].join(', ')}`);
 // Contrôles de cohérence (13/11) : n'empêchent pas l'export (code de retour 0), la ligne « CONTRÔLES : … » est à citer telle quelle
-console.log(rapport(controler(d, tables, { maintenant: MAINTENANT, groupes: SERIES })));
+console.log(rapport(controler(d, tables, { maintenant: MAINTENANT, groupes: SERIES, debutSemaine })));
 // Garde-fou de publication (13/11) : un fichier modifié ou nouveau dans le dépôt (hors fichiers ignorés) est signalé.
 // Une mise à jour des données ne doit RIEN changer dans le dépôt : pas de ligne « DÉPÔT » si tout est propre ; sinon, à citer telle quelle.
 // Limites : ne regarde que le dépôt (pas un dossier de données placé ailleurs), ni les fichiers ignorés par git.

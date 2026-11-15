@@ -4,6 +4,7 @@ import { readFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve, relative, isAbsolute, sep } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { lireCycle } from './semaine.mjs';
 
 export const ici = dirname(fileURLToPath(import.meta.url));
 const erreur = m => { throw new Error(`config.local.json : ${m}`); };
@@ -50,9 +51,13 @@ export function nomProjet(cle) {
   return sans.toLowerCase().startsWith(maison.toLowerCase()) ? sans.slice(maison.length) || sans : sans;
 }
 
-// Resets de la limite hebdo donnés à la main : { "AAAA-MM-JJ (dimanche de la semaine)": "quand" }
+// Resets de la limite hebdo donnés à la main : { "AAAA-MM-JJ (premier jour de la semaine)": "quand" }
 export const RESETS = c.resets ?? {};
 // Périodes où l'on SAIT que les journaux manquent : [[premier jour, dernier jour, raison], …] (bande orange sur la page)
 export const TROUS = c.trous ?? [];
+// Remise à zéro hebdo (jour et heure UTC) : clé remiseAZero, défaut dimanche 10:00 UTC. Seul endroit qui lit cette clé
+let cycle;
+try { cycle = lireCycle(c.remiseAZero); } catch (e) { erreur(`remiseAZero ${e.message}`); }
+export const REMISE_A_ZERO = cycle;
 if (typeof RESETS !== 'object' || Array.isArray(RESETS)) erreur('« resets » doit être un objet { "AAAA-MM-JJ": "quand" }');
 if (!Array.isArray(TROUS) || TROUS.some(t => !Array.isArray(t) || t.length !== 3)) erreur('« trous » doit être une liste [[début, fin, raison], …]');

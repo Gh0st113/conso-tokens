@@ -45,7 +45,7 @@ weekly cap. Without sonar, only the readings written into the Claude Code logs a
 git clone https://github.com/Gh0st113/conso-tokens
 cd conso-tokens
 node agreger.mjs        # reads the logs → donnees/donnees.json (and a counter archive)
-node exporter.mjs       # → donnees/export/*.json (10 tables) + the CONTRÔLES line
+node exporter.mjs       # → donnees/export/*.json (11 tables) + the CONTRÔLES line
 node --test             # tests
 ```
 
@@ -62,7 +62,8 @@ Optional settings: copy `config.exemple.json` to `config.local.json` (ignored by
 | `dossierDonnees` | where data goes (default `donnees/` in this folder; `~/…` accepted). Keeping it outside the repository is safer |
 | `motifProjet` | regular expression whose group 1 turns a log folder key into a short folder name |
 | `renommerProjets` | `[[regex, name], …]` tried first, e.g. to show a sensitive folder under a neutral name |
-| `resets` | weeks where you used a limit reset: `{ "YYYY-MM-DD": "when" }`, the date being the Sunday that opens the week |
+| `remiseAZero` | day and UTC hour of the weekly reset: `{ "jour": "monday", "heureUTC": "08:00" }` (day name in French or English, `HH:MM`). Default: Sunday 10:00 UTC. A change re-cuts the whole history: the keys of `resets` must then be week starts of the new cycle |
+| `resets` | weeks where you used a limit reset: `{ "YYYY-MM-DD": "when" }`, the date being the day that opens the week (the reset day) |
 | `trous` | periods whose logs you know are missing: `[["first day", "last day", "reason"]]` |
 
 Logs from another PC: `node agreger.mjs --journaux <path to its .claude/projects>` (repeatable).
@@ -90,10 +91,10 @@ want a long history.
 chart library and data loader that claude.ai provides, so **opening it directly in a browser shows nothing**.
 
 1. In the Claude desktop app, open the **Code** tab in this folder.
-2. Ask: *"Create a private Dashboard artifact from `page/index.html`, with the 10 files of `donnees/export/` as its
+2. Ask: *"Create a private Dashboard artifact from `page/index.html`, with the 11 files of `donnees/export/` as its
    datasets, each named after its file"* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`, `contexte`,
-   `plafondsHebdo`, `plafonds5h`, `pentes`).
-3. After each new export: *"Reload the 10 datasets of my dashboard from `donnees/export/`"*.
+   `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`).
+3. After each new export: *"Reload the 11 datasets of my dashboard from `donnees/export/`"*.
 
 Keep the artifact private: whoever opens it can read the files (folder names, costs, sessions).
 
@@ -115,8 +116,8 @@ On macOS / Linux: `HOME=../demo-home node agreger.mjs && HOME=../demo-home node 
 ## Limits
 
 - "API equivalent" is an order of magnitude to compare weeks, not how the plan is billed nor the percentage of `/usage`.
-- The weekly reset is fixed at **Sunday 10:00 UTC** and days are calendar days in the **Europe/Paris** time zone. Neither
-  is configurable yet: they are spread over the scripts and the page.
+- The weekly reset is set by the `remiseAZero` key (default **Sunday 10:00 UTC**), one cycle for the whole history.
+  Calendar days stay in the **Europe/Paris** time zone and are not configurable.
 - Usage outside this PC is deduced from whole-number percentages, not measured: when such periods are spotted, the
   weekly cap is given as a range, otherwise as a single estimate; no cap at all when the share paid on this PC is under
   10 % or the range is wider than 25 % of the cap.

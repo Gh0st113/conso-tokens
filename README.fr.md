@@ -44,7 +44,7 @@ estimer le plafond hebdo. Sans sonar, seuls les relevés écrits dans les journa
 git clone https://github.com/Gh0st113/conso-tokens
 cd conso-tokens
 node agreger.mjs        # lit les journaux → donnees/donnees.json (et une archive des compteurs)
-node exporter.mjs       # → donnees/export/*.json (10 tables) + la ligne CONTRÔLES
+node exporter.mjs       # → donnees/export/*.json (11 tables) + la ligne CONTRÔLES
 node --test             # tests
 ```
 
@@ -62,7 +62,8 @@ Réglages facultatifs : copier `config.exemple.json` en `config.local.json` (ign
 | `dossierDonnees` | où vont les données (défaut `donnees/` dans ce dossier ; `~/…` accepté). Hors du dépôt, c'est plus sûr |
 | `motifProjet` | expression régulière dont le groupe 1 tire un nom court de dossier de la clé des journaux |
 | `renommerProjets` | `[[expression, nom], …]` testés d'abord, par ex. pour afficher un dossier sensible sous un nom neutre |
-| `resets` | semaines où vous avez utilisé un reset de limite : `{ "AAAA-MM-JJ": "quand" }`, la date étant le dimanche qui ouvre la semaine |
+| `remiseAZero` | jour et heure UTC de la remise à zéro hebdo : `{ "jour": "lundi", "heureUTC": "08:00" }` (nom du jour en français ou en anglais, `HH:MM`). Défaut : dimanche 10:00 UTC. Un changement redécoupe tout l'historique : les clés de `resets` doivent alors être des débuts de semaine du nouveau cycle |
+| `resets` | semaines où vous avez utilisé un reset de limite : `{ "AAAA-MM-JJ": "quand" }`, la date étant le jour qui ouvre la semaine (jour de la remise à zéro) |
 | `trous` | périodes dont vous savez que les journaux manquent : `[["premier jour", "dernier jour", "raison"]]` |
 
 Journaux d'un autre PC : `node agreger.mjs --journaux <chemin vers son .claude/projects>` (répétable).
@@ -92,10 +93,10 @@ bibliothèque de graphiques et le chargeur de données fournis par claude.ai, do
 navigateur n'affiche rien**.
 
 1. Dans l'appli Claude, ouvrir l'onglet **Code** dans ce dossier.
-2. Demander : *« Crée un artefact Dashboard privé à partir de `page/index.html`, avec comme données les 10 fichiers de
+2. Demander : *« Crée un artefact Dashboard privé à partir de `page/index.html`, avec comme données les 11 fichiers de
    `donnees/export/`, chacun nommé comme son fichier »* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`,
-   `contexte`, `plafondsHebdo`, `plafonds5h`, `pentes`).
-3. Après chaque nouvel export : *« Recharge les 10 données de mon tableau depuis `donnees/export/` »*.
+   `contexte`, `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`).
+3. Après chaque nouvel export : *« Recharge les 11 données de mon tableau depuis `donnees/export/` »*.
 
 Gardez l'artefact privé : qui l'ouvre peut lire les fichiers (noms de dossiers, coûts, sessions).
 
@@ -117,8 +118,8 @@ Sous macOS / Linux : `HOME=../demo-home node agreger.mjs && HOME=../demo-home no
 ## Limites
 
 - L'« équivalent API » est un ordre de grandeur pour comparer les semaines, ni la facturation du forfait ni le % de `/usage`.
-- La remise à zéro hebdo est fixée au **dimanche 10:00 UTC** et les jours sont des jours calendaires au fuseau
-  **Europe/Paris**. Ni l'un ni l'autre n'est encore réglable : ils sont répartis dans les scripts et la page.
+- La remise à zéro hebdo se règle par la clé `remiseAZero` (défaut : **dimanche 10:00 UTC**), un seul cycle pour tout
+  l'historique. Les jours calendaires restent au fuseau **Europe/Paris**, non réglable.
 - L'usage hors de ce PC est déduit de pourcentages entiers, pas mesuré : quand de telles périodes sont repérées, le
   plafond hebdo est donné en fourchette, sinon en estimation unique ; aucun plafond quand la part payée sur ce PC est sous
   10 % ou que la fourchette dépasse 25 % du plafond.

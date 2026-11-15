@@ -5,6 +5,7 @@
 //   anomalie   = incohérence certaine (un calcul ou une donnée est faux) → à corriger dans agreger/exporter ;
 //   aVerifier  = valeur peu plausible ou relevés manquants → peut être vraie, à regarder avant de s'y fier.
 // Fonction pure : aucune écriture, aucun accès disque ; `maintenant` en paramètre pour les tests.
+import { fabriquer, CYCLE_DEFAUT } from './semaine.mjs';
 
 // Champs qui ont le droit d'être null (estimation impossible) ; tout autre nombre doit être fini
 const NULLS_PERMIS = new Set(['plafond', 'sortie', 'pctFin', 'horsEstime']);
@@ -22,7 +23,8 @@ const medianne = xs => { const s = [...xs].sort((a, b) => a - b); return s.lengt
 const dateUTC = s => Date.parse(/T\d\d:\d\d$/.test(s) ? s + ':00Z' : s);
 const jourParis = t => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(t);
 
-export function controler(d, tables, { maintenant = Date.now(), groupes = [] } = {}) {
+// `debutSemaine` : même fonction que celle de l'export (exporter.mjs) ; par défaut, cycle de config par défaut
+export function controler(d, tables, { maintenant = Date.now(), groupes = [], debutSemaine = fabriquer(CYCLE_DEFAUT).debutSemaine } = {}) {
   const anomalies = [], aVerifier = [];
   const t = d.total ?? {}, total = t.cout;
   // Sans total valide, toutes les comparaisons de sommes seraient silencieuses (NaN > x vaut faux)
@@ -86,8 +88,7 @@ export function controler(d, tables, { maintenant = Date.now(), groupes = [] } =
     // Un plafond affiché doit couvrir ce que la semaine a déjà coûté (sinon la projection est contredite)
     if (r.plafond != null && !r.statut.startsWith('atteint') && r.consomme > r.plafond + 0.01) anomalies.push(`semaine ${r.semaine} : consommé ${fr(r.consomme)} $ > plafond ${fr(r.plafond)} $ sans statut « dépassée »`);
   }
-  const semaineCourante = new Date(maintenant - 10 * 36e5);
-  const debutCourante = new Date(semaineCourante - semaineCourante.getUTCDay() * 864e5).toISOString().slice(0, 10);
+  const debutCourante = debutSemaine(maintenant);
   // Export vide (installation neuve) : rien à comparer
   if (hebdo.length && hebdo.at(-1).semaine !== debutCourante) anomalies.push(`dernière semaine du comparatif = ${hebdo.at(-1).semaine}, semaine en cours = ${debutCourante}`);
 
