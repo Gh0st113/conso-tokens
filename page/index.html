@@ -681,9 +681,9 @@
     const suites = [];
     let suite = null;
     for (const r of rows) {
+      if (r.changement) { suite = null; continue; } // avant le test de plafond : une semaine de changement sans plafond coupe aussi
       if (r.plafond == null) continue;
-      if (r.changement) { suite = null; continue; }
-      if (!suite || suite.forfait !== r.forfait) suites.push(suite = { forfait: r.forfait, pts: [] });
+      if (!suite || suite.forfait !== r.forfait.toLowerCase()) suites.push(suite = { forfait: r.forfait.toLowerCase(), pts: [] });
       suite.pts.push(r);
     }
     for (const s of suites) svg.append('path').datum(s.pts).attr('fill', 'none').attr('stroke', dash.colors[0]).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round')

@@ -305,7 +305,15 @@ tester('baisse du % dans une semaine de changement : pas de « reset probable »
 });
 
 test('sans table « forfaits » (export ancien) : mêmes contrôles qu’avec une table vide', () => {
-  const avec = verifier(lire());
+  const vide = lire(); vide.tables.forfaits = [];
   const x = lire(); delete x.tables.forfaits;
-  assert.deepEqual(verifier(x), avec);
+  assert.deepEqual(verifier(x), verifier(vide));
+});
+
+tester('libellés « Pro » puis « pro » (même forfait, sans changement) : une seule médiane', () => {
+  // Groupe Pro = 100, 100 $ ; la pente récente de « pro » (300 $) doit être comparée à ce groupe, donc signalée
+  const v = controler(dFab([]), { forfaits: [{ date: '2026-10-18', semaine: '2026-10-18', forfait: 'Pro', changement: false },
+    { date: '2026-10-25', semaine: '2026-10-25', forfait: 'pro', changement: false }], semaines: [], plafondsHebdo: [],
+    pentes: [pente('2026-10-20T10:00', 100), pente('2026-10-21T10:00', 100), pente('2026-11-02T10:00', 300)] }, { maintenant: MAINT });
+  assert.ok(v.aVerifier.some(a => a.includes('300 $') && a.includes('du forfait « pro »')), JSON.stringify(v));
 });

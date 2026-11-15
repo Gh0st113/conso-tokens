@@ -90,7 +90,7 @@ An invalid value stops the script with a `config.local.json : resets…` message
 - The week of a date uses the reset time of that day: with the default Sunday 10:00 UTC cycle, a reset day belongs to the **new** week, whatever the hour of the cycle.
 - The label is free text: 1 to 40 characters, letters, digits, spaces and `. + -` (no parenthesis nor `%`, which would confuse the checks reading the status). Edge spaces are ignored and `Pro` / `pro` are the same plan. The label **is published on the page**: never put a personal name (employer, client…) in it.
 - A **change** (a label different from the previous entry) makes its week a *change week*. Its cap is computed as usual but marked `plafond indicatif : mêle deux forfaits (A → B)`: the week mixes two limits, so the figure is shown but **never compared** with the other weeks (neither in the plausibility band nor in the cap line of the page). To get a clean cap for that week, declare the reset hour of the change as a precise reset in `resets`: the week is then cut, and the indicative mark stays.
-- Weeks before the first entry have no plan (`inconnu` in the status). Without the key, nothing changes.
+- Weeks before the first entry have no plan: they form a group of their own in the plausibility band. Without the key, nothing changes.
 - **Team** plans: the limit depends on the seat (Standard or Premium), so write it in the label (`"Team Premium"`). **Enterprise** (usage at API prices) and any plan without a weekly % limit: without a % reading, no cap is estimated; the table shows the amount consumed, as before.
 - An invalid entry stops the script with a `config.local.json : forfaits…` message.
 

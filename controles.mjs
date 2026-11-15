@@ -128,11 +128,13 @@ export function controler(d, tables, { maintenant = Date.now(), groupes = [], de
   const parForfait = new Map();
   for (const p of pentes) {
     const sem = debutSemaine(dateUTC(p.debut)), f = forfaitDe(entrees, sem);
-    if (!p.silence && !chg.has(sem)) parForfait.set(f, [...(parForfait.get(f) ?? []), p.plafond]);
+    // Clé sans casse : « Pro » puis « pro » (même forfait, pas de changement) forment un seul groupe (relecture DeepSeek, 16/11)
+    const cle = f.toLowerCase();
+    if (!p.silence && !chg.has(sem)) parForfait.set(cle, [...(parForfait.get(cle) ?? []), p.plafond]);
   }
   const recent = Date.parse(debutCourante) - 7 * 864e5;
   const hors = (v, quoi, f) => {
-    const med = medianne(parForfait.get(f) ?? []);
+    const med = medianne(parForfait.get(f.toLowerCase()) ?? []);
     if (!med) return; // aucune pente de ce forfait : pas de contrôle pour lui
     const [bas, haut] = BANDE.map(k => k * med), nom = f ? ` du forfait « ${f} »` : '';
     if (v < bas || v > haut) aVerifier.push(`${quoi} = ${Math.round(v)} $, loin de la médiane des pentes${nom} (${Math.round(med)} $ ; plage plausible ${Math.round(bas)} à ${Math.round(haut)} $)`);
