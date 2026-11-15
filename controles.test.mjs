@@ -6,7 +6,8 @@ import { test as tester } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { DONNEES } from './config.mjs';
+import { DONNEES, REMISE_A_ZERO } from './config.mjs';
+import { fabriquer } from './semaine.mjs';
 import { controler, rapport } from './controles.mjs';
 
 const ici = DONNEES;
@@ -29,7 +30,9 @@ const GROUPES = (() => {
 })();
 // « Maintenant » = heure de génération de donnees.json (l'export suit dans la même commande) : même semaine que l'export
 const maintenantDe = d => Date.parse(d.genereLe);
-const verifier = ({ d, tables }, opts = {}) => controler(d, tables, { maintenant: maintenantDe(d), groupes: GROUPES, ...opts });
+// Même cycle que l'export (clé remiseAZero) : sinon un cycle réglé ferait voir aux contrôles une autre semaine en cours
+const { debutSemaine } = fabriquer(REMISE_A_ZERO);
+const verifier = ({ d, tables }, opts = {}) => controler(d, tables, { maintenant: maintenantDe(d), groupes: GROUPES, debutSemaine, ...opts });
 
 test('vraies données : CONTRÔLES : OK', () => {
   const r = verifier(lire());
@@ -156,6 +159,6 @@ test('sonar muet depuis plus de 24 h alors que le PC consomme', () => {
   const x = lire();
   // 30 h après le dernier relevé, avec une consommation ce jour-là
   x.tables.jours.push({ jour: new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(maintenantDe(x.d) + 30 * 36e5), cout: 5, appels: 1, jetons: 1, manque: '' });
-  const w = controler(x.d, x.tables, { maintenant: maintenantDe(x.d) + 30 * 36e5, groupes: GROUPES });
+  const w = controler(x.d, x.tables, { maintenant: maintenantDe(x.d) + 30 * 36e5, groupes: GROUPES, debutSemaine });
   assert.ok(w.aVerifier.some(a => a.includes('sonar muet')));
 }, x => (x.d.projections ?? []).some(p => p.type === 'hebdo'));
