@@ -29,7 +29,7 @@ test('lundi 08:00 UTC : 07:59 appartient au lundi précédent, 08:00 au nouveau'
   assert.equal(c.instantDebut('2026-11-16'), Date.parse('2026-11-16T08:00:00Z'));
 });
 
-test('noms anglais et casse quelconque : même résultat qu en français', () => {
+test('noms anglais et casse quelconque : même résultat qu’en français', () => {
   assert.deepEqual(lireCycle({ jour: 'Monday', heureUTC: '08:00' }), lireCycle({ jour: 'lundi', heureUTC: '08:00' }));
   assert.deepEqual(lireCycle({ jour: 'SUNDAY', heureUTC: '10:00' }), CYCLE_DEFAUT);
   assert.equal(lireCycle({ jour: ' samedi ', heureUTC: '10:00' }).jourNum, 6);
