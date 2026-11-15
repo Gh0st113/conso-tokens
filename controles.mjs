@@ -22,8 +22,12 @@ const medianne = xs => { const s = [...xs].sort((a, b) => a - b); return s.lengt
 // « AAAA-MM-JJTHH:MM » de l'export = UTC sans « Z » ; une date déjà complète est lue telle quelle
 const dateUTC = s => Date.parse(/T\d\d:\d\d$/.test(s) ? s + ':00Z' : s);
 const jourParis = t => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(t);
-// « JJ/MM HH:MM » UTC d'un instant ISO, comme le statut de exporter.mjs
+// « JJ/MM HH:MM » UTC d'un instant ISO
 const jjmm = iso => `${iso.slice(8, 10)}/${iso.slice(5, 7)} ${iso.slice(11, 16)}`;
+// Suffixe du statut d'une semaine coupée, écrit par exporter.mjs et relu par segmentRetenu ci-dessous : un seul endroit
+// pour le format, protégé par un test aller-retour (controles.test.mjs)
+export const suffixeCoupee = (premierISO, debutSegmentISO) =>
+  ` ; coupée par reset hebdo le ${jjmm(premierISO)} UTC (segment retenu : depuis le ${jjmm(debutSegmentISO)})`;
 // Segment retenu d'une semaine coupée (suffixe « segment retenu : depuis le JJ/MM HH:MM » du statut) : entrée de segmentsHebdo, ou null
 const segmentRetenu = (d, r) => {
   const m = r.statut.match(/segment retenu : depuis le (\d\d\/\d\d \d\d:\d\d)\)/);
@@ -94,7 +98,7 @@ export function controler(d, tables, { maintenant = Date.now(), groupes = [], de
     const pm = r.statut.match(/\((\d+) %/);
     if (pm && r.pctFin != null && Number(pm[1]) !== r.pctFin && !r.statut.startsWith('atteint')) anomalies.push(`semaine ${r.semaine} : statut dit ${pm[1]} %, colonne pctFin = ${r.pctFin}`);
     // Un plafond affiché doit couvrir ce que la semaine a déjà coûté (sinon la projection est contredite).
-    // Semaine coupée par un reset précis (19/11) : on compare au coût du segment retenu (segmentsHebdo), pas à la semaine
+    // Semaine coupée par un reset précis (15/11) : on compare au coût du segment retenu (segmentsHebdo), pas à la semaine
     const coupee = /coupée par reset hebdo/.test(r.statut), seg = segmentRetenu(d, r);
     if (coupee && !seg) anomalies.push(`semaine ${r.semaine} : segment retenu absent de segmentsHebdo`);
     const coutRef = coupee && seg ? seg.cout : r.consomme;
@@ -123,7 +127,7 @@ export function controler(d, tables, { maintenant = Date.now(), groupes = [], de
   const age = releves.length ? (maintenant - releves.at(-1)) / 36e5 : null;
   if (age != null && dernier?.jour === auj && dernier.cout > 0 && age > SONAR_MUET_H) aVerifier.push(`dernier relevé du % hebdo il y a ${Math.round(age)} h alors que ce PC a consommé aujourd'hui : sonar muet ?`);
 
-  // 8. Reset non déclaré (19/11) : par fenêtre hebdo (debutFenetre), relevés triés par heure. Une baisse est probable entre a et b
+  // 8. Reset non déclaré (15/11) : par fenêtre hebdo (debutFenetre), relevés triés par heure. Une baisse est probable entre a et b
   // quand b ≤ plus haut des relevés précédents − 3 points ET le relevé suivant c aussi (baisse confirmée : une ligne isolée
   // n'est pas un reset). Pas de signal si un reset déclaré tombe dans ]a, c], ou si la semaine est déclarée à l'ancienne forme.
   // Un seul signal par fenêtre, jamais de correction. Sans resetsDeclares (donnees.json ancien) : rien n'est déclaré.
@@ -136,7 +140,7 @@ export function controler(d, tables, { maintenant = Date.now(), groupes = [], de
     if (declares.semaines?.[semaine] !== undefined) continue;
     for (let i = 1; i < v.length - 1; i++) {
       const [a, b, c] = [v[i - 1], v[i], v[i + 1]], ta = Date.parse(a.releve), tb = Date.parse(b.releve), tc = Date.parse(c.releve);
-      // Maximum pris dans le segment de b seulement (décision 5 corrigée, 19/11) : un reset précis déclaré avant b remet le
+      // Maximum pris dans le segment de b seulement (décision 5 corrigée, 15/11) : un reset précis déclaré avant b remet le
       // maximum à zéro pour les relevés qui le suivent. Début du segment = dernier reset déclaré de la semaine ≤ b.
       const debutSegment = Math.max(-Infinity, ...declares.precis.filter(p => p.semaine === semaine).map(p => Date.parse(p.quand)).filter(t => t <= tb));
       const avant = v.slice(0, i).filter(p => Date.parse(p.releve) >= debutSegment);

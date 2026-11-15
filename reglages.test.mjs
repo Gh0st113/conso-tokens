@@ -1,4 +1,4 @@
-// Tests des validateurs de réglages (19/11, plan #5) : node --test reglages.test.mjs
+// Tests des validateurs de réglages (15/11, plan #5) : node --test reglages.test.mjs
 // Purs : aucune donnée ni config.local.json nécessaire.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

@@ -135,7 +135,7 @@ On macOS / Linux: `HOME=../demo-home node agreger.mjs && HOME=../demo-home node 
 - Usage outside this PC is deduced from whole-number percentages, not measured: when such periods are spotted, the
   weekly cap is given as a range, otherwise as a single estimate; no cap at all when the share paid on this PC is under
   10 % or the range is wider than 25 % of the cap.
-- Known limits of the reset detection: readings under 10 % are ignored, so a drop that leaves the % under 10 until the end of the week is not reported; a single odd reading stays in the slopes.
+- Known limits of the reset detection: readings under 10 % are ignored, so a drop that leaves the % under 10 until the end of the week is not reported; a single odd reading stays in the slopes; a single abnormally **high** reading (e.g. 40, 100, 30, 28 %) can wrongly give a "probable reset" (a "to check" line, never a correction). A reset declared at the exact instant of the cycle's own reset is ignored (it cuts nothing).
 
 ## License
 

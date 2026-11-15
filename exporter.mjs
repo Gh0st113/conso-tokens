@@ -3,7 +3,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { controler, rapport } from './controles.mjs';
+import { controler, rapport, suffixeCoupee } from './controles.mjs';
 import { DONNEES, RESETS, RESETS_PRECIS, TROUS, REMISE_A_ZERO, ici } from './config.mjs';
 import { fabriquer } from './semaine.mjs';
 import { execFileSync } from 'node:child_process';
@@ -25,7 +25,7 @@ const joursParis = debut => {
   const a = Date.parse(jourParis(instantDebut(debut)) + 'T12:00:00Z'), b = Date.parse(jourParis(instantDebut(debut) + 7 * 864e5) + 'T12:00:00Z');
   return Array.from({ length: Math.round((b - a) / 864e5) + 1 }, (_, i) => new Date(a + i * 864e5).toISOString().slice(0, 10));
 };
-// Format du 07/11 (dossiers par jour, jours des sessions) et du 19/11 (segments de reset précis) : donnees.json plus ancien
+// Format du 07/11 (dossiers par jour, jours des sessions) et du 15/11 (segments de reset précis) : donnees.json plus ancien
 // → relancer agreger.mjs d'abord
 if (!d.jourProjet || !d.jourModeleTotal || !d.jourTailles || d.sessions.some(s => !s.jour || !s.jourFin)
   || !d.segmentsHebdo || !d.resetsDeclares || [...d.projections, ...d.plafonds].some(p => !p.debutSegment)) {
@@ -88,7 +88,7 @@ const HORS = { duree: 36e5, points: 1, dollarsParPoint: 0.5, prixPoint: 2.44, si
 // Plafond trop incertain : fourchette plus large que 25 % du plafond central → pas de plafond, la fourchette
 // seule dans le statut (ex. semaine où la majorité du % a été prise hors de ce PC).
 const LARGEUR_MAX = 0.25;
-// Relevés hebdo groupés par segment (debutSegment : début de fenêtre, ou reset précis de la semaine, 19/11) :
+// Relevés hebdo groupés par segment (debutSegment : début de fenêtre, ou reset précis de la semaine, 15/11) :
 // une pente ne relie jamais deux relevés de segments différents
 const hebdoParSegment = {};
 for (const p of d.projections.filter(p => p.type === 'hebdo')) (hebdoParSegment[p.debutSegment] ??= []).push(p);
@@ -118,7 +118,7 @@ const nbHorsAvant = (debutSegment, ts) => horsJournaux.filter(h => h.semaine ===
 const fourchette = (cout, local, n) => ({ min: r2(cout * 100 / (local + n)), max: local - n >= 10 ? r2(cout * 100 / (local - n)) : null });
 const usd = n => `${Math.round(n)} $`;
 
-// Découpage par reset précis (19/11) : une semaine coupée a un segment par reset. Le statut suit le segment retenu : celui
+// Découpage par reset précis (15/11) : une semaine coupée a un segment par reset. Le statut suit le segment retenu : celui
 // de plus grand % local (à égalité, le plus récent). Chaque segment a son propre coût (segmentsHebdo) et ses propres relevés.
 const segmentsDe = debut => d.segmentsHebdo.filter(s => s.semaine === debut);
 const etatSegment = debutSegment => ({
@@ -128,16 +128,15 @@ const etatSegment = debutSegment => ({
 // % local d'un segment (100 − hors PC si atteint, sinon % du dernier relevé − hors PC) ; null sans limite ni relevé
 const localDe = ({ atteint, proj }) => {
   if (!atteint && !proj) return null;
-  const hors = atteint ? horsAvant(atteint.debutSegment, atteint.atteinte) : proj.pct - proj.pctLocal;
+  // Même arrondi au dixième que ligneHebdo : sinon le segment retenu pourrait ne pas suivre le statut affiché
+  const hors = Math.round((atteint ? horsAvant(atteint.debutSegment, atteint.atteinte) : proj.pct - proj.pctLocal) * 10) / 10;
   return Math.max(0, (atteint ? 100 : proj.pct) - hors);
 };
-// « JJ/MM HH:MM » (UTC) d'un instant ISO
-const jjmm = iso => `${iso.slice(8, 10)}/${iso.slice(5, 7)} ${iso.slice(11, 16)}`;
-// Suffixe du statut d'une semaine coupée : premier reset précis de la semaine, et début du segment retenu
-const suffixeCoupee = (debut, debutSegment) => {
+// Suffixe du statut d'une semaine coupée : premier reset précis de la semaine, et début du segment retenu (format : controles.mjs)
+const suffixeDe = (debut, debutSegment) => {
   // Premier reset qui coupe vraiment : le 2e segment (le 1er part du début de semaine, reset à cet instant exclu, tour 4)
   const premier = segmentsDe(debut)[1]?.debut ?? debutSegment;
-  return ` ; coupée par reset hebdo le ${jjmm(premier)} UTC (segment retenu : depuis le ${jjmm(debutSegment)})`;
+  return suffixeCoupee(premier, debutSegment);
 };
 
 // Une ligne du comparatif hebdo, pour le segment retenu (coutSeg = coût de ce segment ; v = agrégat de toute la semaine)
@@ -210,7 +209,7 @@ const tables = {
   // Semaine où un reset a été utilisé (ancienne forme) : le compteur repart de zéro sans que la fin bouge, coût ÷ % n'a plus
   // de sens → pas de plafond.
   // Semaines continues (08/11) : la semaine neuve apparaît « en cours » même sans appel depuis la dernière remise à zéro
-  // Semaine coupée par un reset précis (19/11) : une ligne quand même, sur le segment retenu (suffixe dans le statut)
+  // Semaine coupée par un reset précis (15/11) : une ligne quand même, sur le segment retenu (suffixe dans le statut)
   plafondsHebdo: semainesContinues().map(([debut, v]) => {
     const reset = RESETS[debut];
     if (reset) return { semaine: debut, statut: `reset utilisé (${reset})`, plafond: null, sortie: null, consomme: r2(v.cout), consommeSortie: v.sortie };
@@ -224,7 +223,7 @@ const tables = {
     }
     choisi ??= { ...segs.at(-1), etat: {} };
     const ligne = ligneHebdo(debut, choisi.debutSegment, choisi.cout, choisi.etat, v);
-    if (coupees.length) ligne.statut += suffixeCoupee(debut, choisi.debutSegment);
+    if (coupees.length) ligne.statut += suffixeDe(debut, choisi.debutSegment);
     return ligne;
   }),
   plafonds5h: [
@@ -235,7 +234,7 @@ const tables = {
   // Pente : coût consommé entre deux relevés du % hebdo de la même semaine ÷ écart de % (au moins 8 points).
   // Insensible à ce qui a été consommé hors journaux AVANT le premier relevé (claude.ai, téléphone, autre PC) ;
   // une période d'usage hors de ce PC (horsJournaux) coupe la pente : on repart du relevé qui la suit.
-  // Une pente ne relie jamais deux segments (reset précis, 19/11) : groupes par debutSegment
+  // Une pente ne relie jamais deux segments (reset précis, 15/11) : groupes par debutSegment
   pentes: (() => {
     const out = [];
     for (const v of Object.values(hebdoParSegment)) {

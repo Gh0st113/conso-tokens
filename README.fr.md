@@ -137,7 +137,7 @@ Sous macOS / Linux : `HOME=../demo-home node agreger.mjs && HOME=../demo-home no
 - L'usage hors de ce PC est déduit de pourcentages entiers, pas mesuré : quand de telles périodes sont repérées, le
   plafond hebdo est donné en fourchette, sinon en estimation unique ; aucun plafond quand la part payée sur ce PC est sous
   10 % ou que la fourchette dépasse 25 % du plafond.
-- Limites connues de la détection de reset : les relevés sous 10 % sont ignorés, donc une baisse qui laisse le % sous 10 jusqu'à la fin de la semaine n'est pas signalée ; une ligne de relevé aberrante isolée reste dans les pentes.
+- Limites connues de la détection de reset : les relevés sous 10 % sont ignorés, donc une baisse qui laisse le % sous 10 jusqu'à la fin de la semaine n'est pas signalée ; une ligne de relevé aberrante isolée reste dans les pentes ; un relevé isolé anormalement **haut** (ex. 40, 100, 30, 28 %) peut donner un « reset probable » à tort (c'est un « à vérifier », jamais une correction). Un reset déclaré à l'instant exact de la remise à zéro du cycle est ignoré (il ne coupe rien).
 
 ## Licence
 

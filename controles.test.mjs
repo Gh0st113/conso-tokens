@@ -8,7 +8,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { DONNEES, REMISE_A_ZERO } from './config.mjs';
 import { fabriquer } from './semaine.mjs';
-import { controler, rapport } from './controles.mjs';
+import { controler, rapport, suffixeCoupee } from './controles.mjs';
 
 const ici = DONNEES;
 const sansDonnees = !existsSync(join(ici, 'donnees.json')) || !existsSync(join(ici, 'export'));
@@ -164,7 +164,7 @@ test('sonar muet depuis plus de 24 h alors que le PC consomme', () => {
   assert.ok(w.aVerifier.some(a => a.includes('sonar muet')));
 }, x => (x.d.projections ?? []).some(p => p.type === 'hebdo'));
 
-// ---- Reset non déclaré et semaine coupée (19/11) : données fabriquées, sans donnees.json ----
+// ---- Reset non déclaré et semaine coupée (15/11) : données fabriquées, sans donnees.json ----
 const FENETRE = '2026-10-25T10:00:00.000Z';
 const releve = (heure, pct, fenetre = FENETRE) => ({ type: 'hebdo', releve: `2026-11-02T${heure}:00:00.000Z`, pct, debutFenetre: fenetre, debutSegment: fenetre });
 const dFab = (projections, resetsDeclares = { semaines: {}, precis: [] }) => ({
@@ -230,6 +230,21 @@ const coupee = cout => {
 };
 tester('semaine coupée : consommé du segment retenu (30 $ ≤ plafond 40 $) → pas d’anomalie', () => {
   assert.ok(!coupee(30).anomalies.some(a => a.includes('> plafond')), JSON.stringify(coupee(30)));
+});
+tester('suffixe de coupure : aller-retour exporter → contrôle (le segment retenu est bien retrouvé)', () => {
+  // Dates distinctes (paramètres non inversables) ; segment leurre placé avant le bon : seul le segment nommé par le suffixe compte
+  const s = suffixeCoupee('2026-11-03T21:00:00.000Z', '2026-11-05T08:00:00.000Z');
+  assert.equal(s, ' ; coupée par reset hebdo le 03/11 21:00 UTC (segment retenu : depuis le 05/11 08:00)');
+  const d = dFab([]);
+  d.segmentsHebdo = [
+    { semaine: '2026-11-01', debut: '2026-11-03T21:00:00.000Z', fin: '2026-11-05T08:00:00.000Z', cout: 10, sortie: 0 },
+    { semaine: '2026-11-01', debut: '2026-11-05T08:00:00.000Z', fin: '2026-11-08T10:00:00.000Z', cout: 50, sortie: 0 },
+  ];
+  const tables = { semaines: [{ debut: '2026-11-01', cout: 100, appels: 1, jetons: 0 }],
+    plafondsHebdo: [{ semaine: '2026-11-01', statut: 'projeté (50 %)' + s, plafond: 40, consomme: 100, horsEstime: null, pctFin: 50, sortie: null, consommeSortie: 0 }] };
+  const v = controler(d, tables, { maintenant: MAINT });
+  assert.ok(!v.anomalies.some(a => a.includes('segment retenu absent')), JSON.stringify(v));
+  assert.ok(v.anomalies.some(a => a.includes('consommé 50 $ > plafond 40 $')), JSON.stringify(v));
 });
 tester('semaine coupée : consommé du segment retenu (50 $ > plafond 40 $) → anomalie', () => {
   assert.ok(coupee(50).anomalies.some(a => a.includes('consommé 50 $ > plafond 40 $')), JSON.stringify(coupee(50)));
