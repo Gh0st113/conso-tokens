@@ -98,3 +98,8 @@ test('lireForfaits : entrées invalides → erreur (échec fermé)', () => {
   for (const [v, motif] of invalides) assert.throws(() => forfaits(v), new RegExp(motif), JSON.stringify(v));
   assert.doesNotThrow(() => forfaits({ '2026-11-01': 'a'.repeat(40) }));
 });
+
+test('lireForfaits : longueur comptée en caractères (et non en unités UTF-16) : 21 lettres astrales acceptées', () => {
+  assert.equal(forfaits({ '2026-11-01': '𐐀'.repeat(21) })[0].forfait, '𐐀'.repeat(21));
+  assert.throws(() => forfaits({ '2026-11-01': '𐐀'.repeat(41) }), /40 caractères/);
+});

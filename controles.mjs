@@ -37,7 +37,7 @@ const segmentRetenu = (d, r) => {
 
 // Forfait d'une semaine (clé forfaits, 15/11) : libellé de la dernière entrée dont la semaine est ≤ celle-ci, « » si aucune
 // (inconnu). entrees = table « forfaits » (triée par date). Même règle que forfaitDe dans page/index.html (la page ne peut
-// pas importer ce module) : un test de controles.test.mjs les garde d'accord.
+// pas importer ce module) : aucun test ne les compare, à garder d'accord à la main.
 export const forfaitDe = (entrees, semaine) => entrees.reduce((f, e) => e.semaine <= semaine ? e.forfait : f, '');
 // Suffixe du statut d'une semaine de changement de forfait (écrit par exporter.mjs, contrôlé ici)
 export const SUFFIXE_INDICATIF = 'plafond indicatif : mêle deux forfaits';
@@ -92,7 +92,7 @@ export function controler(d, tables, { maintenant = Date.now(), groupes = [], de
 
   // 5. Comparatif hebdo : mêmes semaines que « semaines », même consommé, statut d'accord avec ses colonnes
   // Semaines de changement de forfait (table « forfaits », 15/11) : leur plafond est indicatif, leurs pentes sont exclues du contrôle 6
-  const entrees = tables.forfaits ?? [], chg = new Set(entrees.filter(e => e.changement).map(e => e.semaine));
+  const entrees = tables.forfaits ?? [], chg = new Set(entrees.filter(e => e.changement === true).map(e => e.semaine));
   const hebdo = tables.plafondsHebdo ?? [], parDebut = new Map((tables.semaines ?? []).map(s => [s.debut, s]));
   const sH = hebdo.map(r => r.semaine).join(), sS = [...parDebut.keys()].join();
   if (sH !== sS) anomalies.push(`semaines du comparatif hebdo (${hebdo.length}) ≠ semaines de « semaines » (${parDebut.size})`);

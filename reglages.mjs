@@ -79,7 +79,7 @@ export function lireForfaits(valeur, cycle, debutSemaine) {
     if (typeof libelle !== 'string') throw new Error(`« ${date} » : le libellé doit être un texte, reçu ${JSON.stringify(libelle)}`);
     const forfait = libelle.trim();
     if (!forfait) throw new Error(`« ${date} » : libellé vide`);
-    if (forfait.length > 40) throw new Error(`« ${date} » : libellé de plus de 40 caractères`);
+    if ([...forfait].length > 40) throw new Error(`« ${date} » : libellé de plus de 40 caractères`);
     if (!FORME_LIBELLE.test(forfait))
       throw new Error(`« ${date} » : libellé « ${forfait} » hors de l'alphabet (lettres, chiffres, espace, . + - ; ni parenthèse ni %)`);
     return { date, semaine: debutSemaine(Date.parse(`${date}T${cycle.heureUTC}:00Z`)), forfait };
