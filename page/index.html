@@ -72,9 +72,9 @@
   </header>
 
   <section class="cc-reset" id="reset" aria-label="Remise à zéro du forfait">
-    <h2 data-draw="cycleTitre" data-source="reglages">Le forfait repart à zéro chaque jour de la semaine</h2>
-    <p>Le cycle dure exactement 7 × 24 h et ne suit pas le changement d'heure de Paris. Prochaine remise à zéro : <b data-draw="prochain" data-source="reglages">—</b>.</p>
-    <p class="cc-muted" data-draw="cycleRepli" data-source="reglages" hidden></p>
+    <h2>Le forfait repart à zéro chaque <span data-draw="cycleJour" data-source="reglages">—</span> à <span data-draw="heureReset" data-source="reglages">—</span></h2>
+    <p>Le cycle dure exactement 7 × 24 h et ne suit pas le changement d'heure de Paris. Prochaine remise à zéro : <b data-draw="prochain" data-source="reglages">—</b>.<span data-draw="cycleRepli" data-source="reglages"></span></p>
+    <p class="cc-muted" data-repli hidden>Cycle par défaut affiché (dimanche 10 h UTC) : réglages non reçus (table « reglages » absente ou en erreur).</p>
     <p class="cc-muted">Heure lue dans l'appli (/usage) ; réglable dans <code>config.local.json</code> (clé <code>remiseAZero</code>, README). Chaque barre du graphe hebdomadaire couvre une fenêtre de forfait, d'une remise à zéro à la suivante. Sur le graphe par jour, les traits pointillés marquent ces remises à zéro. Ces fenêtres ne comptent que ce PC (Claude Code et, sous Windows, Cowork local, journaux jusqu'à fin octobre 2026), alors que le forfait compte aussi claude.ai, le téléphone et Cowork distant.</p>
   </section>
 
@@ -129,7 +129,7 @@
   <section class="cc-card" id="jours">
     <div class="cc-titre"><h2 data-jet="Jetons par jour">Coût par jour</h2><span class="cc-seg" role="group" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true">dollars</button><button type="button" data-unite="jetons" aria-pressed="false">jetons</button></span></div>
     <p class="cc-muted" data-jet="Jetons consommés, jour calendaire à l'heure de Paris.">Équivalent API en dollars, jour calendaire à l'heure de Paris.</p>
-    <div class="cc-legend"><span><i class="cc-rule"></i><span data-draw="legReset" data-source="reglages">remise à zéro du forfait</span></span></div>
+    <div class="cc-legend"><span><i class="cc-rule"></i>remise à zéro du forfait (<span data-draw="cycleJour" data-source="reglages">—</span> <span data-draw="heureReset" data-source="reglages">—</span>)</span></div>
     <div class="cc-chart dash-skeleton" data-draw="chJours" data-source="jours"></div>
   </section>
 
@@ -472,16 +472,18 @@
     const r = CC.prochainReset();
     el.textContent = r ? `${CC.jourLong(CC.jourParis(r))} à ${CC.heureParis(r)} (heure de Paris)` : '—';
   });
-  dash.draw('cycleTitre', el => { el.textContent = `Le forfait repart à zéro chaque ${CC.jourNom()} à ${CC.heureUTCTexte()}`; });
+  // Seuls le jour et l'heure sont dessinés : les phrases autour sont dans le HTML (règle « un seul auteur » du tableau)
+  dash.draw('cycleJour', el => { el.textContent = CC.jourNom(); });
   dash.draw('heureReset', el => { el.textContent = CC.heureUTCTexte(); });
-  dash.draw('legReset', el => { el.textContent = `remise à zéro du forfait (${CC.jourNom()} ${CC.heureUTCTexte()})`; });
-  dash.draw('cycleRepli', el => {
-    const c = CC.cycle();
-    el.hidden = !c.repli;
-    el.textContent = c.repli ? `Cycle par défaut affiché (${CC.jourNom()} ${CC.heureUTCTexte()}) : réglages non reçus (table « reglages » absente).` : '';
+  // Dessin vide : montre la phrase de repli (stockée cachée) seulement si la table « reglages » manque vraiment,
+  // pas pendant son chargement. Une phrase cachée ne peut pas se montrer elle-même (son dessin ne tourne pas)
+  dash.draw('cycleRepli', () => {
+    const g = dash.data('reglages');
+    const manque = g.status === 'ok' ? !g.data.length : g.status !== 'loading';
+    document.querySelectorAll('[data-repli]').forEach(p => { p.hidden = !manque; });
   });
   // Ce qui dépend du cycle est redessiné à chaque arrivée de données (« reglages » peut arriver après « jours »)
-  dash.onData(() => ['chJours', 'prochain', 'cycleTitre', 'heureReset', 'legReset', 'cycleRepli'].forEach(n => dash.draw(n)));
+  dash.onData(() => ['chJours', 'prochain', 'cycleJour', 'heureReset', 'cycleRepli'].forEach(n => dash.draw(n)));
 </script>
 
 <script>
