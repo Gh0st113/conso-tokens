@@ -193,6 +193,12 @@ tester('reset précis déclaré dans ]a, b] : aucun signal', () => {
   assert.ok(!aSignal(controler(dFab([releve('08', 40), releve('09', 60), releve('10', 30), releve('11', 28)], decl), {}, { maintenant: MAINT })));
 });
 
+tester('baisse qui suit un reset déclaré : aucun signal (maximum remis à zéro)', () => {
+  // Avant le reset (09:30) : 60 %. Après : 10, 12, 13 %. Sans limite au segment, la baisse de 11:00 serait signalée à tort.
+  const decl = { semaines: {}, precis: [{ quand: '2026-11-02T09:30:00.000Z', type: 'hebdo', note: '', semaine: '2026-10-25' }] };
+  const v = controler(dFab([releve('08', 40), releve('09', 60), releve('10', 10), releve('11', 12), releve('12', 13)], decl), {}, { maintenant: MAINT });
+  assert.ok(!aSignal(v), JSON.stringify(v));
+});
 tester('semaine déclarée à l’ancienne forme : aucun signal', () => {
   const decl = { semaines: { '2026-10-25': 'nuit du 1er' }, precis: [] };
   assert.ok(!aSignal(controler(dFab([releve('08', 40), releve('09', 60), releve('10', 30), releve('11', 28)], decl), {}, { maintenant: MAINT })));

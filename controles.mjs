@@ -135,9 +135,14 @@ export function controler(d, tables, { maintenant = Date.now(), groupes = [], de
     const semaine = v[0].debutFenetre.slice(0, 10);
     if (declares.semaines?.[semaine] !== undefined) continue;
     for (let i = 1; i < v.length - 1; i++) {
-      const max = Math.max(...v.slice(0, i).map(p => p.pct)), [a, b, c] = [v[i - 1], v[i], v[i + 1]];
+      const [a, b, c] = [v[i - 1], v[i], v[i + 1]], ta = Date.parse(a.releve), tb = Date.parse(b.releve);
+      // Maximum pris dans le segment de b seulement (décision 5 corrigée, 19/11) : un reset précis déclaré avant b remet le
+      // maximum à zéro pour les relevés qui le suivent. Début du segment = dernier reset déclaré de la semaine ≤ b.
+      const debutSegment = Math.max(-Infinity, ...declares.precis.filter(p => p.semaine === semaine).map(p => Date.parse(p.quand)).filter(t => t <= tb));
+      const avant = v.slice(0, i).filter(p => Date.parse(p.releve) >= debutSegment);
+      if (!avant.length) continue;
+      const max = Math.max(...avant.map(p => p.pct));
       if (!(b.pct <= max - 3 && c.pct <= max - 3)) continue;
-      const ta = Date.parse(a.releve), tb = Date.parse(b.releve);
       if (declares.precis.some(p => { const t = Date.parse(p.quand); return t > ta && t <= tb; })) continue;
       aVerifier.push(`reset probable entre le ${jjmm(a.releve)} et le ${jjmm(b.releve)} UTC (semaine du ${semaine}), non déclaré dans « resets »`);
       break;

@@ -78,7 +78,7 @@ Réglages facultatifs : copier `config.exemple.json` en `config.local.json` (ign
 
 Une valeur invalide arrête le script avec un message `config.local.json : resets…`. Avec la nouvelle forme, **la semaine est découpée** en segments, un par reset : le plafond et la sortie de la semaine sont calculés sur le segment retenu (celui qui a le plus grand % local, à égalité le plus récent), avec son propre coût ; les pentes ne relient jamais deux segments ; le statut de la semaine indique la coupure. Hypothèse retenue : un reset à la demande ne déplace pas la fin de la semaine (un seul cas observé).
 
-**Détection** : si le % hebdo baisse de 3 points ou plus sans reset déclaré, et que le relevé suivant confirme la baisse, `CONTRÔLES` signale `reset probable … non déclaré dans « resets »`. Une baisse isolée (un seul relevé) n'est pas signalée. Rien n'est corrigé automatiquement. Limite : la détection compare avec le plus haut % de toute la semaine, donc un reset déclaré peut faire signaler à tort la baisse qui suit (à traiter avant la fusion).
+**Détection** : si le % hebdo baisse de 3 points ou plus sans reset déclaré, et que le relevé suivant confirme la baisse, `CONTRÔLES` signale `reset probable … non déclaré dans « resets »`. Une baisse isolée (un seul relevé) n'est pas signalée. Rien n'est corrigé automatiquement. Le plus haut % est pris dans le segment seulement : un reset déclaré remet le maximum à zéro pour les relevés qui le suivent.
 
 Journaux d'un autre PC : `node agreger.mjs --journaux <chemin vers son .claude/projects>` (répétable).
 

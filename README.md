@@ -78,7 +78,7 @@ Optional settings: copy `config.exemple.json` to `config.local.json` (ignored by
 
 An invalid value stops the script with a `config.local.json : resets…` message. With the new form, **the week is cut** into segments, one per reset: the cap and the output of the week are computed on the retained segment (the one with the largest local %, the most recent on a tie), with its own cost; slopes never join two segments; the status of the week mentions the cut. Assumption: a reset on demand does not move the end of the week (one case observed).
 
-**Detection**: if the weekly % drops by 3 points or more without a declared reset, and the next reading confirms the drop, `CONTRÔLES` reports `reset probable … non déclaré dans « resets »` (the French wording is kept on purpose: the check output is in French). An isolated drop (a single reading) is not reported. Nothing is corrected automatically. Limit: the drop is compared with the highest % of the whole week, so a declared reset can make the following drop be reported by mistake.
+**Detection**: if the weekly % drops by 3 points or more without a declared reset, and the next reading confirms the drop, `CONTRÔLES` reports `reset probable … non déclaré dans « resets »` (the French wording is kept on purpose: the check output is in French). An isolated drop (a single reading) is not reported. Nothing is corrected automatically. The highest % is taken within the segment only: a declared reset starts a new maximum for the readings that follow it.
 
 Logs from another PC: `node agreger.mjs --journaux <path to its .claude/projects>` (repeatable).
 
