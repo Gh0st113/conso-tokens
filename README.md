@@ -45,7 +45,7 @@ weekly cap. Without sonar, only the readings written into the Claude Code logs a
 git clone https://github.com/Gh0st113/conso-tokens
 cd conso-tokens
 node agreger.mjs        # reads the logs → donnees/donnees.json (and a counter archive)
-node exporter.mjs       # → donnees/export/*.json (11 tables) + the CONTRÔLES line
+node exporter.mjs       # → donnees/export/*.json (12 tables) + the CONTRÔLES line
 node --test             # tests
 ```
 
@@ -105,10 +105,10 @@ want a long history.
 chart library and data loader that claude.ai provides, so **opening it directly in a browser shows nothing**.
 
 1. In the Claude desktop app, open the **Code** tab in this folder.
-2. Ask: *"Create a private Dashboard artifact from `page/index.html`, with the 11 files of `donnees/export/` as its
+2. Ask: *"Create a private Dashboard artifact from `page/index.html`, with the 12 files of `donnees/export/` as its
    datasets, each named after its file"* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`, `contexte`,
-   `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`).
-3. After each new export: *"Reload the 11 datasets of my dashboard from `donnees/export/`"*.
+   `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`).
+3. After each new export: *"Reload the 12 datasets of my dashboard from `donnees/export/`"*.
 
 Keep the artifact private: whoever opens it can read the files (folder names, costs, sessions).
 

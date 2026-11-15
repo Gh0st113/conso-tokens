@@ -44,7 +44,7 @@ estimer le plafond hebdo. Sans sonar, seuls les relevés écrits dans les journa
 git clone https://github.com/Gh0st113/conso-tokens
 cd conso-tokens
 node agreger.mjs        # lit les journaux → donnees/donnees.json (et une archive des compteurs)
-node exporter.mjs       # → donnees/export/*.json (11 tables) + la ligne CONTRÔLES
+node exporter.mjs       # → donnees/export/*.json (12 tables) + la ligne CONTRÔLES
 node --test             # tests
 ```
 
@@ -107,10 +107,10 @@ bibliothèque de graphiques et le chargeur de données fournis par claude.ai, do
 navigateur n'affiche rien**.
 
 1. Dans l'appli Claude, ouvrir l'onglet **Code** dans ce dossier.
-2. Demander : *« Crée un artefact Dashboard privé à partir de `page/index.html`, avec comme données les 11 fichiers de
+2. Demander : *« Crée un artefact Dashboard privé à partir de `page/index.html`, avec comme données les 12 fichiers de
    `donnees/export/`, chacun nommé comme son fichier »* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`,
-   `contexte`, `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`).
-3. Après chaque nouvel export : *« Recharge les 11 données de mon tableau depuis `donnees/export/` »*.
+   `contexte`, `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`).
+3. Après chaque nouvel export : *« Recharge les 12 données de mon tableau depuis `donnees/export/` »*.
 
 Gardez l'artefact privé : qui l'ouvre peut lire les fichiers (noms de dossiers, coûts, sessions).
 

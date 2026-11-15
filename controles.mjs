@@ -125,7 +125,7 @@ export function controler(d, tables, { maintenant = Date.now(), groupes = [], de
 
   // 8. Reset non déclaré (19/11) : par fenêtre hebdo (debutFenetre), relevés triés par heure. Une baisse est probable entre a et b
   // quand b ≤ plus haut des relevés précédents − 3 points ET le relevé suivant c aussi (baisse confirmée : une ligne isolée
-  // n'est pas un reset). Pas de signal si un reset déclaré tombe dans ]a, b], ou si la semaine est déclarée à l'ancienne forme.
+  // n'est pas un reset). Pas de signal si un reset déclaré tombe dans ]a, c], ou si la semaine est déclarée à l'ancienne forme.
   // Un seul signal par fenêtre, jamais de correction. Sans resetsDeclares (donnees.json ancien) : rien n'est déclaré.
   const declares = d.resetsDeclares ?? { semaines: {}, precis: [] };
   const parFenetre = {};
@@ -135,7 +135,7 @@ export function controler(d, tables, { maintenant = Date.now(), groupes = [], de
     const semaine = v[0].debutFenetre.slice(0, 10);
     if (declares.semaines?.[semaine] !== undefined) continue;
     for (let i = 1; i < v.length - 1; i++) {
-      const [a, b, c] = [v[i - 1], v[i], v[i + 1]], ta = Date.parse(a.releve), tb = Date.parse(b.releve);
+      const [a, b, c] = [v[i - 1], v[i], v[i + 1]], ta = Date.parse(a.releve), tb = Date.parse(b.releve), tc = Date.parse(c.releve);
       // Maximum pris dans le segment de b seulement (décision 5 corrigée, 19/11) : un reset précis déclaré avant b remet le
       // maximum à zéro pour les relevés qui le suivent. Début du segment = dernier reset déclaré de la semaine ≤ b.
       const debutSegment = Math.max(-Infinity, ...declares.precis.filter(p => p.semaine === semaine).map(p => Date.parse(p.quand)).filter(t => t <= tb));
@@ -143,7 +143,8 @@ export function controler(d, tables, { maintenant = Date.now(), groupes = [], de
       if (!avant.length) continue;
       const max = Math.max(...avant.map(p => p.pct));
       if (!(b.pct <= max - 3 && c.pct <= max - 3)) continue;
-      if (declares.precis.some(p => { const t = Date.parse(p.quand); return t > ta && t <= tb; })) continue;
+      // Reset déclaré dans ]a, c] : la baisse de b ou la confirmation par c s'explique par ce reset (relecture 1, 16/11)
+      if (declares.precis.some(p => { const t = Date.parse(p.quand); return t > ta && t <= tc; })) continue;
       aVerifier.push(`reset probable entre le ${jjmm(a.releve)} et le ${jjmm(b.releve)} UTC (semaine du ${semaine}), non déclaré dans « resets »`);
       break;
     }
