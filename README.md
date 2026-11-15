@@ -6,12 +6,12 @@ A local dashboard of your Claude Code usage: what your sessions would cost at pu
 per day, per working folder, per model and per session, plus an estimate of your **weekly plan cap in dollars** built
 from the usage percentage the app shows.
 
-It reads only the token counters and timestamps of the Claude Code logs (and, on Windows, the Cowork local ones) on your machine, **never the content of your
+It reads only the token counters and timestamps of the Claude Code logs (and, on Windows, the Cowork local ones if present) on your machine, **never the content of your
 conversations**, and everything stays on your machine (except what you choose to publish).
 
 Companion project: [**sonar**](https://github.com/Gh0st113/sonar), a mod for the Code tab of Claude Desktop. Its
 quota log (`~/.claude/sonar/quota-log.jsonl`) gives this dashboard the usage percentage readings it needs to estimate the
-weekly cap. Without sonar, only the readings Claude Code writes into its own logs (and, until late October 2026, Cowork local) are used (fewer of them).
+weekly cap. Without sonar, only the readings written into the Claude Code logs are used, and until late October 2026 those of Cowork local (fewer of them).
 
 > The code, comments and dashboard text are in French.
 
@@ -25,7 +25,7 @@ weekly cap. Without sonar, only the readings Claude Code writes into its own log
 - Cost per day, per folder, per model, top 30 sessions; a "dollars / tokens" switch on most cost charts (the slope chart stays
   in dollars, the weekly cap table shows both units, the context chart counts calls).
 - Weekly cap: price of 100 % of the weekly limit, measured between two readings of the same week, and per week
-  (reached, projected, or too uncertain), with usage made outside this PC (claude.ai, phone, remote Cowork, or local Cowork since late October 2026) spotted and
+  (reached, projected, or too uncertain), with usage made outside this PC (claude.ai, phone, remote Cowork) spotted and
   removed when the percentage rises while nothing is spent here.
 - Context size per call (share of calls above 150k tokens).
 - Consistency checks run after every export: one line, `CONTRÔLES : OK`, or a precise list of what is wrong.
