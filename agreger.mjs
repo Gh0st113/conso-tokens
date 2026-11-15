@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { DONNEES, nomProjet } from './config.mjs';
 
 // Deux sources : Claude Code (~/.claude/projects) et Cowork (sessions locales de Claude Desktop,
-// AppData/Local/Claude-Data/claude_*/local-agent-mode-sessions), même format de journal. Cowork n'écrit plus de journal ici depuis fin octobre 2026 : le dossier n'est lu que pour l'historique.
+// AppData/Local/Claude-Data/claude_*/local-agent-mode-sessions), même format de journal. Cowork n'écrit plus de journal ici depuis fin octobre 2026 : son usage passe en hors PC ; le dossier n'est lu que pour l'historique.
 const racine = join(homedir(), '.claude', 'projects');
 const racinesCowork = (() => {
   const base = join(homedir(), 'AppData', 'Local', 'Claude-Data');

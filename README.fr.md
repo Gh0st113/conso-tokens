@@ -35,7 +35,7 @@ estimer le plafond hebdo. Sans sonar, seuls les relevés que Claude Code écrit 
 ## Prérequis
 
 - Node.js 20 ou plus, rien à installer.
-- Les journaux de Claude Code dans `~/.claude/projects` (sous Windows, les sessions locales de Cowork sont lues **si présentes** ; depuis fin octobre 2026, Cowork n'en écrit plus sur le PC : son usage est compté dans le hors PC ; pas
+- Les journaux de Claude Code dans `~/.claude/projects` (sous Windows, les sessions locales de Cowork sont lues **si présentes** ; depuis fin octobre 2026, Cowork n'en écrit plus sur le PC : son usage passe dans le hors PC, déduit ; pas
   sous macOS ni Linux).
 
 ## Utilisation
