@@ -19,10 +19,10 @@ export function lireCycle(valeur) {
   const jourNum = typeof valeur.jour === 'string' ? NOMS.get(valeur.jour.trim().toLowerCase()) : undefined;
   if (jourNum === undefined)
     throw new Error(`« jour » doit être un jour de la semaine (ex. "dimanche" ou "sunday"), reçu ${JSON.stringify(valeur.jour)}`);
-  const m = typeof valeur.heureUTC === 'string' ? valeur.heureUTC.trim().match(/^(\d{2}):(\d{2})$/) : null;
+  const m = typeof valeur.heureUTC === 'string' ? valeur.heureUTC.match(/^(\d{2}):(\d{2})$/) : null;
   if (!m || +m[1] > 23 || +m[2] > 59)
     throw new Error(`« heureUTC » doit être une heure HH:MM entre 00:00 et 23:59 (ex. "10:00"), reçu ${JSON.stringify(valeur.heureUTC)}`);
-  return { jour: JOURS[jourNum], jourNum, heureUTC: `${m[1].padStart(2, '0')}:${m[2]}` };
+  return { jour: JOURS[jourNum], jourNum, heureUTC: `${m[1]}:${m[2]}` };
 }
 
 // Fonctions du cycle (cycle = résultat de lireCycle)

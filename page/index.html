@@ -480,6 +480,8 @@
     el.hidden = !c.repli;
     el.textContent = c.repli ? `Cycle par défaut affiché (${CC.jourNom()} ${CC.heureUTCTexte()}) : réglages non reçus (table « reglages » absente).` : '';
   });
+  // Ce qui dépend du cycle est redessiné à chaque arrivée de données (« reglages » peut arriver après « jours »)
+  dash.onData(() => ['chJours', 'prochain', 'cycleTitre', 'heureReset', 'legReset', 'cycleRepli'].forEach(n => dash.draw(n)));
 </script>
 
 <script>
