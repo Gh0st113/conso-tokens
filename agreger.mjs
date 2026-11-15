@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { DONNEES, nomProjet } from './config.mjs';
 
 // Deux sources : Claude Code (~/.claude/projects) et Cowork (sessions locales de Claude Desktop,
-// AppData/Local/Claude-Data/claude_*/local-agent-mode-sessions), même format de journal.
+// AppData/Local/Claude-Data/claude_*/local-agent-mode-sessions), même format de journal. Cowork n'écrit plus de journal ici depuis fin octobre 2026 : son usage passe en hors PC ; le dossier n'est lu que pour l'historique.
 const racine = join(homedir(), '.claude', 'projects');
 const racinesCowork = (() => {
   const base = join(homedir(), 'AppData', 'Local', 'Claude-Data');
@@ -121,7 +121,7 @@ const heure = ts => Number(new Date(ts).toLocaleString('en-GB', { timeZone: 'Eur
 
 const appels = new Map(); // clé = message.id : une réponse peut occuper plusieurs lignes
 const limites = new Map(); // clé = horodatage + type : un même message peut être recopié par une reprise de session
-// Relevés du % écrits par l'appli (rate_limit_event, surtout dans les journaux Cowork) : clé = uuid
+// Relevés du % écrits par l'appli (rate_limit_event, surtout dans les journaux Cowork jusqu'à fin octobre 2026) : clé = uuid
 const relevesAuto = new Map();
 let lignes = 0, illisibles = 0;
 

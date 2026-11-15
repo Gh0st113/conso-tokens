@@ -6,12 +6,12 @@ Un tableau de bord local de votre usage de Claude Code : ce que vos sessions co�
 semaine de forfait, par jour, par dossier de travail, par modèle et par session, plus une estimation du **plafond hebdo
 de votre forfait en dollars**, tirée du pourcentage d'usage qu'affiche l'appli.
 
-Il ne lit que les compteurs de jetons et les horodatages des journaux de Claude Code de votre machine, **jamais le
+Il ne lit que les compteurs de jetons et les horodatages des journaux de Claude Code (et, sous Windows, de Cowork local si présents) de votre machine, **jamais le
 contenu de vos conversations**, et tout reste sur votre machine (sauf ce que vous choisissez de publier).
 
 Projet compagnon : [**sonar**](https://github.com/Gh0st113/sonar), un mod pour l'onglet Code de Claude Desktop. Son
 journal de quota (`~/.claude/sonar/quota-log.jsonl`) donne à ce tableau les relevés de pourcentage dont il a besoin pour
-estimer le plafond hebdo. Sans sonar, seuls les relevés que Claude Code écrit dans ses propres journaux servent (moins nombreux).
+estimer le plafond hebdo. Sans sonar, seuls les relevés écrits dans les journaux de Claude Code servent, et jusqu'à fin octobre 2026 ceux de Cowork local (moins nombreux).
 
 ![Tuiles de synthèse et coût par semaine de forfait, empilé par modèle](docs/apercu-semaines.png)
 
@@ -35,7 +35,7 @@ estimer le plafond hebdo. Sans sonar, seuls les relevés que Claude Code écrit 
 ## Prérequis
 
 - Node.js 20 ou plus, rien à installer.
-- Les journaux de Claude Code dans `~/.claude/projects` (sous Windows, les sessions locales de Cowork sont lues aussi ; pas
+- Les journaux de Claude Code dans `~/.claude/projects` (sous Windows, les sessions locales de Cowork sont lues **si présentes** ; depuis fin octobre 2026, Cowork n'en écrit plus sur le PC : son usage passe dans le hors PC, déduit ; pas
   sous macOS ni Linux).
 
 ## Utilisation

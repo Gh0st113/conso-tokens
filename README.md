@@ -6,12 +6,12 @@ A local dashboard of your Claude Code usage: what your sessions would cost at pu
 per day, per working folder, per model and per session, plus an estimate of your **weekly plan cap in dollars** built
 from the usage percentage the app shows.
 
-It reads only the token counters and timestamps of the Claude Code logs on your machine, **never the content of your
+It reads only the token counters and timestamps of the Claude Code logs (and, on Windows, the Cowork local ones if present) on your machine, **never the content of your
 conversations**, and everything stays on your machine (except what you choose to publish).
 
 Companion project: [**sonar**](https://github.com/Gh0st113/sonar), a mod for the Code tab of Claude Desktop. Its
 quota log (`~/.claude/sonar/quota-log.jsonl`) gives this dashboard the usage percentage readings it needs to estimate the
-weekly cap. Without sonar, only the readings Claude Code writes into its own logs are used (fewer of them).
+weekly cap. Without sonar, only the readings written into the Claude Code logs are used, and until late October 2026 those of Cowork local (fewer of them).
 
 > The code, comments and dashboard text are in French.
 
@@ -37,7 +37,7 @@ weekly cap. Without sonar, only the readings Claude Code writes into its own log
 ## Requirements
 
 - Node.js 20 or later, no dependency to install.
-- Claude Code logs in `~/.claude/projects` (on Windows, Cowork local sessions are read too; not on macOS or Linux).
+- Claude Code logs in `~/.claude/projects` (on Windows, Cowork local sessions are read **if present**; since late October 2026 Cowork no longer writes them on the PC, so its usage is deduced as outside this PC; not on macOS or Linux).
 
 ## Use
 
