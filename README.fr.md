@@ -11,7 +11,7 @@ contenu de vos conversations**, et tout reste sur votre machine (sauf ce que vou
 
 Projet compagnon : [**sonar**](https://github.com/Gh0st113/sonar), un mod pour l'onglet Code de Claude Desktop. Son
 journal de quota (`~/.claude/sonar/quota-log.jsonl`) donne à ce tableau les relevés de pourcentage dont il a besoin pour
-estimer le plafond hebdo. Sans sonar, seuls les relevés que Claude Code écrit dans ses propres journaux servent (moins nombreux).
+estimer le plafond hebdo. Sans sonar, seuls les relevés que Claude Code écrit dans ses propres journaux (et, jusqu'à fin octobre 2026, Cowork local) servent (moins nombreux).
 
 ![Tuiles de synthèse et coût par semaine de forfait, empilé par modèle](docs/apercu-semaines.png)
 
@@ -23,7 +23,7 @@ estimer le plafond hebdo. Sans sonar, seuls les relevés que Claude Code écrit 
 - Coût par jour, par dossier, par modèle, les 30 sessions les plus chères ; bouton « dollars / jetons » sur la plupart des
   graphiques de coût (les pentes restent en dollars, le tableau des plafonds donne les deux unités, le graphique du contexte compte des appels).
 - Plafond hebdo : prix de 100 % de la limite hebdo, mesuré entre deux relevés de la même semaine, et semaine par semaine
-  (atteint, projeté ou trop incertain), avec l'usage fait hors de ce PC (claude.ai, téléphone, Cowork distant) repéré et
+  (atteint, projeté ou trop incertain), avec l'usage fait hors de ce PC (claude.ai, téléphone, Cowork distant ou local depuis fin octobre 2026) repéré et
   retiré quand le pourcentage monte sans dépense ici.
 - Taille du contexte à chaque appel (part des appels au-delà de 150k jetons).
 - Contrôles de cohérence après chaque export : une ligne, `CONTRÔLES : OK`, ou la liste précise de ce qui cloche.
