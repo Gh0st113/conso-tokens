@@ -63,8 +63,22 @@ Réglages facultatifs : copier `config.exemple.json` en `config.local.json` (ign
 | `motifProjet` | expression régulière dont le groupe 1 tire un nom court de dossier de la clé des journaux |
 | `renommerProjets` | `[[expression, nom], …]` testés d'abord, par ex. pour afficher un dossier sensible sous un nom neutre |
 | `remiseAZero` | jour et heure UTC de la remise à zéro hebdo : `{ "jour": "lundi", "heureUTC": "08:00" }` (nom du jour en français ou en anglais, `HH:MM`). Défaut : dimanche 10:00 UTC. Un changement redécoupe tout l'historique : les clés de `resets` doivent alors être des débuts de semaine du nouveau cycle |
-| `resets` | semaines où vous avez utilisé un reset de limite : `{ "AAAA-MM-JJ": "quand" }`, la date étant le jour qui ouvre la semaine (jour de la remise à zéro) |
+| `resets` | resets de limite utilisés, deux formes (voir ci-dessous) : `{ "AAAA-MM-JJ": "quand" }` (semaine entière) ou une liste `[{ "quand": "AAAA-MM-JJTHH:MMZ", "type": "hebdo", "note": "…" }]` (heure exacte, découpage) |
 | `trous` | périodes dont vous savez que les journaux manquent : `[["premier jour", "dernier jour", "raison"]]` |
+
+**Resets de limite** (`resets`). L'ancienne forme (objet `{ "AAAA-MM-JJ": "quand" }`) marque la semaine entière comme « reset utilisé », sans plafond : c'est le comportement d'origine. La nouvelle forme donne l'heure exacte, en UTC, avec le `Z` :
+
+```json
+"resets": [{ "quand": "2026-01-06T19:30Z", "type": "hebdo", "note": "reset utilisé le mardi soir" }]
+```
+
+- `quand` (obligatoire) : `AAAA-MM-JJTHH:MMZ`. Les secondes sont refusées, comme une date sans `Z`.
+- `type` (obligatoire) : seul `"hebdo"` est accepté pour l'instant.
+- `note` (facultatif) : texte libre affiché dans la page.
+
+Une valeur invalide arrête le script avec un message `config.local.json : resets…`. Avec la nouvelle forme, **la semaine est découpée** en segments, un par reset : le plafond et la sortie de la semaine sont calculés sur le segment retenu (celui qui a le plus grand % local, à égalité le plus récent), avec son propre coût ; les pentes ne relient jamais deux segments ; le statut de la semaine indique la coupure. Hypothèse retenue : un reset à la demande ne déplace pas la fin de la semaine (un seul cas observé).
+
+**Détection** : si le % hebdo baisse de 3 points ou plus sans reset déclaré, et que le relevé suivant confirme la baisse, `CONTRÔLES` signale `reset probable … non déclaré dans « resets »`. Une baisse isolée (un seul relevé) n'est pas signalée. Rien n'est corrigé automatiquement. Limite : la détection compare avec le plus haut % de toute la semaine, donc un reset déclaré peut faire signaler à tort la baisse qui suit (à traiter avant la fusion).
 
 Journaux d'un autre PC : `node agreger.mjs --journaux <chemin vers son .claude/projects>` (répétable).
 
@@ -123,6 +137,7 @@ Sous macOS / Linux : `HOME=../demo-home node agreger.mjs && HOME=../demo-home no
 - L'usage hors de ce PC est déduit de pourcentages entiers, pas mesuré : quand de telles périodes sont repérées, le
   plafond hebdo est donné en fourchette, sinon en estimation unique ; aucun plafond quand la part payée sur ce PC est sous
   10 % ou que la fourchette dépasse 25 % du plafond.
+- Limites connues de la détection de reset : les relevés sous 10 % sont ignorés, donc une baisse qui laisse le % sous 10 jusqu'à la fin de la semaine n'est pas signalée ; une ligne de relevé aberrante isolée reste dans les pentes.
 
 ## Licence
 

@@ -2,6 +2,6 @@
   "dossierDonnees": "~/conso-tokens-donnees",
   "renommerProjets": [["projet-a-masquer", "masqué"]],
   "remiseAZero": { "jour": "dimanche", "heureUTC": "10:00" },
-  "resets": { "2026-01-04": "reset utilisé le mardi soir" },
+  "resets": [{ "quand": "2026-01-06T19:30Z", "type": "hebdo", "note": "reset utilisé le mardi soir (exemple)" }],
   "trous": [["2026-01-10", "2026-01-12", "journaux perdus (exemple)"]]
 }

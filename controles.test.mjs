@@ -14,7 +14,8 @@ const ici = DONNEES;
 const sansDonnees = !existsSync(join(ici, 'donnees.json')) || !existsSync(join(ici, 'export'));
 const lire = () => {
   const d = JSON.parse(readFileSync(join(ici, 'donnees.json'), 'utf8'));
-  const tables = Object.fromEntries(readdirSync(join(ici, 'export')).filter(f => f.endsWith('.json'))
+  // « _tables.json » (manifeste, 15/11) n'est pas une table : exclu
+  const tables = Object.fromEntries(readdirSync(join(ici, 'export')).filter(f => f.endsWith('.json') && !f.startsWith('_'))
     .map(f => [f.slice(0, -5), JSON.parse(readFileSync(join(ici, 'export', f), 'utf8'))]));
   return { d, tables };
 };
@@ -162,3 +163,63 @@ test('sonar muet depuis plus de 24 h alors que le PC consomme', () => {
   const w = controler(x.d, x.tables, { maintenant: maintenantDe(x.d) + 30 * 36e5, groupes: GROUPES, debutSemaine });
   assert.ok(w.aVerifier.some(a => a.includes('sonar muet')));
 }, x => (x.d.projections ?? []).some(p => p.type === 'hebdo'));
+
+// ---- Reset non déclaré et semaine coupée (19/11) : données fabriquées, sans donnees.json ----
+const FENETRE = '2026-10-25T10:00:00.000Z';
+const releve = (heure, pct, fenetre = FENETRE) => ({ type: 'hebdo', releve: `2026-11-02T${heure}:00:00.000Z`, pct, debutFenetre: fenetre, debutSegment: fenetre });
+const dFab = (projections, resetsDeclares = { semaines: {}, precis: [] }) => ({
+  total: { cout: 0, appels: 0, entree: 0, ecritureCache: 0, lectureCache: 0, sortie: 0 }, projections, resetsDeclares,
+});
+const MAINT = Date.parse('2026-11-05T00:00:00Z');
+const aSignal = v => v.aVerifier.some(a => a.includes('reset probable'));
+
+tester('baisse confirmée non déclarée → À VÉRIFIER (une fois par fenêtre)', () => {
+  const v = controler(dFab([releve('08', 40), releve('09', 60), releve('10', 30), releve('11', 28)]), {}, { maintenant: MAINT });
+  assert.ok(v.aVerifier.some(a => a.includes('reset probable entre le 02/11 09:00 et le 02/11 10:00 UTC (semaine du 2026-10-25)')), JSON.stringify(v));
+  assert.equal(v.aVerifier.filter(a => a.includes('reset probable')).length, 1);
+});
+
+tester('baisse isolée (26 → 12 → 26) : aucun signal', () => {
+  assert.ok(!aSignal(controler(dFab([releve('08', 40), releve('09', 60), releve('10', 30), releve('11', 58)]), {}, { maintenant: MAINT })));
+});
+
+tester('remise à zéro du cycle (autre fenêtre) : aucun signal', () => {
+  const autre = '2026-11-01T10:00:00.000Z';
+  assert.ok(!aSignal(controler(dFab([releve('08', 40), releve('09', 60), releve('10', 30, autre), releve('11', 28, autre)]), {}, { maintenant: MAINT })));
+});
+
+tester('reset précis déclaré dans ]a, b] : aucun signal', () => {
+  const decl = { semaines: {}, precis: [{ quand: '2026-11-02T09:30:00.000Z', type: 'hebdo', note: '', semaine: '2026-10-25' }] };
+  assert.ok(!aSignal(controler(dFab([releve('08', 40), releve('09', 60), releve('10', 30), releve('11', 28)], decl), {}, { maintenant: MAINT })));
+});
+
+tester('semaine déclarée à l’ancienne forme : aucun signal', () => {
+  const decl = { semaines: { '2026-10-25': 'nuit du 1er' }, precis: [] };
+  assert.ok(!aSignal(controler(dFab([releve('08', 40), releve('09', 60), releve('10', 30), releve('11', 28)], decl), {}, { maintenant: MAINT })));
+});
+
+tester('donnees.json sans resetsDeclares : pas d’exception', () => {
+  const d = dFab([releve('08', 40), releve('09', 60), releve('10', 30), releve('11', 28)]); delete d.resetsDeclares;
+  assert.doesNotThrow(() => controler(d, {}, { maintenant: MAINT }));
+});
+
+// Semaine coupée : la règle « consommé > plafond » compare au coût du segment retenu, pas à la semaine entière
+const coupee = cout => {
+  const d = dFab([]);
+  d.segmentsHebdo = [
+    { semaine: '2026-11-01', debut: '2026-11-01T10:00:00.000Z', fin: '2026-11-03T21:00:00.000Z', cout: 70, sortie: 0 },
+    { semaine: '2026-11-01', debut: '2026-11-03T21:00:00.000Z', fin: '2026-11-08T10:00:00.000Z', cout, sortie: 0 },
+  ];
+  const tables = {
+    semaines: [{ debut: '2026-11-01', cout: 100, appels: 1, jetons: 0 }],
+    plafondsHebdo: [{ semaine: '2026-11-01', statut: 'projeté (50 %) ; coupée par reset hebdo le 03/11 21:00 UTC (segment retenu : depuis le 03/11 21:00)',
+      plafond: 40, consomme: 100, horsEstime: null, pctFin: 50, sortie: null, consommeSortie: 0 }],
+  };
+  return controler(d, tables, { maintenant: MAINT });
+};
+tester('semaine coupée : consommé du segment retenu (30 $ ≤ plafond 40 $) → pas d’anomalie', () => {
+  assert.ok(!coupee(30).anomalies.some(a => a.includes('> plafond')), JSON.stringify(coupee(30)));
+});
+tester('semaine coupée : consommé du segment retenu (50 $ > plafond 40 $) → anomalie', () => {
+  assert.ok(coupee(50).anomalies.some(a => a.includes('consommé 50 $ > plafond 40 $')), JSON.stringify(coupee(50)));
+});
