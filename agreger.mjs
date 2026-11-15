@@ -113,7 +113,8 @@ const { debutSemaine, instantDebut } = fabriquer(REMISE_A_ZERO);
 // Resets précis (clé resets, nouvelle forme) : ils coupent la fenêtre en segments. Début du segment d'un instant t = le dernier
 // reset précis de sa fenêtre (début = W) qui est ≤ t, sinon le début de la fenêtre W (decision 3 du plan #5, 15/11).
 const SEMAINE_MS = 7 * 864e5;
-const precisDans = W => RESETS_PRECIS.map(p => p.quand).filter(q => q >= W && q < W + SEMAINE_MS);
+// Un reset à l'instant exact du début de semaine ne coupe rien : il est ignoré (sinon il crée un segment vide, relecture 3, 16/11)
+const precisDans = W => RESETS_PRECIS.map(p => p.quand).filter(q => q > W && q < W + SEMAINE_MS);
 const segmentDe = (t, W) => Math.max(W, ...precisDans(W).filter(q => q <= t));
 const ISO = ms => new Date(ms).toISOString();
 
@@ -315,7 +316,7 @@ const projections = releves.flatMap(r => {
 // de la page (une session compte dans la période si elle y a commencé ; le max de jourFin = dernier jour des données)
 const sessions = Object.entries(parSession).map(([id, s]) => ({ id: id.slice(0, 8), jour: jour(s.debut), jourFin: jour(s.fin), ...s }));
 // Semaines coupées par un reset précis seulement : coût et jetons de sortie de chaque segment (source pour exporter.mjs)
-const segmentsHebdo = [...new Set(RESETS_PRECIS.map(p => p.semaine))].sort().flatMap(semaine => {
+const segmentsHebdo = [...new Set(RESETS_PRECIS.filter(p => p.quand > instantDebut(p.semaine)).map(p => p.semaine))].sort().flatMap(semaine => {
   const W = instantDebut(semaine), bornes = [W, ...precisDans(W).sort((a, b) => a - b), W + SEMAINE_MS];
   return bornes.slice(0, -1).map((s, i) => {
     const e = bornes[i + 1], dans = tri.filter(a => { const t = Date.parse(a.ts); return t >= s && t < e; });
@@ -323,7 +324,7 @@ const segmentsHebdo = [...new Set(RESETS_PRECIS.map(p => p.semaine))].sort().fla
       sortie: dans.reduce((x, a) => x + a.sortie, 0) };
   });
 });
-// Resets déclarés (config.local.json) : exporter.mjs et controles.mjs les lisent ici, instants en ISO
+// Resets déclarés (config.local.json) : controles.mjs lit precis (instants en ISO) ; exporter.mjs reconstruit la table resets depuis RESETS / RESETS_PRECIS
 const resetsDeclares = { semaines: RESETS, precis: RESETS_PRECIS.map(p => ({ quand: ISO(p.quand), type: p.type, note: p.note, semaine: p.semaine })) };
 writeFileSync(sortie, JSON.stringify({
   genereLe: new Date().toISOString(), lignesUsage: lignes, illisibles, reponsesUniques: appels.size,
