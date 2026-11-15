@@ -135,7 +135,8 @@ const localDe = ({ atteint, proj }) => {
 const jjmm = iso => `${iso.slice(8, 10)}/${iso.slice(5, 7)} ${iso.slice(11, 16)}`;
 // Suffixe du statut d'une semaine coupée : premier reset précis de la semaine, et début du segment retenu
 const suffixeCoupee = (debut, debutSegment) => {
-  const premier = d.resetsDeclares.precis.filter(p => p.semaine === debut).map(p => p.quand).sort().at(0);
+  // Premier reset qui coupe vraiment : le 2e segment (le 1er part du début de semaine, reset à cet instant exclu, tour 4)
+  const premier = segmentsDe(debut)[1]?.debut ?? debutSegment;
   return ` ; coupée par reset hebdo le ${jjmm(premier)} UTC (segment retenu : depuis le ${jjmm(debutSegment)})`;
 };
 

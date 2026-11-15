@@ -1,6 +1,5 @@
 // Validateurs des réglages propres à chaque utilisateur (config.local.json) : un seul module, API canonique (15/11).
 // Pur : aucun import, aucun fichier lu. config.mjs est le seul lecteur du fichier : il ajoute le préfixe « config.local.json : ».
-// Un nouveau validateur de clé perso va ici (lireForfaits plus tard).
 // Cycle (clé remiseAZero) : un jour de la semaine et une heure UTC ; défaut : dimanche 10:00 UTC (comportement d'origine).
 
 const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
