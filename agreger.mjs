@@ -10,7 +10,8 @@ import { join, dirname, basename, relative, sep, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
-import { DONNEES, nomProjet } from './config.mjs';
+import { DONNEES, nomProjet, REMISE_A_ZERO } from './config.mjs';
+import { fabriquer } from './semaine.mjs';
 
 // Deux sources : Claude Code (~/.claude/projects) et Cowork (sessions locales de Claude Desktop,
 // AppData/Local/Claude-Data/claude_*/local-agent-mode-sessions), même format de journal. Cowork n'écrit plus de journal ici depuis fin octobre 2026 : son usage passe en hors PC ; le dossier n'est lu que pour l'historique.
@@ -105,16 +106,9 @@ function cout(a) {
   return a.coutEntree + a.coutEcriture + a.coutLecture + a.coutSortie;
 }
 
-// Fenêtre hebdomadaire du forfait : dimanche RESET_HEURE_UTC h UTC, cycle fixe de 7 × 24 h
-// (heure lue dans /usage pour le forfait de l'auteur ; non réglable pour l'instant : README, « Limites »).
-const RESET_JOUR = 0, RESET_HEURE_UTC = 10;
-function semaine(ts) {
-  const d = new Date(ts);
-  let recul = (d.getUTCDay() - RESET_JOUR + 7) % 7;
-  if (recul === 0 && d.getUTCHours() < RESET_HEURE_UTC) recul = 7;
-  d.setUTCDate(d.getUTCDate() - recul);
-  return d.toISOString().slice(0, 10); // date du dimanche qui ouvre la fenêtre
-}
+// Fenêtre hebdomadaire du forfait : cycle de 7 × 24 h ouvert au jour et à l'heure UTC de REMISE_A_ZERO
+// (config.local.json, clé remiseAZero ; défaut dimanche 10:00 UTC, README « Limites »).
+const { debutSemaine, instantDebut } = fabriquer(REMISE_A_ZERO);
 
 const jour = ts => new Date(ts).toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
 const heure = ts => Number(new Date(ts).toLocaleString('en-GB', { timeZone: 'Europe/Paris', hour: '2-digit', hourCycle: 'h23' }));
@@ -211,7 +205,7 @@ for (const a of appels.values()) {
   const j = jour(a.ts);
   a.cout = cout(a);
   ajouter(total, a);
-  const sem = (parSemaine[semaine(a.ts)] ??= { ...vide(), modeles: {}, jetonsModeles: {} });
+  const sem = (parSemaine[debutSemaine(a.ts)] ??={ ...vide(), modeles: {}, jetonsModeles: {} });
   ajouter(sem, a);
   sem.modeles[a.modele] = (sem.modeles[a.modele] || 0) + a.cout;
   sem.jetonsModeles[a.modele] = (sem.jetonsModeles[a.modele] || 0) + a.entree + a.ecritureCache + a.lectureCache + a.sortie;
@@ -251,7 +245,7 @@ const vus = new Set();
 const plafonds = [...limites.values()].sort((a, b) => a.ts < b.ts ? -1 : 1).map(l => {
   const atteinte = Date.parse(l.ts);
   const reset = l.type === 'hebdo'
-    ? Date.parse(semaine(new Date(atteinte + 7 * 864e5).toISOString()) + 'T' + String(RESET_HEURE_UTC).padStart(2, '0') + ':00:00Z')
+    ? instantDebut(debutSemaine(atteinte + 7 * 864e5))
     : parisVersUtc(atteinte, l.h, l.min);
   if (reset === null || vus.has(l.type + reset)) return null; // même fenêtre déjà comptée (message répété)
   vus.add(l.type + reset);
@@ -309,7 +303,7 @@ const projections = releves.flatMap(r => {
 const sessions = Object.entries(parSession).map(([id, s]) => ({ id: id.slice(0, 8), jour: jour(s.debut), jourFin: jour(s.fin), ...s }));
 writeFileSync(sortie, JSON.stringify({
   genereLe: new Date().toISOString(), lignesUsage: lignes, illisibles, reponsesUniques: appels.size,
-  reset: { jour: 'dimanche', heure: RESET_HEURE_UTC, fuseau: 'UTC' }, tarifs: TARIFS, paliers: PALIERS,
+  reset: { jour: REMISE_A_ZERO.jour, heureUTC: REMISE_A_ZERO.heureUTC, fuseau: 'UTC' }, tarifs: TARIFS, paliers: PALIERS,
   total, plafonds, projections, parSemaine, parJour, jourModele, jourProjet, jourModeleTotal, jourTailles, parProjet, parModele, parHeure, tailles, sessions,
 }, null, 1));
 console.log(`${appels.size} réponses uniques (${lignes} lignes « usage », ${illisibles} illisibles), ${sessions.length} sessions, ${lignesSonar} relevés sonar -> ${sortie}`);

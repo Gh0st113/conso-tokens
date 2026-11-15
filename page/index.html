@@ -63,7 +63,7 @@
 <div class="cc">
   <header style="display:grid;gap:var(--cds-gap-sm)">
     <h1 id="titre">Conso Claude Code</h1>
-    <p class="cc-lead">Semaine de forfait en cours (depuis le <b data-draw="semDebut" data-source="semCourante" data-field="debut">—</b>, 10 h UTC) : <b data-draw="semCout" data-source="semCourante" data-field="cout">—</b> <span data-jet="jetons">en équivalent API</span>, contre <b data-draw="semPrec" data-source="semCourante" data-field="prec">—</b> sur toute la semaine précédente.</p>
+    <p class="cc-lead">Semaine de forfait en cours (depuis le <b data-draw="semDebut" data-source="semCourante" data-field="debut">—</b>, <span data-draw="heureReset" data-source="reglages">—</span>) : <b data-draw="semCout" data-source="semCourante" data-field="cout">—</b> <span data-jet="jetons">en équivalent API</span>, contre <b data-draw="semPrec" data-source="semCourante" data-field="prec">—</b> sur toute la semaine précédente.</p>
     <div class="cc-unite">
       <span class="cc-muted">Afficher en</span>
       <span class="cc-seg" role="group" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true">dollars</button><button type="button" data-unite="jetons" aria-pressed="false">jetons</button></span>
@@ -72,9 +72,10 @@
   </header>
 
   <section class="cc-reset" id="reset" aria-label="Remise à zéro du forfait">
-    <h2>Le forfait repart à zéro chaque dimanche à 10 h UTC</h2>
-    <p>Soit 11 h à Paris en hiver et midi en été : le cycle dure exactement 7 × 24 h et ne suit pas le changement d'heure. Prochaine remise à zéro : <b data-draw="prochain">—</b>.</p>
-    <p class="cc-muted">Heure lue dans l'appli (/usage) ; heure non réglable pour l'instant (README, « Limites »). Chaque barre du graphe hebdomadaire couvre une fenêtre de forfait, d'un dimanche 10 h UTC au suivant. Sur le graphe par jour, les traits pointillés marquent ces remises à zéro. Ces fenêtres ne comptent que ce PC (Claude Code et, sous Windows, Cowork local, journaux jusqu'à fin octobre 2026), alors que le forfait compte aussi claude.ai, le téléphone et Cowork distant.</p>
+    <h2 data-draw="cycleTitre" data-source="reglages">Le forfait repart à zéro chaque jour de la semaine</h2>
+    <p>Le cycle dure exactement 7 × 24 h et ne suit pas le changement d'heure de Paris. Prochaine remise à zéro : <b data-draw="prochain" data-source="reglages">—</b>.</p>
+    <p class="cc-muted" data-draw="cycleRepli" data-source="reglages" hidden></p>
+    <p class="cc-muted">Heure lue dans l'appli (/usage) ; réglable dans <code>config.local.json</code> (clé <code>remiseAZero</code>, README). Chaque barre du graphe hebdomadaire couvre une fenêtre de forfait, d'une remise à zéro à la suivante. Sur le graphe par jour, les traits pointillés marquent ces remises à zéro. Ces fenêtres ne comptent que ce PC (Claude Code et, sous Windows, Cowork local, journaux jusqu'à fin octobre 2026), alors que le forfait compte aussi claude.ai, le téléphone et Cowork distant.</p>
   </section>
 
   <section class="cc-card" id="pentes">
@@ -128,7 +129,7 @@
   <section class="cc-card" id="jours">
     <div class="cc-titre"><h2 data-jet="Jetons par jour">Coût par jour</h2><span class="cc-seg" role="group" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true">dollars</button><button type="button" data-unite="jetons" aria-pressed="false">jetons</button></span></div>
     <p class="cc-muted" data-jet="Jetons consommés, jour calendaire à l'heure de Paris.">Équivalent API en dollars, jour calendaire à l'heure de Paris.</p>
-    <div class="cc-legend"><span><i class="cc-rule"></i>remise à zéro du forfait (dimanche 10 h UTC)</span></div>
+    <div class="cc-legend"><span><i class="cc-rule"></i><span data-draw="legReset" data-source="reglages">remise à zéro du forfait</span></span></div>
     <div class="cc-chart dash-skeleton" data-draw="chJours" data-source="jours"></div>
   </section>
 
@@ -283,16 +284,43 @@
     th.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); CC.trier(th); } });
   });
 
-  // Remise à zéro : dimanche 10 h UTC, cycle fixe de 7 × 24 h
-  CC.RESET_HEURE_UTC = 10;
-  CC.resetDu = jour => new Date(jour + 'T' + String(CC.RESET_HEURE_UTC).padStart(2, '0') + ':00:00Z');
+  // Remise à zéro du forfait : jour et heure UTC lus dans la table « reglages » (clé remiseAZero de config.local.json).
+  // Table absente ou vide (page publiée avant les données) : repli sur dimanche 10:00, dit à l'écran (cycleRepli).
+  const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+  CC.cycle = () => {
+    const g = dash.data('reglages'), r = g.status === 'ok' && g.data.length ? g.data[0] : null;
+    return r ? { jourNum: Number(r.jourNum), heureUTC: r.heureUTC, repli: false }
+      : { jourNum: 0, heureUTC: '10:00', repli: true }; // même valeur que CYCLE_DEFAUT de semaine.mjs
+  };
+  CC.jourNom = () => JOURS[CC.cycle().jourNum];
+  // « 10:00 » → « 10 h UTC » ; « 17:30 » → « 17 h 30 UTC »
+  CC.heureUTCTexte = () => { const [h, m] = CC.cycle().heureUTC.split(':'); return m === '00' ? `${+h} h UTC` : `${+h} h ${m} UTC`; };
+  // Instant de remise à zéro du jour UTC « AAAA-MM-JJ » (même calcul que semaine.mjs)
+  CC.resetDu = jour => new Date(Date.parse(jour + 'T' + CC.cycle().heureUTC + ':00Z'));
+  CC.jourParis = d => d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
   CC.heureParis = d => d.toLocaleTimeString('fr-FR', { timeZone: 'Europe/Paris', hour: 'numeric', minute: '2-digit' });
+  // Heure de Paris en décimal (11,5 pour 11 h 30), pour placer un trait sur la journée du graphe
+  CC.heureParisDec = d => {
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      .formatToParts(d).map(x => [x.type, +x.value]));
+    return p.hour + p.minute / 60;
+  };
+  // Remise à zéro tombant le jour de Paris « AAAA-MM-JJ » (0 ou 1) : instants UTC des jours voisins qui y tombent
+  CC.resetsDuJourParis = jour => {
+    const c = CC.cycle(), out = [];
+    for (const k of [-1, 0, 1]) {
+      const t = CC.resetDu(new Date(Date.parse(jour + 'T12:00:00Z') + k * 864e5).toISOString().slice(0, 10));
+      if (t.getUTCDay() === c.jourNum && CC.jourParis(t) === jour) out.push(t);
+    }
+    return out;
+  };
   CC.prochainReset = () => {
-    const d = new Date();
-    let avance = (7 - d.getUTCDay()) % 7;
-    if (avance === 0 && d.getUTCHours() >= CC.RESET_HEURE_UTC) avance = 7;
-    d.setUTCDate(d.getUTCDate() + avance);
-    return CC.resetDu(d.toISOString().slice(0, 10));
+    const maintenant = Date.now();
+    for (let k = 0; k <= 7; k++) {
+      const t = CC.resetDu(new Date(maintenant + k * 864e5).toISOString().slice(0, 10));
+      if (t.getUTCDay() === CC.cycle().jourNum && t > maintenant) return t;
+    }
+    return null;
   };
 
   // Graphe en barres plus large que sa place (13/11 : une barre de plus chaque semaine ou chaque jour) : largeur minimale
@@ -442,8 +470,18 @@
   texte('tGros', 'grosContexte', r => CC.pct(r.part));
   dash.draw('prochain', el => {
     const r = CC.prochainReset();
-    el.textContent = `${CC.jourLong(r.toISOString().slice(0, 10))} à ${CC.heureParis(r)} (heure de Paris)`;
+    el.textContent = r ? `${CC.jourLong(CC.jourParis(r))} à ${CC.heureParis(r)} (heure de Paris)` : '—';
   });
+  dash.draw('cycleTitre', el => { el.textContent = `Le forfait repart à zéro chaque ${CC.jourNom()} à ${CC.heureUTCTexte()}`; });
+  dash.draw('heureReset', el => { el.textContent = CC.heureUTCTexte(); });
+  dash.draw('legReset', el => { el.textContent = `remise à zéro du forfait (${CC.jourNom()} ${CC.heureUTCTexte()})`; });
+  dash.draw('cycleRepli', el => {
+    const c = CC.cycle();
+    el.hidden = !c.repli;
+    el.textContent = c.repli ? `Cycle par défaut affiché (${CC.jourNom()} ${CC.heureUTCTexte()}) : réglages non reçus (table « reglages » absente).` : '';
+  });
+  // Ce qui dépend du cycle est redessiné à chaque arrivée de données (« reglages » peut arriver après « jours »)
+  dash.onData(() => ['chJours', 'prochain', 'cycleTitre', 'heureReset', 'legReset', 'cycleRepli'].forEach(n => dash.draw(n)));
 </script>
 
 <script>
@@ -483,8 +521,8 @@
     svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', r => x(r.debut)).attr('width', x.bandwidth())
       .attr('y', m.t).attr('height', H - m.t - m.b).attr('fill', 'transparent')
       .on('pointermove', (ev, r) => {
-        const fin = new Date(new Date(r.debut + 'T12:00:00Z').getTime() + 7 * 864e5).toISOString().slice(0, 10);
-        tip.show(`Du dim. ${CC.jourCourt(r.debut)} ${CC.heureParis(CC.resetDu(r.debut))} au dim. ${CC.jourCourt(fin)} ${CC.heureParis(CC.resetDu(fin))} (Paris)`,
+        const debutFen = CC.resetDu(r.debut), finFen = new Date(debutFen.getTime() + 7 * 864e5);
+        tip.show(`Du ${CC.jourLong(CC.jourParis(debutFen))} ${CC.heureParis(debutFen)} au ${CC.jourLong(CC.jourParis(finFen))} ${CC.heureParis(finFen)} (Paris)`,
           [[null, 'Total', CC.fmt(r.cout)], ...SERIES.map(([c, n, ci]) => [CC.couleur(ci), n, CC.fmt(Number(r[CC.serie(c)]) || 0)]),
            ...(CC.enJetons() ? [[null, 'Coût', CC.usd(r.usd)]] : []), [null, 'Réponses', CC.int(r.appels)], ...(r.manque ? [[null, null, `Incomplète : ${r.manque}`]] : [])],
           defil.x(x(r.debut) + x.bandwidth() / 2), defil.y(y(r.cout)));
@@ -492,7 +530,7 @@
       .on('pointerleave', () => tip.hide());
   });
 
-  // Jours : barres + traits de remise à zéro le dimanche à 11 h
+  // Jours : barres + traits de remise à zéro (jour de Paris qui contient une remise à zéro du cycle)
   CC.draw('chJours', el => {
     const g = dash.data('jours');
     if (g.status !== 'ok') { el.replaceChildren(); return; }
@@ -505,14 +543,15 @@
     const svg = d3.select(defil.box).append('svg').attr('width', defil.largeur).attr('viewBox', `0 0 ${W} ${H}`);
     CC.axe(svg.append('g').attr('transform', `translate(${m.l},0)`), d3.axisLeft(y).ticks(5).tickSize(-(W - m.l - m.r)).tickFormat(CC.fmt));
     svg.select('.domain').remove();
-    const dimanche = j => new Date(j + 'T12:00:00Z').getUTCDay() === 0;
-    const pas = Math.max(1, Math.ceil(rows.filter(r => dimanche(r.jour)).length / Math.max(1, Math.floor((W - m.l) / 70))));
+    const remiseDe = j => CC.resetsDuJourParis(j)[0] ?? null;
+    const pas = Math.max(1, Math.ceil(rows.filter(r => remiseDe(r.jour)).length / Math.max(1, Math.floor((W - m.l) / 70))));
     let n = 0;
     CC.axe(svg.append('g').attr('transform', `translate(0,${H - m.b})`), d3.axisBottom(x).tickSize(0).tickPadding(8)
-      .tickFormat(d => dimanche(d) && (n++ % pas === 0) ? CC.jourCourt(d) : ''));
-    // Trait à l'heure de Paris de la remise à zéro (11 h l'hiver, 12 h l'été)
-    const posReset = r => x(r.jour) + x.step() * parseInt(CC.heureParis(CC.resetDu(r.jour)), 10) / 24;
-    svg.append('g').selectAll('line').data(rows.filter(r => dimanche(r.jour))).join('line')
+      .tickFormat(d => remiseDe(d) && (n++ % pas === 0) ? CC.jourCourt(d) : ''));
+    // Trait à l'heure de Paris de la remise à zéro (instant UTC du cycle, lu en heure de Paris)
+    const remises = rows.filter(r => remiseDe(r.jour)).map(r => ({ jour: r.jour, t: remiseDe(r.jour) }));
+    const posReset = o => x(o.jour) + x.step() * CC.heureParisDec(o.t) / 24;
+    svg.append('g').selectAll('line').data(remises).join('line')
       .attr('x1', posReset).attr('x2', posReset)
       .attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3');
     // Jours sans journaux (effacés) : bande pleine hauteur, pour ne pas les confondre avec des jours calmes
@@ -524,7 +563,7 @@
     svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', r => x(r.jour) - x.step() * 0.1).attr('width', x.step())
       .attr('y', m.t).attr('height', H - m.t - m.b).attr('fill', 'transparent')
       .on('pointermove', (ev, r) => {
-        tip.show(CC.jourLong(r.jour) + (dimanche(r.jour) ? ` (remise à zéro à ${CC.heureParis(CC.resetDu(r.jour))})` : ''),
+        tip.show(CC.jourLong(r.jour) + (remiseDe(r.jour) ? ` (remise à zéro à ${CC.heureParis(remiseDe(r.jour))})` : ''),
           [[null, 'Coût', CC.usd(r.cout)], [null, 'Réponses', CC.int(r.appels)], [null, 'Jetons', CC.compact(r.jetons)], ...(r.manque ? [[null, null, `Incomplet : ${r.manque}`]] : [])],
           defil.x(x(r.jour) + x.bandwidth() / 2), defil.y(y(r.v)));
       })
