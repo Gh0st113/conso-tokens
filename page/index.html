@@ -19,7 +19,8 @@
   .cc-legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
   .cc-legend .cc-hollow { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--color-fg); background: transparent; box-sizing: border-box; }
   .cc-legend .cc-hollow.cc-dash { border-style: dotted; }
-  .cc-legend .cc-rule { width: 14px; height: 0; border-top: 2px dashed var(--cds-chart-reference); border-radius: 0; }  .cc-tip { position: absolute; pointer-events: none; z-index: 2; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); white-space: nowrap; }
+  .cc-legend .cc-rule { width: 14px; height: 0; border-top: 2px dashed var(--cds-chart-reference); border-radius: 0; }
+  .cc-legend .cc-rule-plein { width: 14px; height: 0; border-top: 2px solid var(--color-fg); border-radius: 0; }  .cc-tip { position: absolute; pointer-events: none; z-index: 2; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); white-space: nowrap; }
   .cc-tip .cc-tip-head { color: var(--cds-text-secondary); }
   .cc-tip i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; margin-right: 6px; }
   .cc-split { display: grid; gap: var(--cds-gap-sm); }
@@ -129,7 +130,7 @@
   <section class="cc-card" id="jours">
     <div class="cc-titre"><h2 data-jet="Jetons par jour">Coût par jour</h2><span class="cc-seg" role="group" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true">dollars</button><button type="button" data-unite="jetons" aria-pressed="false">jetons</button></span></div>
     <p class="cc-muted" data-jet="Jetons consommés, jour calendaire à l'heure de Paris.">Équivalent API en dollars, jour calendaire à l'heure de Paris.</p>
-    <div class="cc-legend"><span><i class="cc-rule"></i>remise à zéro du forfait (<span data-draw="cycleJour" data-source="reglages">—</span> <span data-draw="heureReset" data-source="reglages">—</span>)</span></div>
+    <div class="cc-legend" id="legJours"><span><i class="cc-rule"></i>remise à zéro du forfait (<span data-draw="cycleJour" data-source="reglages">—</span> <span data-draw="heureReset" data-source="reglages">—</span>)</span></div>
     <div class="cc-chart dash-skeleton" data-draw="chJours" data-source="jours"></div>
   </section>
 
@@ -556,6 +557,19 @@
     svg.append('g').selectAll('line').data(remises).join('line')
       .attr('x1', posReset).attr('x2', posReset)
       .attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-width', 1.5).attr('stroke-dasharray', '4 3');
+    // Resets précis déclarés (table « resets », 15/11) : trait plein à l'heure de Paris, distinct du pointillé du cycle.
+    // Ancienne forme (quand vide) : rien à dessiner. Table absente, vide ou en erreur : rien, sans plantage ni phrase de repli.
+    const rs = dash.data('resets'), precis = rs.status === 'ok' ? rs.data.filter(p => p.quand).map(p => ({ t: new Date(Date.parse(p.quand + ':00Z')), note: p.note || '' })) : [];
+    const precisDe = j => precis.filter(p => CC.jourParis(p.t) === j);
+    const dessines = rows.flatMap(r => precisDe(r.jour).map(p => ({ jour: r.jour, t: p.t })));
+    svg.append('g').selectAll('line').data(dessines).join('line')
+      .attr('x1', posReset).attr('x2', posReset).attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--color-fg)').attr('stroke-width', 1.5);
+    // Entrée de légende seulement si un trait est dessiné (jamais une légende sans dessin)
+    const legende = document.getElementById('legJours');
+    if (legende) {
+      legende.querySelectorAll('.cc-reset-precis').forEach(n => n.remove());
+      if (dessines.length) legende.insertAdjacentHTML('beforeend', '<span class="cc-reset-precis"><i class="cc-rule-plein"></i>reset hebdo déclaré</span>');
+    }
     // Jours sans journaux (effacés) : bande pleine hauteur, pour ne pas les confondre avec des jours calmes
     svg.append('g').selectAll('rect').data(rows.filter(r => r.manque)).join('rect').attr('x', r => x(r.jour) - x.step() * 0.1).attr('width', x.step())
       .attr('y', m.t).attr('height', H - m.t - m.b).attr('fill', 'var(--color-warn)').attr('opacity', 0.25);
@@ -565,7 +579,8 @@
     svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', r => x(r.jour) - x.step() * 0.1).attr('width', x.step())
       .attr('y', m.t).attr('height', H - m.t - m.b).attr('fill', 'transparent')
       .on('pointermove', (ev, r) => {
-        tip.show(CC.jourLong(r.jour) + (remiseDe(r.jour) ? ` (remise à zéro à ${CC.heureParis(remiseDe(r.jour))})` : ''),
+        tip.show(CC.jourLong(r.jour) + (remiseDe(r.jour) ? ` (remise à zéro à ${CC.heureParis(remiseDe(r.jour))})` : '')
+          + precisDe(r.jour).map(p => ` ; reset hebdo déclaré à ${CC.heureParis(p.t).replace(':', ' h ')}${p.note ? ` (${p.note})` : ''}`).join(''),
           [[null, 'Coût', CC.usd(r.cout)], [null, 'Réponses', CC.int(r.appels)], [null, 'Jetons', CC.compact(r.jetons)], ...(r.manque ? [[null, null, `Incomplet : ${r.manque}`]] : [])],
           defil.x(x(r.jour) + x.bandwidth() / 2), defil.y(y(r.v)));
       })

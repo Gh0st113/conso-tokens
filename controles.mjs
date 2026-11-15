@@ -22,6 +22,18 @@ const medianne = xs => { const s = [...xs].sort((a, b) => a - b); return s.lengt
 // « AAAA-MM-JJTHH:MM » de l'export = UTC sans « Z » ; une date déjà complète est lue telle quelle
 const dateUTC = s => Date.parse(/T\d\d:\d\d$/.test(s) ? s + ':00Z' : s);
 const jourParis = t => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(t);
+// « JJ/MM HH:MM » UTC d'un instant ISO
+const jjmm = iso => `${iso.slice(8, 10)}/${iso.slice(5, 7)} ${iso.slice(11, 16)}`;
+// Suffixe du statut d'une semaine coupée, écrit par exporter.mjs et relu par segmentRetenu ci-dessous : un seul endroit
+// pour le format, protégé par un test aller-retour (controles.test.mjs)
+export const suffixeCoupee = (premierISO, debutSegmentISO) =>
+  ` ; coupée par reset hebdo le ${jjmm(premierISO)} UTC (segment retenu : depuis le ${jjmm(debutSegmentISO)})`;
+// Segment retenu d'une semaine coupée (suffixe « segment retenu : depuis le JJ/MM HH:MM » du statut) : entrée de segmentsHebdo, ou null
+const segmentRetenu = (d, r) => {
+  const m = r.statut.match(/segment retenu : depuis le (\d\d\/\d\d \d\d:\d\d)\)/);
+  if (!m) return null;
+  return (d.segmentsHebdo ?? []).find(s => s.semaine === r.semaine && jjmm(s.debut) === m[1]) ?? null;
+};
 
 // `debutSemaine` : même fonction que celle de l'export (exporter.mjs) ; par défaut, cycle de config par défaut
 export function controler(d, tables, { maintenant = Date.now(), groupes = [], debutSemaine = fabriquer(CYCLE_DEFAUT).debutSemaine } = {}) {
@@ -85,8 +97,12 @@ export function controler(d, tables, { maintenant = Date.now(), groupes = [], de
     if (r.horsEstime != null && r.pctFin != null && r.horsEstime > r.pctFin) anomalies.push(`semaine ${r.semaine} : ${fr(r.horsEstime)} pts hors PC > ${r.pctFin} % atteints`);
     const pm = r.statut.match(/\((\d+) %/);
     if (pm && r.pctFin != null && Number(pm[1]) !== r.pctFin && !r.statut.startsWith('atteint')) anomalies.push(`semaine ${r.semaine} : statut dit ${pm[1]} %, colonne pctFin = ${r.pctFin}`);
-    // Un plafond affiché doit couvrir ce que la semaine a déjà coûté (sinon la projection est contredite)
-    if (r.plafond != null && !r.statut.startsWith('atteint') && r.consomme > r.plafond + 0.01) anomalies.push(`semaine ${r.semaine} : consommé ${fr(r.consomme)} $ > plafond ${fr(r.plafond)} $ sans statut « dépassée »`);
+    // Un plafond affiché doit couvrir ce que la semaine a déjà coûté (sinon la projection est contredite).
+    // Semaine coupée par un reset précis (15/11) : on compare au coût du segment retenu (segmentsHebdo), pas à la semaine
+    const coupee = /coupée par reset hebdo/.test(r.statut), seg = segmentRetenu(d, r);
+    if (coupee && !seg) anomalies.push(`semaine ${r.semaine} : segment retenu absent de segmentsHebdo`);
+    const coutRef = coupee && seg ? seg.cout : r.consomme;
+    if (r.plafond != null && !r.statut.startsWith('atteint') && coutRef > r.plafond + 0.01) anomalies.push(`semaine ${r.semaine} : consommé ${fr(coutRef)} $ > plafond ${fr(r.plafond)} $ sans statut « dépassée »`);
   }
   const debutCourante = debutSemaine(maintenant);
   // Export vide (installation neuve) : rien à comparer
@@ -110,6 +126,33 @@ export function controler(d, tables, { maintenant = Date.now(), groupes = [], de
   // Aucun relevé du tout (pas de sonar ni d'événement de limite) : rien à surveiller, pas d'alerte
   const age = releves.length ? (maintenant - releves.at(-1)) / 36e5 : null;
   if (age != null && dernier?.jour === auj && dernier.cout > 0 && age > SONAR_MUET_H) aVerifier.push(`dernier relevé du % hebdo il y a ${Math.round(age)} h alors que ce PC a consommé aujourd'hui : sonar muet ?`);
+
+  // 8. Reset non déclaré (15/11) : par fenêtre hebdo (debutFenetre), relevés triés par heure. Une baisse est probable entre a et b
+  // quand b ≤ plus haut des relevés précédents − 3 points ET le relevé suivant c aussi (baisse confirmée : une ligne isolée
+  // n'est pas un reset). Pas de signal si un reset déclaré tombe dans ]a, c], ou si la semaine est déclarée à l'ancienne forme.
+  // Un seul signal par fenêtre, jamais de correction. Sans resetsDeclares (donnees.json ancien) : rien n'est déclaré.
+  const declares = d.resetsDeclares ?? { semaines: {}, precis: [] };
+  const parFenetre = {};
+  for (const p of (d.projections ?? []).filter(p => p.type === 'hebdo')) (parFenetre[p.debutFenetre] ??= []).push(p);
+  for (const v of Object.values(parFenetre)) {
+    v.sort((x, y) => x.releve < y.releve ? -1 : 1);
+    const semaine = v[0].debutFenetre.slice(0, 10);
+    if (declares.semaines?.[semaine] !== undefined) continue;
+    for (let i = 1; i < v.length - 1; i++) {
+      const [a, b, c] = [v[i - 1], v[i], v[i + 1]], ta = Date.parse(a.releve), tb = Date.parse(b.releve), tc = Date.parse(c.releve);
+      // Maximum pris dans le segment de b seulement (décision 5 corrigée, 15/11) : un reset précis déclaré avant b remet le
+      // maximum à zéro pour les relevés qui le suivent. Début du segment = dernier reset déclaré de la semaine ≤ b.
+      const debutSegment = Math.max(-Infinity, ...declares.precis.filter(p => p.semaine === semaine).map(p => Date.parse(p.quand)).filter(t => t <= tb));
+      const avant = v.slice(0, i).filter(p => Date.parse(p.releve) >= debutSegment);
+      if (!avant.length) continue;
+      const max = Math.max(...avant.map(p => p.pct));
+      if (!(b.pct <= max - 3 && c.pct <= max - 3)) continue;
+      // Reset déclaré dans ]a, c] : la baisse de b ou la confirmation par c s'explique par ce reset (relecture 1, 16/11)
+      if (declares.precis.some(p => { const t = Date.parse(p.quand); return t > ta && t <= tc; })) continue;
+      aVerifier.push(`reset probable entre le ${jjmm(a.releve)} et le ${jjmm(b.releve)} UTC (semaine du ${semaine}), non déclaré dans « resets »`);
+      break;
+    }
+  }
 
   return { anomalies, aVerifier };
 }

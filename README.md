@@ -45,7 +45,7 @@ weekly cap. Without sonar, only the readings written into the Claude Code logs a
 git clone https://github.com/Gh0st113/conso-tokens
 cd conso-tokens
 node agreger.mjs        # reads the logs → donnees/donnees.json (and a counter archive)
-node exporter.mjs       # → donnees/export/*.json (11 tables) + the CONTRÔLES line
+node exporter.mjs       # → donnees/export/*.json (12 tables) + the CONTRÔLES line
 node --test             # tests
 ```
 
@@ -63,8 +63,22 @@ Optional settings: copy `config.exemple.json` to `config.local.json` (ignored by
 | `motifProjet` | regular expression whose group 1 turns a log folder key into a short folder name |
 | `renommerProjets` | `[[regex, name], …]` tried first, e.g. to show a sensitive folder under a neutral name |
 | `remiseAZero` | day and UTC hour of the weekly reset: `{ "jour": "monday", "heureUTC": "08:00" }` (day name in French or English, `HH:MM`). Default: Sunday 10:00 UTC. A change re-cuts the whole history: the keys of `resets` must then be week starts of the new cycle |
-| `resets` | weeks where you used a limit reset: `{ "YYYY-MM-DD": "when" }`, the date being the day that opens the week (the reset day) |
+| `resets` | limit resets you used, two forms (see below): `{ "YYYY-MM-DD": "when" }` (whole week) or a list `[{ "quand": "YYYY-MM-DDTHH:MMZ", "type": "hebdo", "note": "…" }]` (exact time, week cut) |
 | `trous` | periods whose logs you know are missing: `[["first day", "last day", "reason"]]` |
+
+**Limit resets** (`resets`). The old form (an object `{ "YYYY-MM-DD": "when" }`) marks the whole week as "reset used", with no cap: that is the original behaviour. The new form gives the exact time, in UTC, with the `Z`:
+
+```json
+"resets": [{ "quand": "2026-01-06T19:30Z", "type": "hebdo", "note": "reset used on Tuesday evening" }]
+```
+
+- `quand` (required): `YYYY-MM-DDTHH:MMZ`. Seconds are refused, and so is a date without `Z`.
+- `type` (required): only `"hebdo"` is accepted for now.
+- `note` (optional): free text shown on the page.
+
+An invalid value stops the script with a `config.local.json : resets…` message. With the new form, **the week is cut** into segments, one per reset: the cap and the output of the week are computed on the retained segment (the one with the largest local %, the most recent on a tie), with its own cost; slopes never join two segments; the status of the week mentions the cut. Assumption: a reset on demand does not move the end of the week (one case observed).
+
+**Detection**: if the weekly % drops by 3 points or more without a declared reset, and the next reading confirms the drop, `CONTRÔLES` reports `reset probable … non déclaré dans « resets »` (the French wording is kept on purpose: the check output is in French). An isolated drop (a single reading) is not reported. Nothing is corrected automatically. The highest % is taken within the segment only: a declared reset starts a new maximum for the readings that follow it.
 
 Logs from another PC: `node agreger.mjs --journaux <path to its .claude/projects>` (repeatable).
 
@@ -91,10 +105,10 @@ want a long history.
 chart library and data loader that claude.ai provides, so **opening it directly in a browser shows nothing**.
 
 1. In the Claude desktop app, open the **Code** tab in this folder.
-2. Ask: *"Create a private Dashboard artifact from `page/index.html`, with the 11 files of `donnees/export/` as its
+2. Ask: *"Create a private Dashboard artifact from `page/index.html`, with the 12 files of `donnees/export/` as its
    datasets, each named after its file"* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`, `contexte`,
-   `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`).
-3. After each new export: *"Reload the 11 datasets of my dashboard from `donnees/export/`"*.
+   `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`).
+3. After each new export: *"Reload the 12 datasets of my dashboard from `donnees/export/`"*.
 
 Keep the artifact private: whoever opens it can read the files (folder names, costs, sessions).
 
@@ -121,6 +135,7 @@ On macOS / Linux: `HOME=../demo-home node agreger.mjs && HOME=../demo-home node 
 - Usage outside this PC is deduced from whole-number percentages, not measured: when such periods are spotted, the
   weekly cap is given as a range, otherwise as a single estimate; no cap at all when the share paid on this PC is under
   10 % or the range is wider than 25 % of the cap.
+- Known limits of the reset detection: readings under 10 % are ignored, so a drop that leaves the % under 10 until the end of the week is not reported; a single odd reading stays in the slopes; a single abnormally **high** reading (e.g. 40, 100, 30, 28 %) can wrongly give a "probable reset" (a "to check" line, never a correction). A reset declared at the exact instant of the cycle's own reset is ignored (it cuts nothing).
 
 ## License
 

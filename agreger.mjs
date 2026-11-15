@@ -10,7 +10,7 @@ import { join, dirname, basename, relative, sep, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
-import { DONNEES, nomProjet, REMISE_A_ZERO } from './config.mjs';
+import { DONNEES, nomProjet, REMISE_A_ZERO, RESETS, RESETS_PRECIS } from './config.mjs';
 import { fabriquer } from './semaine.mjs';
 
 // Deux sources : Claude Code (~/.claude/projects) et Cowork (sessions locales de Claude Desktop,
@@ -109,6 +109,14 @@ function cout(a) {
 // Fenêtre hebdomadaire du forfait : cycle de 7 × 24 h ouvert au jour et à l'heure UTC de REMISE_A_ZERO
 // (config.local.json, clé remiseAZero ; défaut dimanche 10:00 UTC, README « Limites »).
 const { debutSemaine, instantDebut } = fabriquer(REMISE_A_ZERO);
+
+// Resets précis (clé resets, nouvelle forme) : ils coupent la fenêtre en segments. Début du segment d'un instant t = le dernier
+// reset précis de sa fenêtre (début = W) qui est ≤ t, sinon le début de la fenêtre W (decision 3 du plan #5, 15/11).
+const SEMAINE_MS = 7 * 864e5;
+// Un reset à l'instant exact du début de semaine ne coupe rien : il est ignoré (sinon il crée un segment vide, relecture 3, 16/11)
+const precisDans = W => RESETS_PRECIS.map(p => p.quand).filter(q => q > W && q < W + SEMAINE_MS);
+const segmentDe = (t, W) => Math.max(W, ...precisDans(W).filter(q => q <= t));
+const ISO = ms => new Date(ms).toISOString();
 
 const jour = ts => new Date(ts).toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
 const heure = ts => Number(new Date(ts).toLocaleString('en-GB', { timeZone: 'Europe/Paris', hour: '2-digit', hourCycle: 'h23' }));
@@ -247,11 +255,15 @@ const plafonds = [...limites.values()].sort((a, b) => a.ts < b.ts ? -1 : 1).map(
   const reset = l.type === 'hebdo'
     ? instantDebut(debutSemaine(atteinte + 7 * 864e5))
     : parisVersUtc(atteinte, l.h, l.min);
-  if (reset === null || vus.has(l.type + reset)) return null; // même fenêtre déjà comptée (message répété)
-  vus.add(l.type + reset);
+  if (reset === null) return null;
   const debut = reset - (l.type === 'hebdo' ? 7 * 864e5 : 5 * 36e5);
-  const dans = tri.filter(a => { const t = Date.parse(a.ts); return t >= debut && t <= atteinte; });
-  return { type: l.type, atteinte: l.ts, debutFenetre: new Date(debut).toISOString(), reset: new Date(reset).toISOString(),
+  // Coût compté depuis le début du segment où la limite est atteinte (= début de fenêtre sans reset précis)
+  const debutSeg = l.type === 'hebdo' ? segmentDe(atteinte, debut) : debut;
+  // Même segment déjà compté : message répété. Par segment (pas par fenêtre) : un second message après un reset précis compte (relecture 2, 16/11)
+  if (vus.has(l.type + debutSeg)) return null;
+  vus.add(l.type + debutSeg);
+  const dans = tri.filter(a => { const t = Date.parse(a.ts); return t >= debutSeg && t <= atteinte; });
+  return { type: l.type, atteinte: l.ts, debutFenetre: ISO(debut), debutSegment: ISO(debutSeg), reset: ISO(reset),
     cout: Math.round(dans.reduce((s, a) => s + a.cout, 0) * 100) / 100, appels: dans.length,
     jetonsSortie: dans.reduce((s, a) => s + a.sortie, 0) };
 }).filter(Boolean);
@@ -291,8 +303,10 @@ const projections = releves.flatMap(r => {
   const t = Date.parse(r.ts), out = [];
   for (const [type, pct, reset, duree] of [['hebdo', r.hebdo, r.hebdoReset, 7 * 864e5], ['5h', r.cinqH, r.cinqHReset, 5 * 36e5]]) {
     if (!(pct >= 10) || !Number.isFinite(Date.parse(reset))) continue; // % trop bas ou reset illisible : métrique ignorée
-    const debut = Date.parse(reset) - duree, c = coutEntre(debut, t), so = sortieEntre(debut, t);
-    out.push({ type, releve: r.ts, pct, debutFenetre: new Date(debut).toISOString(), coutAuReleve: Math.round(c * 100) / 100,
+    const debut = Date.parse(reset) - duree;
+    const debutSeg = type === 'hebdo' ? segmentDe(t, debut) : debut; // coût du relevé depuis le segment (reset précis)
+    const c = coutEntre(debutSeg, t), so = sortieEntre(debutSeg, t);
+    out.push({ type, releve: r.ts, pct, debutFenetre: ISO(debut), debutSegment: ISO(debutSeg), coutAuReleve: Math.round(c * 100) / 100,
       plafondProjete: Math.round(c / (pct / 100) * 100) / 100, sortieProjetee: Math.round(so / (pct / 100)) });
   }
   return out;
@@ -301,10 +315,21 @@ const projections = releves.flatMap(r => {
 // jour / jourFin = jour du début / de la dernière réponse, en heure de Paris (même découpe que parJour) : filtre par période
 // de la page (une session compte dans la période si elle y a commencé ; le max de jourFin = dernier jour des données)
 const sessions = Object.entries(parSession).map(([id, s]) => ({ id: id.slice(0, 8), jour: jour(s.debut), jourFin: jour(s.fin), ...s }));
+// Semaines coupées par un reset précis seulement : coût et jetons de sortie de chaque segment (source pour exporter.mjs)
+const segmentsHebdo = [...new Set(RESETS_PRECIS.filter(p => p.quand > instantDebut(p.semaine)).map(p => p.semaine))].sort().flatMap(semaine => {
+  const W = instantDebut(semaine), bornes = [W, ...precisDans(W).sort((a, b) => a - b), W + SEMAINE_MS];
+  return bornes.slice(0, -1).map((s, i) => {
+    const e = bornes[i + 1], dans = tri.filter(a => { const t = Date.parse(a.ts); return t >= s && t < e; });
+    return { semaine, debut: ISO(s), fin: ISO(e), cout: Math.round(dans.reduce((x, a) => x + a.cout, 0) * 100) / 100,
+      sortie: dans.reduce((x, a) => x + a.sortie, 0) };
+  });
+});
+// Resets déclarés (config.local.json) : controles.mjs lit precis (instants en ISO) ; exporter.mjs reconstruit la table resets depuis RESETS / RESETS_PRECIS
+const resetsDeclares = { semaines: RESETS, precis: RESETS_PRECIS.map(p => ({ quand: ISO(p.quand), type: p.type, note: p.note, semaine: p.semaine })) };
 writeFileSync(sortie, JSON.stringify({
   genereLe: new Date().toISOString(), lignesUsage: lignes, illisibles, reponsesUniques: appels.size,
   reset: { jour: REMISE_A_ZERO.jour, heureUTC: REMISE_A_ZERO.heureUTC, fuseau: 'UTC' }, tarifs: TARIFS, paliers: PALIERS,
-  total, plafonds, projections, parSemaine, parJour, jourModele, jourProjet, jourModeleTotal, jourTailles, parProjet, parModele, parHeure, tailles, sessions,
+  total, plafonds, projections, segmentsHebdo, resetsDeclares, parSemaine, parJour, jourModele, jourProjet, jourModeleTotal, jourTailles, parProjet, parModele, parHeure, tailles, sessions,
 }, null, 1));
 console.log(`${appels.size} réponses uniques (${lignes} lignes « usage », ${illisibles} illisibles), ${sessions.length} sessions, ${lignesSonar} relevés sonar -> ${sortie}`);
 console.log(`archive : ${dejaArchives} réponses déjà connues, ${appels.size - dejaArchives} nouvelles -> ${fichierArchive}`);
