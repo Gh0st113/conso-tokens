@@ -37,7 +37,7 @@ weekly cap. Without sonar, only the readings Claude Code writes into its own log
 ## Requirements
 
 - Node.js 20 or later, no dependency to install.
-- Claude Code logs in `~/.claude/projects` (on Windows, Cowork local sessions are read too; not on macOS or Linux).
+- Claude Code logs in `~/.claude/projects` (on Windows, Cowork local sessions are read **if present**; since late October 2026 Cowork no longer writes them on the PC, so its usage counts as outside this PC; not on macOS or Linux).
 
 ## Use
 
