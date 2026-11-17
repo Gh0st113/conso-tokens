@@ -9,6 +9,8 @@ de votre forfait en dollars**, tirée du pourcentage d'usage qu'affiche l'appli.
 Il ne lit que les compteurs de jetons et les horodatages des journaux de Claude Code (et, sous Windows, de Cowork local si présents) de votre machine, **jamais le
 contenu de vos conversations**, et tout reste sur votre machine (sauf ce que vous choisissez de publier).
 
+La page du tableau de bord existe en français et en anglais : un bouton FR / EN la change, et par défaut elle suit la langue du navigateur. Le code, les commentaires et les sorties de console restent en français.
+
 Projet compagnon : [**sonar**](https://github.com/Gh0st113/sonar), un mod pour l'onglet Code de Claude Desktop. Son
 journal de quota (`~/.claude/sonar/quota-log.jsonl`) donne à ce tableau les relevés de pourcentage dont il a besoin pour
 estimer le plafond hebdo. Sans sonar, seuls les relevés écrits dans les journaux de Claude Code servent, et jusqu'à fin octobre 2026 ceux de Cowork local (moins nombreux).
@@ -193,6 +195,27 @@ la page à jour d'abord.
 Avec la commande `conso-tokens`, `conso-tokens page` affiche où sont la page et le dossier `export/`.
 
 Gardez l'artefact privé : qui l'ouvre peut lire les fichiers (noms de dossiers, coûts, sessions).
+
+## Ajouter une langue
+
+La page compte deux langues, le français (la référence, texte du HTML) et l'anglais ; les boutons FR / EN sont fabriqués
+à partir d'une seule table. Pour ajouter une langue (l'exemple ci-dessous est `zh`, un scénario seulement : rien n'est
+traduit ici) :
+
+1. Dans `page/index.html`, `<script id="dico">` : ajoutez une entrée à `LANGUES`, par exemple l'entrée donnée plus bas. Le bouton apparaît tout seul.
+2. Même fichier, `<script id="libelles">` : ajoutez la même clé à `PHRASES` (mêmes clés que `fr` : `types`, `tranches`, et chaque fonction de phrase).
+3. Même script `#dico` : ajoutez une clé `zh` à chaque entrée de `DICO` (textes du HTML et textes de `tr()` ; un texte du HTML n'a pas de clé `fr`).
+4. Lancez `node --test` : il dit ce qui manque (`zh : phrase « coupee »`, `zh : « titre » (DICO)`, …). Une langue incomplète fait échouer les tests ; dans le navigateur, un texte manquant reste en français.
+
+Exemple d'entrée (`zh`, une illustration seulement) :
+
+```js
+zh: { locale: 'zh-CN', decimal: '.', sep: ': ', monnaie: n => '$' + n, heureInfo: s => s, heureUTC: (h, m) => `${h}:${m} UTC` }
+```
+
+Rien d'autre à changer dans la logique : elle lit les tables. Le test « page : aucune langue en dur… » de `libelles.test.mjs`
+fixe la liste des langues (`['en', 'fr']`) : il faut y ajouter le nouveau code. La langue par défaut est celle du navigateur si elle figure dans `LANGUES`
+(son préfixe, `zh-CN` → `zh`), sinon l'anglais.
 
 ## Essayer avec des données simulées
 

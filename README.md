@@ -13,7 +13,7 @@ Companion project: [**sonar**](https://github.com/Gh0st113/sonar), a mod for the
 quota log (`~/.claude/sonar/quota-log.jsonl`) gives this dashboard the usage percentage readings it needs to estimate the
 weekly cap. Without sonar, only the readings written into the Claude Code logs are used, and until late October 2026 those of Cowork local (fewer of them).
 
-> The code, comments and dashboard text are in French.
+> The code, comments and console output are in French. The dashboard page exists in French and in English: an FR / EN button switches it, and by default it follows the browser language.
 
 ![Summary tiles and cost per plan week, stacked by model](docs/apercu-semaines.png)
 
@@ -188,6 +188,26 @@ The new page still reads old exports, but an old page cannot read the new ones: 
 With the `conso-tokens` command, `conso-tokens page` prints where the page and the `export/` folder are.
 
 Keep the artifact private: whoever opens it can read the files (folder names, costs, sessions).
+
+## Adding a language
+
+The page has two languages, French (the reference, the text of the HTML) and English, and the FR / EN buttons are built
+from one table. To add a language (the example below is `zh`, a scenario only: nothing is translated here):
+
+1. In `page/index.html`, `<script id="dico">`: add an entry to `LANGUES`, e.g. the example entry below. The button appears by itself.
+2. Same file, `<script id="libelles">`: add the same key to `PHRASES` (same keys as `fr`: `types`, `tranches`, and every phrase function).
+3. Same `#dico` script: add a `zh` key to each `DICO` entry (texts of the HTML and `tr()` texts; a text of the HTML has no `fr` key).
+4. Run `node --test`: it names what is missing (`zh : phrase « coupee »`, `zh : « titre » (DICO)`, …). A language left incomplete fails the tests; the browser falls back to French for a missing text.
+
+Example entry (`zh`, an illustration only):
+
+```js
+zh: { locale: 'zh-CN', decimal: '.', sep: ': ', monnaie: n => '$' + n, heureInfo: s => s, heureUTC: (h, m) => `${h}:${m} UTC` }
+```
+
+Nothing else changes in the logic: it reads the tables. The test « page : aucune langue en dur… » in `libelles.test.mjs`
+fixes the list of languages (`['en', 'fr']`): it must list the new code too. The default language is the browser's one if it is in `LANGUES` (its
+prefix, `zh-CN` → `zh`), otherwise `en`.
 
 ## Try it with simulated data
 

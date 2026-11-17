@@ -1,6 +1,7 @@
-// Formateur de la page (bloc <script id="libelles"> de page/index.html, lot 2a de #17) : la page est publiée en un seul
-// fichier, le test extrait donc le bloc et l'exécute (node:vm). Phrases attendues = celles qu'écrivait exporter.mjs
-// avant le lot 2a (champ statut), recopiées telles quelles : l'écran ne doit pas bouger d'un caractère.
+// Formateur et dictionnaire de la page (page/index.html) : la page est publiée en un seul fichier, le test extrait donc
+// les blocs <script id="libelles"> (phrases), <script id="dico"> (LANGUES, DICO, tr) et les exécute (node:vm).
+// Phrases attendues en français = celles qu'écrivait exporter.mjs avant le lot 2a (champ statut), recopiées telles quelles.
+// Ajouter une langue : voir README, « Ajouter une langue ». Ces tests disent ce qui manque.
 // Lancer : node --test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,11 +10,20 @@ import vm from 'node:vm';
 import { ETATS_HEBDO } from './controles.mjs';
 
 const html = readFileSync(new URL('./page/index.html', import.meta.url), 'utf8');
-const bloc = html.match(/<script id="libelles">([\s\S]*?)<\/script>/);
+const bloc = (id) => html.match(new RegExp(`<script id="${id}">([\\s\\S]*?)</script>`))[1];
 const ctx = {};
 vm.createContext(ctx);
-vm.runInContext(bloc[1], ctx);
+vm.runInContext('globalThis.window = globalThis;', ctx); // la page parle à window (LANGUES, tr… sont exposés dessus)
+vm.runInContext(bloc('libelles'), ctx);
+vm.runInContext(bloc('dico'), ctx);
 const L = ctx.libelles;
+const LANGUES = vm.runInContext('LANGUES', ctx);
+const DICO = vm.runInContext('DICO', ctx);
+const PHRASES = L.PHRASES;
+
+// La page règle la langue (code de LANGUES) et ses formats ; le test fait pareil
+const regler = (code) => { L.langue = code; L.formats = LANGUES[code]; };
+regler('fr');
 
 // Ligne de plafondsHebdo telle qu'exporter.mjs l'écrit (valeurs par défaut de VIDE_HEBDO)
 const h = champs => ({ semaine: '2026-10-18', etat: null, pct: null, enCours: false, projete100: false, fourchetteMin: null, fourchetteMax: null,
@@ -45,7 +55,45 @@ const CAS = [
     'projeté (50 %) ; plafond indicatif : mêle deux forfaits (inconnu → Pro)'],
 ];
 
+// Mêmes cas en anglais, écrits en dur (la seule langue hors fr dont le texte attendu est fixé ici)
+const EN = [
+  'reached', 'reached, of which 10.9 pts off this PC; cap between $174 and $190', 'reached (100 % reading)',
+  'reached (100 % reading, of which 4 pts off this PC)', 'not reached (projection of 80 % exceeded)',
+  'in progress (projection of 62 % exceeded)', 'projected (30 %)', 'in progress (8 %)', 'in progress', 'not reached',
+  'not reached (ended at 40 %)', 'not reached (ended at 56 %, 100 % projected)',
+  'in progress (20 %, of which 12.5 pts off this PC; cap uncertain: between $150 and ?)', 'reset used (reset du mardi)',
+  'reached; cut by weekly reset on 10/20 12:00 UTC (segment kept: from 10/22 08:30); indicative cap: mixes two plans (Pro → Max 5x)',
+  'projected (50 %); indicative cap: mixes two plans (inconnu → Pro)',
+];
+
+// Clés lues dans la page : textes du HTML (data-t, data-t-aria), variantes jetons (data-jet), appels tr('…') littéraux
+const cles = (re, texte = html) => [...texte.matchAll(re)].map(m => m[1]);
+const clesHtml = [...new Set([...cles(/ data-t="([^"]+)"/g), ...cles(/data-t-aria="([^"]+)"/g)])];
+const clesJs = [...new Set(cles(/\btr\('([^']+)'\)/g))];
+// Variante jetons : seulement pour un élément qui porte data-jet (une clé « cle.jet » sans data-jet serait morte)
+const clesJet = [...new Set((html.match(/<\w+[^>]*data-jet="[^"]*"[^>]*>/g) ?? []).map(b => b.match(/data-t="([^"]+)"/)?.[1]).filter(Boolean))];
+
+// Ce qui manque à une langue : phrases du formateur, types et tranches, textes du HTML et du JS (DICO).
+// Renvoie la liste des manques ; liste vide = langue complète.
+function manquants(langues, phrases, dico) {
+  const probs = [];
+  const ref = Object.keys(phrases.fr);
+  for (const code of Object.keys(langues)) {
+    const p = phrases[code];
+    if (!p) { probs.push(`${code} : aucune phrase dans PHRASES`); continue; }
+    const L = langues[code];
+    for (const f of ['locale', 'decimal', 'sep']) if (typeof L[f] !== 'string') probs.push(`${code} : ${f} absent de LANGUES`);
+    for (const f of ['monnaie', 'heureInfo', 'heureUTC']) if (typeof L[f] !== 'function') probs.push(`${code} : ${f} absent de LANGUES`);
+    for (const k of ref) if (p[k] === undefined) probs.push(`${code} : phrase « ${k} »`);
+    for (const t of ['types', 'tranches']) for (const k of Object.keys(phrases.fr[t])) if (p[t]?.[k] === undefined) probs.push(`${code} : ${t}.${k}`);
+    if (code !== 'fr') for (const k of [...clesHtml, ...clesJet.map(c => c + '.jet')]) if (dico[k]?.[code] === undefined) probs.push(`${code} : « ${k} » (DICO)`);
+    for (const k of clesJs) if (dico[k]?.[code] === undefined) probs.push(`${code} : tr « ${k} » (DICO)`);
+  }
+  return probs;
+}
+
 test('statutHebdo : même phrase qu\'avant le lot 2a, valeurs natives ou relues en texte', () => {
+  regler('fr');
   for (const [nom, r, attendu] of CAS) {
     assert.equal(L.statutHebdo(r), attendu, nom);
     assert.equal(L.statutHebdo(enTexte(r)), attendu, `${nom} (texte)`);
@@ -53,17 +101,20 @@ test('statutHebdo : même phrase qu\'avant le lot 2a, valeurs natives ou relues 
 });
 
 test('chaque état de controles.mjs a sa phrase dans la page (mêmes listes)', () => {
+  regler('fr');
   assert.deepEqual([...L.ETATS], ETATS_HEBDO);
   for (const etat of ETATS_HEBDO) assert.doesNotMatch(L.statutHebdo(h({ etat, pct: 10, resetNote: 'x' })), /inconnu/, etat);
 });
 
 test('atteint : limite vue ou relevé à 100 %, rien d\'autre', () => {
+  regler('fr');
   for (const etat of ETATS_HEBDO) assert.equal(L.atteint(h({ etat })), etat === 'atteint' || etat === 'plein', etat);
   assert.equal(L.atteint({ etat: 'atteint' }), true);
   assert.equal(L.atteint({ etat: 'projete', pct: 72 }), false);
 });
 
-test('plafonds5h, types, tranches', () => {
+test('plafonds5h, types, tranches (français)', () => {
+  regler('fr');
   assert.equal(L.statut5h({ etat: 'atteint', pct: null }), 'atteint');
   assert.equal(L.statut5h({ etat: 'projete', pct: 72 }), 'projeté (72 %)');
   assert.deepEqual(['cacheRead', 'cacheWrite', 'output', 'input'].map(L.type),
@@ -72,7 +123,8 @@ test('plafonds5h, types, tranches', () => {
   assert.deepEqual([...L.GROS], ['150-250k', '250k+']);
 });
 
-test('repli : la page neuve sur un ancien export affiche la même chose', () => {
+test('repli : la page neuve sur un ancien export affiche la même chose (français)', () => {
+  regler('fr');
   assert.equal(L.statutHebdo({ statut: 'atteint, dont 3 pts hors de ce PC' }), 'atteint, dont 3 pts hors de ce PC');
   assert.equal(L.statut5h({ statut: 'projeté (60 %)' }), 'projeté (60 %)');
   assert.equal(L.atteint({ statut: 'atteint (relevé à 100 %)' }), true);
@@ -82,8 +134,62 @@ test('repli : la page neuve sur un ancien export affiche la même chose', () => 
   assert.equal(L.tranche('plus de 250k'), 'plus de 250k');
 });
 
+test('anglais : mêmes cas, phrases anglaises (valeurs natives et relues en texte)', () => {
+  regler('en');
+  try {
+    CAS.forEach(([nom, r], i) => {
+      assert.equal(L.statutHebdo(r), EN[i], nom);
+      assert.equal(L.statutHebdo(enTexte(r)), EN[i], `${nom} (texte)`);
+    });
+    assert.equal(L.statut5h({ etat: 'projete', pct: 72 }), 'projected (72 %)');
+    assert.deepEqual(['cacheRead', 'cacheWrite', 'output', 'input'].map(L.type),
+      ['Cache read', 'Cache write', 'Output (replies + reasoning)', 'Fresh input']);
+    assert.deepEqual([...L.TRANCHES].map(L.tranche), ['under 50k', '50k to 100k', '100k to 150k', '150k to 250k', 'over 250k']);
+    // Repli d'un ancien export : la phrase française s'affiche telle quelle, sans erreur
+    assert.equal(L.statutHebdo({ statut: 'atteint, dont 3 pts hors de ce PC' }), 'atteint, dont 3 pts hors de ce PC');
+    assert.equal(L.codeTranche('150k to 250k'), '150-250k');
+  } finally { regler('fr'); }
+});
+
+test('toutes les langues de LANGUES : chaque état a sa phrase, types et tranches traduits', () => {
+  for (const code of Object.keys(LANGUES)) {
+    regler(code);
+    for (const etat of ETATS_HEBDO) assert.doesNotMatch(L.statutHebdo(h({ etat, pct: 10, resetNote: 'x', horsEstime: 2, pctFin: 50 })), /inconnu|unknown state/, `${code} ${etat}`);
+    for (const t of ['cacheRead', 'cacheWrite', 'output', 'input']) assert.notEqual(L.type(t), t, `${code} type ${t}`);
+    for (const t of L.TRANCHES) assert.notEqual(L.tranche(t), t, `${code} tranche ${t}`);
+  }
+  regler('fr');
+});
+
+test('formateur : les codes qu\'il sait écrire sont exactement ceux de LANGUES', () => {
+  assert.deepEqual([...L.CODES].sort(), Object.keys(LANGUES).sort());
+});
+
+test('complétude : chaque langue de LANGUES a ses phrases, ses textes du HTML et ses tr()', () => {
+  assert.deepEqual(manquants(LANGUES, PHRASES, DICO), []);
+});
+
+test('complétude : une fausse langue xx (copie, jamais dans la page) est signalée comme incomplète', () => {
+  const faux = { ...LANGUES, xx: { locale: 'xx-XX', decimal: '.', monnaie: n => n, sep: ': ', heureInfo: s => s, heureUTC: (hh, m) => `${hh}:${m}` } };
+  const probs = manquants(faux, PHRASES, DICO);
+  assert.ok(probs.length > 0, 'la langue incomplète doit être signalée');
+  assert.ok(probs.every(p => p.startsWith('xx :')), probs.slice(0, 3).join(' | '));
+  assert.ok(probs.some(p => p.includes('aucune phrase')), 'xx sans PHRASES');
+});
+
+test('défaut : la langue de repli est une langue de LANGUES', () => {
+  assert.ok(Object.hasOwn(LANGUES, vm.runInContext('LANGUE_PAR_DEFAUT', ctx)));
+});
+
+test('page : aucune langue en dur hors des tables (LANGUES, PHRASES, DICO) ; seulement fr et en', () => {
+  const sansTables = html.replace(/const LANGUES = \{[\s\S]*?\n {2}\};/, '').replace(/\n {4}const PHRASES = \{[\s\S]*?\n {4}\};/, '');
+  assert.doesNotMatch(sansTables, /=== 'en'|=== 'fr'|'en-US'|'fr-FR'|\? 'en'|\? 'fr'/);
+  assert.doesNotMatch(sansTables, /data-langue="(fr|en)"/, 'boutons de langue en dur');
+  assert.deepEqual(Object.keys(LANGUES).sort(), ['en', 'fr']);
+});
+
 test('page : plus aucune lecture directe de statut, type ou tranche hors du formateur', () => {
-  const hors = html.replace(bloc[0], '');
+  const hors = html.replace(bloc('libelles'), '');
   // Lectures d'un champ d'export brut : r.statut, d.type…, sauf à travers libelles.xxx(r.champ)
   const lectures = [...hors.matchAll(/(?<!libelles\.\w+\()\b\w+\.(statut|type|tranche)\b/g)].map(m => m[0])
     // libelles.type / libelles.tranche : le formateur lui-même ; x.type : Intl.DateTimeFormat.formatToParts, hors export
@@ -92,4 +198,80 @@ test('page : plus aucune lecture directe de statut, type ou tranche hors du form
   // Anciens libellés comparés en dur (ex. tranche === '150k à 250k') : seulement dans le formateur
   for (const lib of ['moins de 50k', '150k à 250k', 'plus de 250k', 'Lecture du cache', "startsWith('atteint')", 'data-field="statut"'])
     assert.ok(!hors.includes(lib), lib);
+});
+
+test('dictionnaire : un texte du HTML n\'a pas de français ; chaque langue hors fr a sa clé ; tr() a fr et en', () => {
+  for (const k of clesHtml) assert.equal(DICO[k]?.fr, undefined, `${k} : une entrée du HTML n'a pas de fr`);
+  for (const k of clesJet.map(c => c + '.jet')) assert.equal(DICO[k]?.fr, undefined, `${k} : une entrée .jet n'a pas de fr`);
+  for (const k of [...clesHtml, ...clesJet.map(c => c + '.jet')]) {
+    assert.ok(DICO[k], `${k} : pas d'entrée`);
+    for (const code of Object.keys(LANGUES)) if (code !== 'fr') assert.ok(DICO[k][code] !== undefined, `${k} : pas de ${code}`);
+  }
+  for (const k of clesJs) assert.ok(DICO[k]?.fr !== undefined && DICO[k]?.en !== undefined, `tr('${k}') : fr et en requis`);
+  // tr() ne reçoit que des clés écrites en dur : cherché dans la page entière (scripts compris)
+  assert.equal([...html.matchAll(/\btr\(([^')][^)]*)\)/g)].length, 0, 'tr() avec une clé non littérale');
+});
+
+test('dictionnaire : aucune clé morte (chaque entrée est utilisée)', () => {
+  const usees = new Set([...clesHtml, ...clesJs, ...clesJet.map(c => c + '.jet')]);
+  assert.deepEqual(Object.keys(DICO).filter(k => !usees.has(k)), [], 'entrées mortes');
+});
+
+test('anglais : aucune lettre accentuée française ni guillemets français', () => {
+  for (const [k, v] of Object.entries(DICO)) {
+    if (v.en === undefined) continue;
+    assert.doesNotMatch(v.en, /[éèàùçêôî«»]/, k);
+  }
+  for (const [k, v] of Object.entries(PHRASES.en.types)) assert.doesNotMatch(v, /[éèàùçêôî«»]/, k);
+});
+
+test('data-t : texte seul (aucun enfant, donc aucun data-draw ou data-source effacé)', () => {
+  const corps = html.replace(/<style[\s\S]*?<\/style>/, '').replace(/<script[\s\S]*?<\/script>/g, '');
+  for (const m of corps.matchAll(/<(\w+)[^>]*\sdata-t="[^"]*"[^>]*>([\s\S]*?)<\/\1>/g)) {
+    assert.doesNotMatch(m[2], /</, `data-t sur un élément qui contient un enfant : ${m[2].slice(0, 60)}`);
+  }
+});
+
+// Plateforme (artefact Dashboard) : elle perd les barres obliques inverses des scripts (un \' devient une chaîne non
+// fermée, une regex est altérée en silence). Aucune dans un <script> : apostrophe typographique, [0-9], pas de regex.
+const scripts = [...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)].map(m => ({ attrs: m[1].trim(), corps: m[2] }));
+test('scripts : aucune barre oblique inverse dans un <script> de la page', () => {
+  const barre = '\\';
+  for (const [i, s] of scripts.entries()) {
+    const lignes = s.corps.split('\n').filter(l => l.includes(barre)).map(l => l.trim().slice(0, 80));
+    assert.deepEqual(lignes, [], `script n° ${i + 1} (${s.attrs || 'sans id'})`);
+  }
+});
+
+// Plateforme : chaque <script> a sa propre portée. Un const de #dico n'est pas visible d'un script suivant : ce qui
+// est partagé passe par window. On exécute libelles et dico, chacun dans sa fonction, puis on vérifie window.
+test('scripts : chaque script dans sa propre portée ; LANGUES, LANGUE_PAR_DEFAUT, DICO, tr et libelles sur window', () => {
+  const w = vm.createContext({});
+  vm.runInContext('globalThis.window = globalThis;', w);
+  for (const s of scripts.filter(s => s.attrs === 'id="libelles"' || s.attrs === 'id="dico"')) {
+    vm.runInContext(`(function () {\n${s.corps}\n})();`, w);
+  }
+  for (const nom of ['LANGUES', 'LANGUE_PAR_DEFAUT', 'DICO', 'tr', 'jourSemaine', 'libelles']) {
+    assert.notEqual(vm.runInContext(`typeof window.${nom}`, w), 'undefined', `window.${nom} absent`);
+  }
+});
+
+// Montant FR du plafond : milliers groupés comme CC.usd (espace fine insécable U+202F), montant < 1000 inchangé
+test('monnaie FR : 1000 $ groupé comme CC.usd ; 174 $ inchangé', () => {
+  assert.equal(LANGUES.fr.monnaie(1000), '1 000 $');
+  assert.equal(LANGUES.fr.monnaie(12345), '12 345 $');
+  assert.equal(LANGUES.fr.monnaie(174), '174 $');
+});
+
+// Infobulle du graphe par semaine : le jour se calcule depuis le début de la semaine (cycle variable)
+test('jour de semaine : dimanche et mardi, en fr et en', () => {
+  const jourSemaine = vm.runInContext('jourSemaine', ctx);
+  assert.equal(jourSemaine('2026-11-15', 'fr'), 'dim. 15 nov.');
+  assert.equal(jourSemaine('2026-11-17', 'fr'), 'mar. 17 nov.');
+  assert.equal(jourSemaine('2026-11-15', 'en'), 'Sun, Nov 15');
+});
+
+test('infobulle semaine : « Semaine du » / « Week of » (le jour vient du cycle, pas du texte)', () => {
+  assert.equal(DICO['tip.semaine'].fr, 'Semaine du');
+  assert.equal(DICO['tip.semaine'].en, 'Week of');
 });
