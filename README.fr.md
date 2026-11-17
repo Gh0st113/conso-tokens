@@ -110,6 +110,12 @@ tant que les deux commandes ci-dessus n'ont pas tourné, et chacun de ceux qui d
 avez (plusieurs semaines, quelques pentes) l'est aussi. Un test de données en échec signale un export incohérent : lire
 son message.
 
+Contrôle croisé facultatif : `node comparer-ccusage.mjs` (après `agreger.mjs`) lance [ccusage](https://github.com/ryoppippi/ccusage)
+(version figée, téléchargée par `npx` la première fois : il faut le réseau) sur les mêmes journaux et affiche
+`CCUSAGE : OK` ou chaque jour dont les jetons diffèrent. Il n'écrit rien. ccusage qui compte moins sur des jours anciens
+est attendu (journaux effacés gardés dans l'archive, `--journaux`, Cowork local) ; ccusage qui compte plus signale des
+réponses que ce tableau de bord ne compte pas.
+
 Réglages facultatifs : copier `config.exemple.json` en `config.local.json` (ignoré par git) :
 
 | Clé (ancien nom accepté entre parenthèses) | Rôle |
