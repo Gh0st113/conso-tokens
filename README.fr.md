@@ -52,9 +52,10 @@ Chemins donnés pour le dossier de données par défaut `donnees/` (ignoré par 
 
 ### En commande (`conso-tokens`)
 
-Les mêmes scripts se lancent aussi en une seule commande, depuis n'importe quel dossier. Depuis un clone, `npm link`
-(une fois, dans le clone) met `conso-tokens` dans le PATH ; le code, `config.local.json` et `donnees/` restent dans le
-clone. Un paquet npm publié (`npm install -g conso-tokens`) est **à venir, pas encore disponible**.
+Les mêmes scripts se lancent aussi en une seule commande, depuis n'importe quel dossier. Sans clone :
+`npm install -g conso-tokens` (Node 20+ ; mise à jour ensuite par `npm update -g conso-tokens`). Depuis un clone,
+`npm link` (une fois, dans le clone) met plutôt `conso-tokens` dans le PATH ; le code, `config.local.json` et `donnees/`
+restent dans le clone.
 
 ```
 conso-tokens maj        # agreger puis exporter (exporter n'est pas lancé si agreger échoue)

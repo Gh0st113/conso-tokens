@@ -53,9 +53,9 @@ Paths above are for the default data folder `donnees/` (ignored by git); with `d
 
 ### As a command (`conso-tokens`)
 
-The same scripts can be run as one command from any folder. From a clone, `npm link` (run once in the clone) puts
-`conso-tokens` in your PATH; the code, `config.local.json` and `donnees/` stay in the clone. A published npm package
-(`npm install -g conso-tokens`) is **coming, not available yet**.
+The same scripts can be run as one command from any folder. Without a clone: `npm install -g conso-tokens` (Node 20+;
+update later with `npm update -g conso-tokens`). From a clone, `npm link` (run once in the clone) puts `conso-tokens` in
+your PATH instead; the code, `config.local.json` and `donnees/` stay in the clone.
 
 ```
 conso-tokens maj        # agreger then exporter (exporter is skipped if agreger fails)
