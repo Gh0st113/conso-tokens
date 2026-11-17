@@ -1,11 +1,11 @@
 // Réglages propres à chaque utilisateur : config.local.json dans le dossier de base (ignoré par git ; modèle : config.exemple.json).
 // Dossier de base (issue #19, choisirBase dans reglages.mjs) : celui des scripts pour un clone, ~/.conso-tokens pour le
 // paquet npm, ou CONSO_TOKENS_DIR. Sans config.local.json, tout marche avec les valeurs par défaut ci-dessous.
-import { readFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, mkdirSync, existsSync, statSync } from 'node:fs';
 import { join, dirname, resolve, relative, isAbsolute, sep } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { lireCycle, lireResets, lireForfaits, choisirBase } from './reglages.mjs';
+import { lireCycle, lireResets, lireForfaits, choisirBase, nomsAnciens, choisirDossierDonnees } from './reglages.mjs';
 import { fabriquer } from './semaine.mjs';
 
 export const ici = dirname(fileURLToPath(import.meta.url));
@@ -20,6 +20,8 @@ let c = {};
 try { c = JSON.parse(readFileSync(join(BASE, 'config.local.json'), 'utf8')); }
 catch (e) { if (e.code !== 'ENOENT') erreur(`illisible (${e.message})`); }
 if (c === null || typeof c !== 'object' || Array.isArray(c)) erreur('doit contenir un objet { … }');
+// Noms anglais (lot 1, 17/11) ramenés aux anciens noms : tout le reste du fichier lit les mêmes clés qu'avant
+try { c = nomsAnciens(c); } catch (e) { erreur(e.message); }
 const texte = (k, v) => { if (typeof v !== 'string' || !v) erreur(`« ${k} » doit être un texte non vide`); return v; };
 const regex = (k, v) => { try { return new RegExp(texte(k, v), 'i'); } catch (e) { erreur(`« ${k} » n'est pas une expression régulière valide (${e.message})`); } };
 // « ~ » seul ou « ~/… » = dossier personnel ; « ~autre » refusé (sens ambigu)
@@ -30,17 +32,24 @@ const chemin = (k, p) => {
   return resolve(BASE, p);
 };
 
-// Dossier des données (donnees.json, archive-appels.json, releves.json, export/) : hors du dépôt de préférence
-export const DONNEES = c.dossierDonnees === undefined ? join(BASE, 'donnees') : chemin('dossierDonnees', c.dossierDonnees);
-// Garde-fou, dans tous les modes : dans le dossier du code, les données ne vont QUE dans donnees/ (ignoré par git) ;
+// Dossier des données (donnees.json, archive-appels.json, releves.json, export/) : hors du dépôt de préférence.
+// Sans chemin explicite (dataDir ou dossierDonnees) : data/, ou donnees/ s'il est seul à exister (choisirDossierDonnees).
+const DOSSIERS_DONNEES = ['data', 'donnees'];
+export const DONNEES = c.dossierDonnees === undefined
+  ? join(BASE, (() => {
+    try { return choisirDossierDonnees({ base: BASE, existe: p => statSync(p, { throwIfNoEntry: false })?.isDirectory() ?? false, joindre: join }); }
+    catch (e) { throw new Error(`conso-tokens : ${e.message}`); }
+  })())
+  : chemin('dossierDonnees', c.dossierDonnees);
+// Garde-fou, dans tous les modes : dans le dossier du code, les données ne vont QUE dans data/ ou donnees/ (ignorés par git) ;
 // ailleurs, elles pourraient être commitées et publiées, ou écrasées par une mise à jour du paquet → refus
 const dansCode = p => { const r = relative(ici, p); return !(isAbsolute(r) || r === '..' || r.startsWith('..' + sep) || r.startsWith('../')); };
 const rel = relative(ici, DONNEES);
-if (dansCode(DONNEES) && rel.split(/[\\/]/)[0] !== 'donnees')
-  erreur(`dossierDonnees (${DONNEES}) est dans le dépôt hors de donnees/ : les données pourraient être publiées. Choisir un dossier hors du dépôt ou donnees/.`);
+if (dansCode(DONNEES) && !DOSSIERS_DONNEES.includes(rel.split(/[\\/]/)[0]))
+  erreur(`dataDir (ou dossierDonnees) (${DONNEES}) est dans le dépôt hors de data/ ou donnees/ : les données pourraient être publiées. Choisir un dossier hors du dépôt, ou data/ (donnees/ aussi accepté).`);
 // Paquet installé : rien n'est écrit dans son dossier, même donnees/ (une mise à jour l'effacerait)
 if (MODE === 'paquet' && (dansCode(BASE) || dansCode(DONNEES)))
-  throw new Error(`conso-tokens : ${dansCode(BASE) ? `CONSO_TOKENS_DIR (${BASE})` : `dossierDonnees (${DONNEES})`} est dans le dossier du paquet installé (${ici}) : une mise à jour l'effacerait. Choisir un autre dossier.`);
+  throw new Error(`conso-tokens : ${dansCode(BASE) ? `CONSO_TOKENS_DIR (${BASE})` : `dataDir (ou dossierDonnees) (${DONNEES})`} est dans le dossier du paquet installé (${ici}) : une mise à jour l'effacerait. Choisir un autre dossier.`);
 try { mkdirSync(DONNEES, { recursive: true }); } catch (e) { erreur(`dossier des données impossible à créer : ${DONNEES} (${e.code})`); }
 
 // Nom d'un dossier de travail à partir de la clé des journaux (ex. « C--Users-moi-Documents-Code-projet »).

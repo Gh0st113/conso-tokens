@@ -105,3 +105,45 @@ export function choisirBase({ ici, existe, env = {}, maison, joindre = (a, b) =>
     throw new Error(`CONSO_TOKENS_DIR (${force}) doit être un chemin absolu ou commencer par ~/`);
   return { mode, base: force ?? (mode === 'clone' ? ici : joindre(maison, '.conso-tokens')), force: force !== null };
 }
+
+// Noms anglais (lot 1, 17/11) : chaque réglage s'écrit sous son nom anglais OU son ancien nom français, jamais les deux.
+// nomsAnciens rend une copie de la config avec les anciens noms (ceux que lisent config.mjs, lireCycle, lireResets… inchangés).
+// Mêmes noms pour les champs de weeklyReset (day, hourUTC) et des entrées de resets (when) ; type « weekly » = « hebdo ».
+const PAIRES_CLES = [['dataDir', 'dossierDonnees'], ['projectPattern', 'motifProjet'], ['renameProjects', 'renommerProjets'],
+  ['weeklyReset', 'remiseAZero'], ['plans', 'forfaits'], ['gaps', 'trous']];
+const PAIRES_CHAMPS_CYCLE = [['day', 'jour'], ['hourUTC', 'heureUTC']];
+const PAIRE_CHAMP_RESET = ['when', 'quand'];
+function unNomParChamp(objet, paires, ou) {
+  if (objet === null || typeof objet !== 'object' || Array.isArray(objet)) return objet; // refusé plus loin, avec son propre message
+  const copie = { ...objet };
+  for (const [nouveau, ancien] of paires) {
+    if (objet[nouveau] !== undefined && objet[ancien] !== undefined)
+      throw new Error(`${ou} : « ${nouveau} » et « ${ancien} » sont deux noms du même champ, n'en garder qu'un`);
+    if (objet[nouveau] !== undefined) { copie[ancien] = objet[nouveau]; delete copie[nouveau]; }
+  }
+  return copie;
+}
+export function nomsAnciens(c) {
+  const copie = { ...c };
+  for (const [nouveau, ancien] of PAIRES_CLES) {
+    if (c[nouveau] !== undefined && c[ancien] !== undefined)
+      throw new Error(`« ${nouveau} » et « ${ancien} » sont deux noms du même réglage, n'en garder qu'un`);
+    if (c[nouveau] !== undefined) { copie[ancien] = c[nouveau]; delete copie[nouveau]; }
+  }
+  if (copie.remiseAZero !== undefined) copie.remiseAZero = unNomParChamp(copie.remiseAZero, PAIRES_CHAMPS_CYCLE, 'weeklyReset');
+  if (Array.isArray(copie.resets)) copie.resets = copie.resets.map((r, i) => {
+    const ou = `resets[${i}]`;
+    const entree = unNomParChamp(r, [PAIRE_CHAMP_RESET], ou);
+    return entree !== null && typeof entree === 'object' && entree.type === 'weekly' ? { ...entree, type: 'hebdo' } : entree;
+  });
+  return copie;
+}
+
+// Dossier des données sans chemin explicite (lot 1, 17/11) : « donnees » seulement si c'est le seul présent (installation
+// antérieure), sinon « data ». Les deux présents → arrêt avant toute écriture. Pur : présences passées par `existe`.
+export function choisirDossierDonnees({ base, existe, joindre = (a, b) => `${a}/${b}` }) {
+  const data = existe(joindre(base, 'data')), donnees = existe(joindre(base, 'donnees'));
+  if (data && donnees)
+    throw new Error(`dossiers « data » et « donnees » présents dans ${base} : n'en garder qu'un (ou fixer dataDir)`);
+  return donnees ? 'donnees' : 'data';
+}

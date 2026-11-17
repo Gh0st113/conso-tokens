@@ -1,8 +1,8 @@
 {
-  "dossierDonnees": "~/conso-tokens-donnees",
-  "renommerProjets": [["projet-a-masquer", "masqué"]],
-  "remiseAZero": { "jour": "dimanche", "heureUTC": "10:00" },
-  "resets": [{ "quand": "2026-01-06T19:30Z", "type": "hebdo", "note": "reset utilisé le mardi soir (exemple)" }],
-  "forfaits": { "2026-01-04": "Pro", "2026-01-13": "Max 5x" },
-  "trous": [["2026-01-10", "2026-01-12", "journaux perdus (exemple)"]]
+  "dataDir": "~/conso-tokens-donnees",
+  "renameProjects": [["projet-a-masquer", "masqué"]],
+  "weeklyReset": { "day": "sunday", "hourUTC": "10:00" },
+  "resets": [{ "when": "2026-01-06T19:30Z", "type": "weekly", "note": "reset utilisé le mardi soir (exemple)" }],
+  "plans": { "2026-01-04": "Pro", "2026-01-13": "Max 5x" },
+  "gaps": [["2026-01-10", "2026-01-12", "journaux perdus (exemple)"]]
 }

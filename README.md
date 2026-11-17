@@ -45,7 +45,7 @@ weekly cap. Without sonar, only the readings written into the Claude Code logs a
 
 ```
 npm install -g conso-tokens
-conso-tokens maj        # reads the logs and builds the dashboard data
+conso-tokens update     # reads the logs and builds the dashboard data
 conso-tokens page       # where the dashboard page and its data are
 ```
 
@@ -62,37 +62,43 @@ From a clone:
 ```
 git clone https://github.com/Gh0st113/conso-tokens
 cd conso-tokens
-node agreger.mjs        # reads the logs → donnees/donnees.json (and a counter archive)
-node exporter.mjs       # → donnees/export/*.json (13 tables) + the CONTRÔLES line
+node agreger.mjs        # reads the logs → data/donnees.json (and a counter archive)
+node exporter.mjs       # → data/export/*.json (13 tables) + the CONTRÔLES line
 node --test             # tests
 ```
 
-Paths above are for the default data folder `donnees/` (ignored by git); with `dossierDonnees` set, look there instead.
+Paths above are for the default data folder `data/` (ignored by git). A clone that already has a `donnees/` folder keeps
+using it, with no change; with `dataDir` set, look there instead.
 
 ### As a command (`conso-tokens`)
 
 The same scripts can be run as one command from any folder, once installed with npm (see [Install](#install)). From a
 clone, `npm link` (run once in the clone) puts `conso-tokens` in your PATH instead; the code, `config.local.json` and
-`donnees/` stay in the clone.
+`data/` stay in the clone.
 
 ```
-conso-tokens maj        # agreger then exporter (exporter is skipped if agreger fails)
-conso-tokens agreger    # same options as node agreger.mjs (--journaux, --sortie, …)
-conso-tokens exporter
-conso-tokens tarifs     # node maj-tarifs.mjs
+conso-tokens update     # aggregate then export (export is skipped if aggregate fails)
+conso-tokens aggregate  # same options as node agreger.mjs (--logs, --output, --quota-log, …)
+conso-tokens export
+conso-tokens prices     # node maj-tarifs.mjs
 conso-tokens page       # path of the dashboard page and of the export/ folder
+conso-tokens help       # the list of commands
 ```
+
+The old French names still work: `maj`, `agreger`, `exporter`, `tarifs`, `aide`, and the options `--journaux`, `--sortie`,
+`--journal-quota`; so do the old keys of `config.local.json` (see below). Nothing has to be renamed.
 
 **Where settings and data go.** Run from a clone (a folder holding `.git`, `config.local.json` or `donnees/`), nothing
-changes: everything stays in the clone. Installed as a package, `config.local.json`, `donnees/` and an updated
+changes: everything stays in the clone. Installed as a package, `config.local.json`, `data/` and an updated
 `tarifs.json` go to `~/.conso-tokens/` instead, so that an update of the package never touches them. The environment
-variable `CONSO_TOKENS_DIR` replaces that folder in both cases.
+variable `CONSO_TOKENS_DIR` replaces that folder in both cases. If the folder holds both `data/` and `donnees/` and no
+`dataDir` (or `dossierDonnees`) is set, the data commands (`update`, `aggregate`, `export`) stop before writing anything: keep one of the two.
 
-**Moving from a clone to the package**: **before** the first `conso-tokens maj`, copy the clone's `config.local.json`
-into `~/.conso-tokens/`. If its data were in the clone's `donnees/` folder (the default) or at a relative
-`dossierDonnees`, copy that data folder too (to `~/.conso-tokens/donnees/`, or to the same relative place); an absolute
-or `~/…` `dossierDonnees` keeps pointing at the same data. If you ran `node maj-tarifs.mjs` in the clone, copy its
-`tarifs.json` too: it keeps the price of models since removed from the Pricing page. The counter archive in `donnees/` keeps answers whose logs
+**Moving from a clone to the package**: **before** the first `conso-tokens update`, copy the clone's `config.local.json`
+into `~/.conso-tokens/`. If its data were in the clone's `data/` (or `donnees/`) folder, or at a relative `dataDir`,
+copy that data folder too (to `~/.conso-tokens/data/`, or to the same relative place); an absolute or `~/…` `dataDir`
+keeps pointing at the same data. If you ran `node maj-tarifs.mjs` in the clone, copy its
+`tarifs.json` too: it keeps the price of models since removed from the Pricing page. The counter archive in `data/` (or `donnees/`) keeps answers whose logs
 Claude Code has since deleted: a new archive cannot get them back. The first run with no archive says so.
 
 **Windows**: if PowerShell refuses to run scripts (execution policy), it also refuses the `conso-tokens.ps1` launcher
@@ -104,34 +110,38 @@ skipped too. A failing data test means your export looks inconsistent: read its 
 
 Optional settings: copy `config.exemple.json` to `config.local.json` (ignored by git):
 
-| Key | Meaning |
+| Key | Meaning (old name, still accepted) |
 |---|---|
-| `dossierDonnees` | where data goes (default `donnees/` next to `config.local.json`; `~/…` accepted, a relative path starts from the folder of `config.local.json`). Keeping it outside the repository is safer |
-| `motifProjet` | regular expression whose group 1 turns a log folder key into a short folder name |
-| `renommerProjets` | `[[regex, name], …]` tried first, e.g. to show a sensitive folder under a neutral name |
-| `remiseAZero` | day and UTC hour of the weekly reset: `{ "jour": "monday", "heureUTC": "08:00" }` (day name in French or English, `HH:MM`). Default: Sunday 10:00 UTC. A change re-cuts the whole history: the keys of `resets` must then be week starts of the new cycle |
-| `resets` | limit resets you used, two forms (see below): `{ "YYYY-MM-DD": "when" }` (whole week) or a list `[{ "quand": "YYYY-MM-DDTHH:MMZ", "type": "hebdo", "note": "…" }]` (exact time, week cut) |
-| `trous` | periods whose logs you know are missing: `[["first day", "last day", "reason"]]` |
-| `forfaits` | plan changes you declare by hand: `{ "YYYY-MM-DD": "plan" }`, applied to the whole week containing the date (see below) |
+| `dataDir` (`dossierDonnees`) | where data goes (default `data/` next to `config.local.json`, or `donnees/` if only that one exists; `~/…` accepted, a relative path starts from the folder of `config.local.json`). Keeping it outside the repository is safer |
+| `projectPattern` (`motifProjet`) | regular expression whose group 1 turns a log folder key into a short folder name |
+| `renameProjects` (`renommerProjets`) | `[[regex, name], …]` tried first, e.g. to show a sensitive folder under a neutral name |
+| `weeklyReset` (`remiseAZero`) | day and UTC hour of the weekly reset: `{ "day": "monday", "hourUTC": "08:00" }` (day name in French or English, `HH:MM`). Default: Sunday 10:00 UTC. A change re-cuts the whole history: the keys of `resets` must then be week starts of the new cycle |
+| `resets` | limit resets you used, two forms (see below): `{ "YYYY-MM-DD": "when" }` (whole week) or a list `[{ "when": "YYYY-MM-DDTHH:MMZ", "type": "weekly", "note": "…" }]` (exact time, week cut) |
+| `gaps` (`trous`) | periods whose logs you know are missing: `[["first day", "last day", "reason"]]` |
+| `plans` (`forfaits`) | plan changes you declare by hand: `{ "YYYY-MM-DD": "plan" }`, applied to the whole week containing the date (see below) |
+
+Each setting can be written under its English name or its old French name, not both: giving both stops the script with
+a message naming them. Inside `weeklyReset`, `day` and `hourUTC` (or `jour` and `heureUTC`) can be mixed, but not both
+of the same field.
 
 **Limit resets** (`resets`). The old form (an object `{ "YYYY-MM-DD": "when" }`) marks the whole week as "reset used", with no cap: that is the original behaviour. The new form gives the exact time, in UTC, with the `Z`:
 
 ```json
-"resets": [{ "quand": "2026-01-06T19:30Z", "type": "hebdo", "note": "reset used on Tuesday evening" }]
+"resets": [{ "when": "2026-01-06T19:30Z", "type": "weekly", "note": "reset used on Tuesday evening" }]
 ```
 
-- `quand` (required): `YYYY-MM-DDTHH:MMZ`. Seconds are refused, and so is a date without `Z`.
-- `type` (required): only `"hebdo"` is accepted for now.
+- `when` (required; old name `quand`): `YYYY-MM-DDTHH:MMZ`. Seconds are refused, and so is a date without `Z`.
+- `type` (required): `"weekly"` (or the old `"hebdo"`); only this type is accepted for now.
 - `note` (optional): free text shown on the page.
 
 An invalid value stops the script with a `config.local.json : resets…` message. With the new form, **the week is cut** into segments, one per reset: the cap and the output of the week are computed on the retained segment (the one with the largest local %, the most recent on a tie), with its own cost; slopes never join two segments; the status of the week mentions the cut. Assumption: a reset on demand does not move the end of the week (one case observed).
 
 **Detection**: if the weekly % drops by 3 points or more without a declared reset, and the next reading confirms the drop, `CONTRÔLES` reports `reset probable … non déclaré dans « resets »` (the French wording is kept on purpose: the check output is in French). An isolated drop (a single reading) is not reported. Nothing is corrected automatically. The highest % is taken within the segment only: a declared reset starts a new maximum for the readings that follow it.
 
-**Plan changes** (`forfaits`). The plan (Pro, Max 5x…) is **not detected automatically**: the logs do not contain it, and no credentials file is read. Declare each change yourself, with the first day of the new plan; the whole week containing that day is the new plan:
+**Plan changes** (`plans`, old name `forfaits`). The plan (Pro, Max 5x…) is **not detected automatically**: the logs do not contain it, and no credentials file is read. Declare each change yourself, with the first day of the new plan; the whole week containing that day is the new plan:
 
 ```json
-"forfaits": { "2026-01-04": "Pro", "2026-01-13": "Max 5x" }
+"plans": { "2026-01-04": "Pro", "2026-01-13": "Max 5x" }
 ```
 
 - The week of a date uses the reset time of that day: with the default Sunday 10:00 UTC cycle, a reset day belongs to the **new** week, whatever the hour of the cycle.
@@ -141,10 +151,10 @@ An invalid value stops the script with a `config.local.json : resets…` message
 - **Team** plans: the limit depends on the seat (Standard or Premium), so write it in the label (`"Team Premium"`). **Enterprise** (usage at API prices) and any plan without a weekly % limit: without a % reading, no cap is estimated; the table shows the amount consumed, as before.
 - An invalid entry stops the script with a `config.local.json : forfaits…` message.
 
-Logs from another PC: `node agreger.mjs --journaux <path to its .claude/projects>` (repeatable).
+Logs from another PC: `node agreger.mjs --logs <path to its .claude/projects>` (repeatable; `--journaux` still works).
 
-**Manual readings** (optional): without sonar, you can add usage percentages yourself in `releves.json` in the data
-folder, a list of readings in UTC (`hebdo` = weekly %, `cinqH` = 5-hour %, each with the reset time the app shows):
+**Manual readings** (optional): without sonar, you can add usage percentages yourself in `readings.json` (old name
+`releves.json`, still read; keep only one of the two names, or the script stops) in the data folder, a list of readings in UTC (`hebdo` = weekly %, `cinqH` = 5-hour %, each with the reset time the app shows):
 
 ```json
 [{ "ts": "2026-01-07T18:30:00Z", "hebdo": 42, "hebdoReset": "2026-01-11T10:00:00Z", "cinqH": 15, "cinqHReset": "2026-01-07T21:00:00Z" }]
@@ -166,10 +176,10 @@ want a long history.
 chart library and data loader that claude.ai provides, so **opening it directly in a browser shows nothing**.
 
 1. In the Claude desktop app, open the **Code** tab in this folder.
-2. Ask: *"Create a private Dashboard artifact from `page/index.html`, with the 13 files of `donnees/export/` as its
+2. Ask: *"Create a private Dashboard artifact from `page/index.html`, with the 13 files of `data/export/` as its
    datasets, each named after its file"* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`, `contexte`,
    `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `forfaits`).
-3. After each new export: *"Reload the 13 datasets of my dashboard from `donnees/export/`"*.
+3. After each new export: *"Reload the 13 datasets of my dashboard from `data/export/`"*.
 
 With the `conso-tokens` command, `conso-tokens page` prints where the page and the `export/` folder are.
 
@@ -179,7 +189,7 @@ Keep the artifact private: whoever opens it can read the files (folder names, co
 
 `demo/generer-demo.mjs` writes a fake home folder: eight weeks of Claude Code logs (invented folders, fixed random
 seed) and a matching sonar quota log, with a weekly cap of about 180 $. It is how the screenshots above were made.
-Run it in a **second clone** of this repository (with its `.git`) without `config.local.json`, so the results land in the copy's `donnees/`,
+Run it in a **second clone** of this repository (with its `.git`) without `config.local.json`, so the results land in the copy's `data/`,
 not in your own data folder:
 
 ```powershell
@@ -188,18 +198,18 @@ $env:USERPROFILE = (Resolve-Path ../demo-home); node agreger.mjs; node exporter.
 ```
 
 On macOS / Linux: `HOME=../demo-home node agreger.mjs && HOME=../demo-home node exporter.mjs`. Then display
-`donnees/export/` as described above. Close that PowerShell window afterwards (its `USERPROFILE` is changed).
+`data/export/` as described above. Close that PowerShell window afterwards (its `USERPROFILE` is changed).
 
 ## Limits
 
 - "API equivalent" is an order of magnitude to compare weeks, not how the plan is billed nor the percentage of `/usage`.
-- The weekly reset is set by the `remiseAZero` key (default **Sunday 10:00 UTC**), one cycle for the whole history.
+- The weekly reset is set by the `weeklyReset` key (old name `remiseAZero`; default **Sunday 10:00 UTC**), one cycle for the whole history.
   Calendar days stay in the **Europe/Paris** time zone and are not configurable.
 - Usage outside this PC is deduced from whole-number percentages, not measured: when such periods are spotted, the
   weekly cap is given as a range, otherwise as a single estimate; no cap at all when the share paid on this PC is under
   10 % or the range is wider than 25 % of the cap.
 - Known limits of the reset detection: readings under 10 % are ignored, so a drop that leaves the % under 10 until the end of the week is not reported; a single odd reading stays in the slopes; a single abnormally **high** reading (e.g. 40, 100, 30, 28 %) can wrongly give a "probable reset" (a "to check" line, never a correction). A reset declared at the exact instant of the cycle's own reset is ignored (it cuts nothing).
-- Plan changes (`forfaits`) are dated to the week, not to the hour: the whole week is left out of the comparisons and its cap is only indicative. An undeclared plan change is not detected: the plans are mixed, as before.
+- Plan changes (`plans`) are dated to the week, not to the hour: the whole week is left out of the comparisons and its cap is only indicative. An undeclared plan change is not detected: the plans are mixed, as before.
 
 ## License
 

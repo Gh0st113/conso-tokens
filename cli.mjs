@@ -8,17 +8,21 @@ import { fileURLToPath } from 'node:url';
 
 const script = nom => fileURLToPath(new URL(`./${nom}`, import.meta.url));
 const SCRIPTS = { agreger: 'agreger.mjs', exporter: 'exporter.mjs', tarifs: 'maj-tarifs.mjs' };
-const AIDE = `conso-tokens : coût de l'usage de Claude Code, d'après les journaux de ce PC
+// Noms anglais (lot 1, 17/11) → noms français, qui restent acceptés
+const NOM_ANGLAIS = { update: 'maj', aggregate: 'agreger', export: 'exporter', prices: 'tarifs', help: 'aide', '--help': 'aide', '-h': 'aide' };
+const AIDE = `conso-tokens : cost of Claude Code usage, from this PC's logs
 
-  conso-tokens maj [--journaux <dossier>] agreger puis exporter (exporter n'est pas lancé si agreger échoue)
-  conso-tokens agreger [options]         journaux → donnees.json (--journaux <dossier>, --sortie <fichier>, …)
-  conso-tokens exporter                  donnees.json → export/ (tables du tableau de bord) + ligne CONTRÔLES
-  conso-tokens tarifs [--page fichier]   met à jour les tarifs depuis la page Pricing officielle
-  conso-tokens page                      chemin de la page du tableau de bord et du dossier export/
+  conso-tokens update [--logs <folder>]  aggregate, then export (export is skipped if aggregate fails)
+  conso-tokens aggregate [options]       logs → donnees.json (--logs <folder>, --output <file>, …)
+  conso-tokens export                    donnees.json → export/ (dashboard tables) + the CONTRÔLES line
+  conso-tokens prices [--page file]      update prices from the official Pricing page
+  conso-tokens page                      path of the dashboard page and of the export/ folder
   conso-tokens --version
+  conso-tokens help                      this text (no argument = same)
 
-Réglages et données : dans le dossier du code pour un clone, sinon dans ~/.conso-tokens ; la variable
-CONSO_TOKENS_DIR (chemin absolu ou ~/…) remplace ce dossier. Détails : README.`;
+Settings and data: in the code folder for a clone, otherwise in ~/.conso-tokens; the environment variable
+CONSO_TOKENS_DIR (absolute path or ~/…) replaces that folder. Details: README.
+The old French names (maj, agreger, exporter, tarifs, aide) still work.`;
 
 const lancer = (nom, args) => {
   const r = spawnSync(process.execPath, [script(nom), ...args], { stdio: 'inherit' });
@@ -26,11 +30,12 @@ const lancer = (nom, args) => {
   return r.status ?? 1; // tué par un signal : échec
 };
 
-const [cmd, ...args] = process.argv.slice(2);
+const [cmdSaisi, ...args] = process.argv.slice(2);
+const cmd = Object.hasOwn(NOM_ANGLAIS, cmdSaisi ?? '') ? NOM_ANGLAIS[cmdSaisi] : cmdSaisi;
 if (Object.hasOwn(SCRIPTS, cmd ?? '')) process.exitCode = lancer(SCRIPTS[cmd], args);
 else if (cmd === 'maj') {
-  // exporter lit toujours donnees.json du dossier des données : un --sortie ailleurs lui ferait exporter l'ancien
-  if (args.includes('--sortie')) { console.error('conso-tokens maj : --sortie refusé (exporter lirait l\'ancien donnees.json) ; utiliser conso-tokens agreger --sortie'); process.exitCode = 2; }
+  // exporter lit toujours donnees.json du dossier des données : un --sortie (ou --output) ailleurs lui ferait exporter l'ancien
+  if (args.includes('--sortie') || args.includes('--output')) { console.error('conso-tokens update : --output refusé (exporter lirait l\'ancien donnees.json) ; utiliser conso-tokens aggregate --output (ou --sortie)'); process.exitCode = 2; }
   else { const code = lancer('agreger.mjs', args); process.exitCode = code !== 0 ? code : lancer('exporter.mjs', []); }
 } else if (cmd === 'page') {
   const { DONNEES } = await import('./config.mjs');
@@ -38,5 +43,5 @@ else if (cmd === 'maj') {
   console.log(`Tables à charger        : ${join(DONNEES, 'export')}`);
 } else if (cmd === '--version' || cmd === '-v') {
   console.log(JSON.parse(readFileSync(script('package.json'), 'utf8')).version);
-} else if (cmd === undefined || cmd === 'aide' || cmd === '--help' || cmd === '-h') console.log(AIDE);
+} else if (cmd === undefined || cmd === 'aide') console.log(AIDE);
 else { console.error(`conso-tokens : commande inconnue « ${cmd} »\n\n${AIDE}`); process.exitCode = 2; }

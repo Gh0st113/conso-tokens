@@ -2,7 +2,7 @@
 // Purs : aucune donnée ni config.local.json nécessaire.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { lireCycle, lireResets, lireForfaits, CYCLE_DEFAUT } from './reglages.mjs';
+import { lireCycle, lireResets, lireForfaits, CYCLE_DEFAUT, nomsAnciens, choisirDossierDonnees } from './reglages.mjs';
 import * as semaine from './semaine.mjs';
 import { fabriquer } from './semaine.mjs';
 
@@ -115,6 +115,13 @@ test('choisirBase : mode clone par chacun des indices, mode paquet sans indice, 
   assert.deepEqual(base([], { CONSO_TOKENS_DIR: '   ' }), { mode: 'paquet', base: '/moi/.conso-tokens', force: false });
 });
 
+test('INDICES_CLONE : data/ n’en fait pas partie (un data/ égaré dans le paquet ne le fait pas passer en mode clone)', async () => {
+  const { INDICES_CLONE, choisirBase } = await import('./reglages.mjs');
+  assert.ok(!INDICES_CLONE.includes('data'));
+  assert.ok(INDICES_CLONE.includes('donnees'));
+  assert.equal(choisirBase({ ici: '/paquet', maison: '/moi', env: {}, existe: p => p === '/paquet/data' }).mode, 'paquet');
+});
+
 test('choisirBase : CONSO_TOKENS_DIR en ~/ développé, chemin relatif refusé (il dépendrait du dossier courant)', async () => {
   const { choisirBase } = await import('./reglages.mjs');
   const base = env => choisirBase({ ici: '/code', maison: '/moi', env, existe: () => false }).base;
@@ -122,4 +129,60 @@ test('choisirBase : CONSO_TOKENS_DIR en ~/ développé, chemin relatif refusé (
   assert.equal(base({ CONSO_TOKENS_DIR: '~' }), '/moi');
   assert.equal(base({ CONSO_TOKENS_DIR: 'C:/alt' }), 'C:/alt');
   for (const v of ['data', './data', '../data', 'C:alt', '~autre']) assert.throws(() => base({ CONSO_TOKENS_DIR: v }), /chemin absolu/);
+});
+
+// ---- Noms anglais (lot 1, 17/11) : chaque réglage s'écrit sous son nom anglais ou son ancien nom, jamais les deux ----
+const ANCIENNE = {
+  dossierDonnees: '~/conso-tokens-donnees', renommerProjets: [['projet-a-masquer', 'masqué']], remiseAZero: { jour: 'monday', heureUTC: '08:00' },
+  resets: [{ quand: '2026-01-06T19:30Z', type: 'hebdo', note: 'essai' }], forfaits: { '2026-01-04': 'Pro' }, trous: [['2026-01-10', '2026-01-12', 'perdus']],
+  motifProjet: '^Documents-(.*)$',
+};
+const NOUVELLE = {
+  dataDir: '~/conso-tokens-donnees', renameProjects: [['projet-a-masquer', 'masqué']], weeklyReset: { day: 'monday', hourUTC: '08:00' },
+  resets: [{ when: '2026-01-06T19:30Z', type: 'weekly', note: 'essai' }], plans: { '2026-01-04': 'Pro' }, gaps: [['2026-01-10', '2026-01-12', 'perdus']],
+  projectPattern: '^Documents-(.*)$',
+};
+test('nomsAnciens : une config entièrement nouvelle devient exactement l’ancienne (mêmes valeurs lues ensuite)', () => {
+  assert.deepEqual(nomsAnciens(NOUVELLE), ANCIENNE);
+  assert.deepEqual(nomsAnciens(ANCIENNE), ANCIENNE);   // l'ancienne ne change pas
+  assert.deepEqual(nomsAnciens({}), {});
+});
+
+test('nomsAnciens : mélange entre clés différentes permis (day + heureUTC, plans + when)', () => {
+  const r = nomsAnciens({ weeklyReset: { day: 'monday', heureUTC: '08:00' }, resets: [{ when: '2026-01-06T19:30Z', type: 'hebdo' }] });
+  assert.deepEqual(r.remiseAZero, { jour: 'monday', heureUTC: '08:00' });
+  assert.deepEqual(r.resets, [{ quand: '2026-01-06T19:30Z', type: 'hebdo' }]);
+});
+
+test('nomsAnciens : type « weekly » devient « hebdo » (et « hebdo » reste accepté)', () => {
+  const r = nomsAnciens({ resets: [{ when: '2026-11-03T21:00Z', type: 'weekly' }, { quand: '2026-11-10T21:00Z', type: 'hebdo' }] });
+  assert.deepEqual(r.resets.map(e => e.type), ['hebdo', 'hebdo']);
+  assert.equal(lireResets(r.resets, defaut).precis.length, 2);
+  assert.equal(lireResets(nomsAnciens(NOUVELLE).resets, defaut).precis[0].note, 'essai');
+});
+
+test('nomsAnciens : même réglage sous les deux noms → arrêt (même valeur ou non)', () => {
+  const doublons = [
+    { dataDir: 'a', dossierDonnees: 'a' }, { weeklyReset: {}, remiseAZero: {} }, { projectPattern: 'x', motifProjet: 'x' },
+    { renameProjects: [], renommerProjets: [] }, { plans: {}, forfaits: {} }, { gaps: [], trous: [] },
+    { weeklyReset: { day: 'monday', jour: 'monday' } }, { weeklyReset: { hourUTC: '08:00', heureUTC: '08:00' } },
+    { resets: [{ when: '2026-11-03T21:00Z', quand: '2026-11-03T21:00Z', type: 'hebdo' }] },
+  ];
+  for (const c of doublons) assert.throws(() => nomsAnciens(c), /deux noms/, JSON.stringify(c));
+});
+
+test('nomsAnciens : clé nouvelle seule pour la forme resets objet (date → quand) : inchangée', () => {
+  assert.deepEqual(nomsAnciens({ resets: { '2026-01-04': 'nuit' } }), { resets: { '2026-01-04': 'nuit' } });
+});
+
+// ---- Dossier des données sans chemin explicite (lot 1, 17/11) ----
+test('choisirDossierDonnees : rien → data ; donnees seul → donnees (installation antérieure) ; data seul → data', () => {
+  const dossier = presents => choisirDossierDonnees({ base: '/base', existe: p => presents.includes(p), joindre: (a, b) => `${a}/${b}` });
+  assert.equal(dossier([]), 'data');
+  assert.equal(dossier(['/base/donnees']), 'donnees');
+  assert.equal(dossier(['/base/data']), 'data');
+});
+
+test('choisirDossierDonnees : data ET donnees présents → arrêt, message qui nomme les deux', () => {
+  assert.throws(() => choisirDossierDonnees({ base: '/base', existe: () => true, joindre: (a, b) => `${a}/${b}` }), /« data » et « donnees »/);
 });
