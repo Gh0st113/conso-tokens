@@ -105,7 +105,8 @@ le signale.
 **Windows** : si PowerShell refuse d'exécuter des scripts (stratégie d'exécution), il refuse aussi le lanceur
 `conso-tokens.ps1` créé par npm : taper `conso-tokens.cmd` à la place (et `npm.cmd link`).
 
-`node --test` lance les tests du lecteur de tarifs, puis vérifie vos propres données exportées : ces tests sont sautés
+`node --test` lance les tests des calculs et des phrases de la page (sur de petits exemples écrits à la main) et
+du lecteur de tarifs, puis vérifie vos propres données exportées : ces tests sont sautés
 tant que les deux commandes ci-dessus n'ont pas tourné, et chacun de ceux qui demandent plus d'historique que vous n'en
 avez (plusieurs semaines, quelques pentes) l'est aussi. Un test de données en échec signale un export incohérent : lire
 son message.

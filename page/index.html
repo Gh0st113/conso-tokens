@@ -257,7 +257,7 @@
   CC.jourLong = s => new Date(s + 'T12:00:00Z').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
   // Séries de modèles (légende dynamique, 13/11) : lues dans les colonnes de « semaines » (une colonne c + sa jumelle jc en jetons).
   // Ordre connu d'abord (couleurs stables), puis les autres par coût décroissant ; une série jamais utilisée n'est pas affichée.
-  // Clé inconnue = modèle hors de GROUPES d'exporter.mjs : « m_opus_4-6 » s'affiche « Opus 4.6 », sans toucher à la page.
+  // Clé inconnue = modèle hors de GROUPES de lib/tables.mjs : « m_opus_4-6 » s'affiche « Opus 4.6 », sans toucher à la page.
   CC.ORDRE = [['opus55', 'Opus 5.5'], ['opus48', 'Opus 4.8'], ['sonnet', 'Sonnet'], ['haiku', 'Haiku'], ['fable', 'Fable']];
   CC.nomSerie = c => (CC.ORDRE.find(s => s[0] === c) ?? [])[1]
     ?? c.replace(/^m_/, '').replace(/(\d)-(\d)/g, '$1.$2').replace(/_/g, ' ').replace(/^./, x => x.toUpperCase());

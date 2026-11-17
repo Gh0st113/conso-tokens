@@ -1,315 +1,43 @@
-// Transforme donnees.json (sortie d'agreger.mjs) en tables JSON pour le tableau de bord (dossier export/).
+// Transforme donnees.json (sortie d'agreger.mjs) en tables JSON pour le tableau de bord (dossier export/), puis
+// affiche la ligne CONTRÔLES et, pour un clone, une ligne DÉPÔT si le dépôt a changé.
 // Usage : node exporter.mjs
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { controler, rapport, forfaitDe } from './controles.mjs';
-import { DONNEES, RESETS, RESETS_PRECIS, FORFAITS, TROUS, REMISE_A_ZERO, ici, MODE } from './config.mjs';
-import { fabriquer } from './semaine.mjs';
-import { execFileSync } from 'node:child_process';
+import { join } from 'node:path';
+import { DONNEES, RESETS, RESETS_PRECIS, FORFAITS, TROUS, REMISE_A_ZERO, ici, MODE } from './lib/config.mjs';
+import { fabriquer } from './lib/semaine.mjs';
+import { construireTables, formatAncien } from './lib/tables.mjs';
+import { controler, rapport } from './lib/controles.mjs';
+import { etatDepot } from './lib/depot.mjs';
 
-const d = JSON.parse(readFileSync(join(DONNEES, 'donnees.json'), 'utf8'));
-const sortie = join(DONNEES, 'export');
-mkdirSync(sortie, { recursive: true });
-
-// Un seul « maintenant » pour tout l'export et ses contrôles (13/11) : sinon, autour de la remise à zéro hebdo, l'export
-// et les contrôles pourraient voir deux semaines différentes
-const MAINTENANT = Date.now();
-const r2 = n => Math.round(n * 100) / 100;
-const ISO = ms => new Date(ms).toISOString();
-const { debutSemaine, instantDebut } = fabriquer(REMISE_A_ZERO);
-// Jour de Paris (AAAA-MM-JJ) d'un instant : les jours calendaires restent en heure de Paris
-const jourParis = ts => new Date(ts).toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
-// Jours de Paris d'une semaine, du jour de sa remise à zéro à celui de la suivante (inclus)
-const joursParis = debut => {
-  const a = Date.parse(jourParis(instantDebut(debut)) + 'T12:00:00Z'), b = Date.parse(jourParis(instantDebut(debut) + 7 * 864e5) + 'T12:00:00Z');
-  return Array.from({ length: Math.round((b - a) / 864e5) + 1 }, (_, i) => new Date(a + i * 864e5).toISOString().slice(0, 10));
-};
-// Format du 07/11 (dossiers par jour, jours des sessions) et du 15/11 (segments de reset précis) : donnees.json plus ancien
-// → relancer agreger.mjs d'abord
-if (!d.jourProjet || !d.jourModeleTotal || !d.jourTailles || d.sessions.some(s => !s.jour || !s.jourFin)
-  || !d.segmentsHebdo || !d.resetsDeclares || [...d.projections, ...d.plafonds].some(p => !p.debutSegment)) {
-  console.error('ERREUR : donnees.json vient d\'une ancienne version d\'agreger.mjs (champs par jour, jour des sessions ou segments de reset absents) : relancer node agreger.mjs');
-  process.exit(1);
-}
-// RESETS (ancienne forme : semaine entière perdue) et RESETS_PRECIS (nouvelle forme : semaine découpée) : config.local.json
-const trou = jour => TROUS.find(([a, b]) => jour >= a && jour <= b)?.[2] ?? '';
-// Tous les jours du premier au dernier, y compris ceux sans appel (sinon le graphe les fait disparaître)
-const joursContinus = () => {
-  // Bornes : données et trous déclarés (un trou au début ou à la fin doit apparaître aussi)
-  const cles = [...Object.keys(d.parJour), ...TROUS.flatMap(([a, b]) => [a, b])].sort(), out = [];
-  if (!cles.length) return out;
-  for (let t = Date.parse(cles[0] + 'T12:00:00Z'); t <= Date.parse(cles.at(-1) + 'T12:00:00Z'); t += 864e5) {
-    const jour = new Date(t).toISOString().slice(0, 10), v = d.parJour[jour];
-    out.push({ jour, cout: v ? r2(v.cout) : 0, appels: v ? v.appels : 0, jetons: v ? jetons(v) : 0, manque: trou(jour) });
+function main() {
+  const donnees = JSON.parse(readFileSync(join(DONNEES, 'donnees.json'), 'utf8'));
+  const sortie = join(DONNEES, 'export');
+  mkdirSync(sortie, { recursive: true });
+  // Un seul « maintenant » pour l'export et ses contrôles : sinon, autour de la remise à zéro hebdo, ils pourraient
+  // voir deux semaines différentes
+  const maintenant = Date.now();
+  if (formatAncien(donnees)) {
+    console.error('ERREUR : donnees.json vient d\'une ancienne version d\'agreger.mjs (champs par jour, '
+      + 'jour des sessions ou segments de reset absents) : relancer node agreger.mjs');
+    process.exit(1);
   }
-  return out;
-};
-const semainesContinues = () => {
-  const cles = Object.keys(d.parSemaine).sort(), out = [];
-  const zero = { cout: 0, appels: 0, entree: 0, ecritureCache: 0, lectureCache: 0, sortie: 0, modeles: {} };
-  if (!cles.length) return out;
-  // Jusqu'à la semaine en cours, même sans réponse encore (juste après la remise à zéro du cycle)
-  const enCours = debutSemaine(MAINTENANT);
-  const fin = Math.max(Date.parse(cles.at(-1) + 'T12:00:00Z'), Date.parse(enCours + 'T12:00:00Z'));
-  for (let t = Date.parse(cles[0] + 'T12:00:00Z'); t <= fin; t += 7 * 864e5) {
-    const debut = new Date(t).toISOString().slice(0, 10);
-    out.push([debut, d.parSemaine[debut] ?? zero]);
-  }
-  return out;
-};
-// Groupe de chaque modèle connu (13/11 : Fable ajouté). Modèle absent d'ici (ex. « Opus 4.6 » chez un autre utilisateur) : série à lui,
-// clé automatique « m_opus_4-6 » que la page affiche « Opus 4.6 » (légende dynamique, 13/11) ; rien à changer dans la page.
-const GROUPES = { 'Fable 5.2': 'fable', 'Fable 5.1': 'fable', 'Fable 5': 'fable', 'Opus 5.5': 'opus55', 'Opus 4.8': 'opus48', 'Sonnet 5.5': 'sonnet', 'Sonnet 5': 'sonnet', 'Haiku 5.5': 'haiku', 'Haiku 4.5': 'haiku' };
-const inconnus = new Set();
-const cleAuto = m => 'm_' + m.toLowerCase().replace(/(\d)\.(\d)/g, '$1-$2').replace(/[^a-z0-9-]+/g, '_').replace(/^_|_$/g, '');
-const groupeDe = m => GROUPES[m] ?? (inconnus.add(m), cleAuto(m));
-// Toutes les clés de série, connues et automatiques : mêmes colonnes dans chaque ligne (une semaine sans ce modèle vaut 0)
-const SERIES = [...new Set([...Object.values(GROUPES), ...Object.keys(d.parModele ?? {}).map(groupeDe)])];
-const parGroupe = (modeles, prefixe = '', arrondi = r2) => {
-  const g = Object.fromEntries(SERIES.map(k => [k, 0]));
-  for (const [m, v] of Object.entries(modeles)) g[groupeDe(m)] = (g[groupeDe(m)] ?? 0) + v;
-  return Object.fromEntries(Object.entries(g).map(([k, v]) => [prefixe + k, arrondi(v)]));
-};
-const jetons = v => v.entree + v.ecritureCache + v.lectureCache + v.sortie;
 
-// Usage hors de ce PC (Cowork distant sans journal local, claude.ai, téléphone) : entre deux relevés
-// hebdo consécutifs de la même semaine, plus d'une heure d'écart, au moins 1 point de hausse pour moins de 0,5 $ par point
-// dans les journaux (un point coûte en général bien plus). Ces points sont retirés du % des relevés suivants de la semaine
-// (pctLocal) ; une pente ne les enjambe jamais. Les sauts d'une minute (arrondi du %) restent sous le seuil de durée.
-// Points retirés = hausse − part payée en local (coût local ÷ prix de référence d'un point : < 0,2 pt par point ici).
-// Seuil de 1 point : le % est arrondi à l'entier inférieur, une hausse lue de N points vaut entre
-// N − 1 et N + 1 points réels, quel que soit N ; un seuil de 2 points ratait les hausses de 1 point à coût nul
-// et faussait des pentes. Chaque période compte donc ±1 point d'incertitude (voir `fourchette`).
-// Silence : plus d'une heure sans relevé alors que plus de 5 $ (≈ 2 points) ont été consommés en local = le relevé
-// ne tournait pas (ex. sonar fermé pendant deux jours). Un éventuel usage hors PC pendant ce
-// silence est invisible : la pente qui l'enjambe est gardée mais marquée `silence` (jamais « définitive » pour la fiche Haiku).
-const HORS = { duree: 36e5, points: 1, dollarsParPoint: 0.5, prixPoint: 2.44, silenceDollars: 5 };
-// Plafond trop incertain : fourchette plus large que 25 % du plafond central → pas de plafond, la fourchette
-// seule (champs fourchetteMin / fourchetteMax, fourchetteIncertaine) (ex. semaine où la majorité du % a été prise hors de ce PC).
-const LARGEUR_MAX = 0.25;
-// Relevés hebdo groupés par segment (debutSegment : début de fenêtre, ou reset précis de la semaine, 15/11) :
-// une pente ne relie jamais deux relevés de segments différents
-const hebdoParSegment = {};
-for (const p of d.projections.filter(p => p.type === 'hebdo')) (hebdoParSegment[p.debutSegment] ??= []).push(p);
-const horsJournaux = [];
-for (const v of Object.values(hebdoParSegment)) {
-  v.sort((a, b) => a.releve < b.releve ? -1 : 1);
-  let retire = 0;
-  v.forEach((b, i) => {
-    const a = v[i - 1];
-    if (a) {
-      const dp = b.pct - a.pct, dc = b.coutAuReleve - a.coutAuReleve, long = Date.parse(b.releve) - Date.parse(a.releve) > HORS.duree;
-      if (long && dp >= HORS.points && dc < dp * HORS.dollarsParPoint) {
-        const points = Math.round((dp - dc / HORS.prixPoint) * 10) / 10;
-        retire += points; b.apresCoupure = true;
-        horsJournaux.push({ semaine: b.debutSegment, debut: a.releve, fin: b.releve, points });
-      } else if (long && dc > HORS.silenceDollars) b.apresSilence = true;
-    }
-    b.pctLocal = Math.max(0, b.pct - retire);
+  const { tables, series, inconnus } = construireTables(donnees, {
+    cycle: REMISE_A_ZERO, resets: RESETS, resetsPrecis: RESETS_PRECIS, forfaits: FORFAITS, trous: TROUS, maintenant,
   });
-}
-// Points consommés hors de ce PC dans le segment commencé à debutSegment, dans les périodes commencées avant l'instant ts
-const horsAvant = (debutSegment, ts) => horsJournaux.filter(h => h.semaine === debutSegment && Date.parse(h.debut) < Date.parse(ts))
-  .reduce((s, h) => s + h.points, 0);
-// Nombre de ces périodes (chacune ±1 point, arrondi du %) : sert à la fourchette du plafond
-const nbHorsAvant = (debutSegment, ts) => horsJournaux.filter(h => h.semaine === debutSegment && Date.parse(h.debut) < Date.parse(ts)).length;
-// Fourchette du plafond : part locale entre local − n et local + n points ; sous 10 % local, borne haute inconnue
-const fourchette = (cout, local, n) => ({ min: r2(cout * 100 / (local + n)), max: local - n >= 10 ? r2(cout * 100 / (local - n)) : null });
-
-// Découpage par reset précis (15/11) : une semaine coupée a un segment par reset. Le statut suit le segment retenu : celui
-// de plus grand % local (à égalité, le plus récent). Chaque segment a son propre coût (segmentsHebdo) et ses propres relevés.
-const segmentsDe = debut => d.segmentsHebdo.filter(s => s.semaine === debut);
-const etatSegment = debutSegment => ({
-  atteint: d.plafonds.find(p => p.type === 'hebdo' && p.debutSegment === debutSegment),
-  proj: d.projections.filter(p => p.type === 'hebdo' && p.debutSegment === debutSegment).at(-1),
-});
-// % local d'un segment (100 − hors PC si atteint, sinon % du dernier relevé − hors PC) ; null sans limite ni relevé
-const localDe = ({ atteint, proj }) => {
-  if (!atteint && !proj) return null;
-  // Même arrondi au dixième que ligneHebdo : sinon le segment retenu pourrait ne pas suivre le statut affiché
-  const hors = Math.round((atteint ? horsAvant(atteint.debutSegment, atteint.atteinte) : proj.pct - proj.pctLocal) * 10) / 10;
-  return Math.max(0, (atteint ? 100 : proj.pct) - hors);
-};
-// Semaine coupée : premier reset précis de la semaine, et début du segment retenu (ISO UTC à la minute ; phrase : page, #libelles)
-const coupeeDe = (debut, debutSegment) => {
-  // Premier reset qui coupe vraiment : le 2e segment (le 1er part du début de semaine, reset à cet instant exclu, tour 4)
-  const premier = segmentsDe(debut)[1]?.debut ?? debutSegment;
-  return { coupeePremier: premier.slice(0, 16), coupeeDepuis: debutSegment.slice(0, 16) };
-};
-// Champs de plafondsHebdo (lot 2a de #17) : codes et nombres, jamais de phrase ; mêmes colonnes dans chaque ligne
-const VIDE_HEBDO = { etat: null, pct: null, enCours: false, projete100: false, fourchetteMin: null, fourchetteMax: null, fourchetteIncertaine: false,
-  resetNote: null, coupeePremier: null, coupeeDepuis: null, indicatifDe: null, indicatifA: null };
-
-// Une ligne du comparatif hebdo, pour le segment retenu (coutSeg = coût de ce segment ; v = agrégat de toute la semaine)
-const ligneHebdo = (debut, debutSegment, coutSeg, { atteint, proj }, v) => {
-  const fin = ISO(instantDebut(debut) + 7 * 864e5);
-  const enCours = Date.parse(fin) > MAINTENANT;
-  // Relevé à 100 % (sonar, ou relevé noté à la main quand le blocage a eu lieu hors de ce PC) : semaine pleine
-  const plein = !atteint && proj?.pct >= 100;
-  // Part du % consommée hors de ce PC : retirée avant de ramener le coût local à 100 %
-  const hors = Math.round((atteint ? horsAvant(debutSegment, atteint.atteinte) : proj ? proj.pct - proj.pctLocal : 0) * 10) / 10;
-  const local = Math.max(0, (atteint ? 100 : proj?.pct ?? 0) - hors);
-  const echelle = local >= 10 ? 100 / local : null; // sous 10 % local, la division est trop bruitée
-  const pctFin = atteint ? 100 : Math.min(100, proj?.pct ?? 0), coutFin = atteint ? atteint.cout : proj?.coutAuReleve ?? 0;
-  // Fourchette (13/11) : n périodes hors PC, chacune ±1 point → part locale entre local − n et local + n
-  const n = atteint ? nbHorsAvant(debutSegment, atteint.atteinte) : proj ? nbHorsAvant(debutSegment, proj.releve) : 0;
-  const f = n && local >= 10 ? fourchette(coutFin, local, n) : null;
-  const plafondCentral = atteint && echelle ? r2(atteint.cout * echelle) : proj && echelle ? r2(proj.coutAuReleve * echelle) : null;
-  const tropLarge = f != null && plafondCentral != null && (f.max == null || f.max - f.min > LARGEUR_MAX * plafondCentral);
-  const plafond = tropLarge ? null : plafondCentral;
-  // Points hors de ce PC affichés (colonne « Hors PC ») : ceux repérés période par période (13/11). L'ancienne estimation
-  // globale (% − coût local ÷ prix fixe d'un point) est retirée : le prix d'un point varie beaucoup selon les semaines,
-  // elle inventait du hors PC. Usage hors PC simultané à Claude Code :
-  // invisible (il se fond dans le prix du point de la pente).
-  // Même valeur que la note « dont N pts » de la page (au dixième) : un arrondi à l'entier afficherait « ≈ 0 pts » pour 0,4 pt repéré
-  const horsEstime = hors > 0 ? hors : null;
-  // Projection contredite (04/11) : le segment a consommé plus que le 100 % projeté sans l'atteindre → pas de plafond,
-  // seulement « au moins le consommé »
-  // Comparé au plafond central même quand il n'est pas affiché (fourchette trop large) : un dépassement reste un dépassement
-  const contredit = !atteint && !plein && plafondCentral != null && coutSeg > plafondCentral;
-  // État de la semaine (la page en fait la phrase) ; semaine finie sans blocage ni relevé à 100 % (08/11) : pasAtteint
-  const etat = atteint ? 'atteint' : plein ? 'plein' : contredit ? 'depasse' : proj && enCours ? (plafond != null ? 'projete' : 'enCours')
-    : proj ? 'pasAtteint' : enCours ? 'enCours' : 'pasAtteint';
-  return {
-    semaine: debut,
-    ...VIDE_HEBDO,
-    etat, pct: atteint || plein || !proj ? null : proj.pct, enCours, projete100: !!proj && plafond != null,
-    // Fourchette affichée seulement avec des points hors de ce PC (comme avant : elle vit dans la note « dont N pts »)
-    ...(f && horsEstime != null ? { fourchetteMin: f.min, fourchetteMax: f.max, fourchetteIncertaine: tropLarge } : {}),
-    pctFin: horsEstime == null ? null : pctFin, horsEstime,
-    plafond: contredit ? null : plafond,
-    sortie: contredit || tropLarge ? null : atteint && echelle ? Math.round(atteint.jetonsSortie * echelle) : proj && echelle ? Math.round(proj.sortieProjetee * proj.pct / 100 * echelle) : null,
-    consomme: r2(v.cout),
-    consommeSortie: v.sortie, // jetons de sortie de la semaine, pour la vue « jetons » de la page
-  };
-};
-
-// Semaine de changement de forfait (clé forfaits, 15/11, décision 5) : champs indicatifDe / indicatifA (A → B) (A = forfait
-// de la semaine d'avant, « inconnu » si aucun). Ni comparée aux autres semaines ni contrôlée côté plafond : controles.mjs et la page le savent
-const changementsSemaines = new Set(FORFAITS.filter(f => f.changement).map(f => f.semaine));
-const indicatif = (debut, ligne) => {
-  if (!changementsSemaines.has(debut)) return ligne;
-  const avant = forfaitDe(FORFAITS, new Date(Date.parse(debut + 'T12:00:00Z') - 7 * 864e5).toISOString().slice(0, 10)) || 'inconnu';
-  return { ...ligne, indicatifDe: avant, indicatifA: forfaitDe(FORFAITS, debut) };
-};
-
-// Coût par groupe = somme des coûts calculés appel par appel (agreger.mjs) ; colonnes j… = jetons, jamais un coût
-const tables = {
-  // Toutes les semaines de la première à la dernière : une semaine sans réponse vaut 0 au lieu de disparaître
-  semaines: semainesContinues().map(([debut, v]) => ({
-    debut, cout: r2(v.cout), appels: v.appels, jetons: jetons(v), ...parGroupe(v.modeles),
-    // Jetons par groupe de modèles (jopus55…), pour la vue « jetons » de la page
-    ...parGroupe(v.jetonsModeles ?? {}, 'j', Math.round),
-    // Semaine touchée par un trou : jours de Paris de la fenêtre (remise à zéro → remise à zéro suivante) dans TROUS
-    manque: joursParis(debut).map(trou).find(Boolean) ?? '',
-  })),
-  jours: joursContinus(),
-  // Une ligne par jour (heure de Paris) et par dossier : la page additionne sur la période choisie (7 j, 30 j, tout ; 07/11)
-  projets: Object.entries(d.jourProjet).sort().flatMap(([jour, parDossier]) => Object.entries(parDossier)
-    .map(([projet, v]) => ({ jour, projet, cout: r2(v.cout), appels: v.appels, jetons: jetons(v) }))),
-  // Codes de type et de tranche (lot 2a de #17) : le libellé est fabriqué par la page (#libelles)
-  types: [
-    ['cacheRead', d.total.lectureCache, d.total.coutLecture],
-    ['cacheWrite', d.total.ecritureCache, d.total.coutEcriture],
-    ['output', d.total.sortie, d.total.coutSortie],
-    ['input', d.total.entree, d.total.coutEntree],
-  ].map(([type, jetons, cout]) => ({ type, jetons, cout: r2(cout) })),
-  // Une ligne par jour (heure de Paris) et par modèle / par tranche de contexte : la page additionne sur la période (07/11)
-  modeles: Object.entries(d.jourModeleTotal).sort().flatMap(([jour, parModele]) => Object.entries(parModele)
-    .map(([modele, v]) => ({ jour, modele, cout: r2(v.cout), appels: v.appels, jetons: jetons(v) }))),
-  contexte: Object.entries(d.jourTailles).sort().flatMap(([jour, t]) =>
-    ['0-50k', '50-100k', '100-150k', '150-250k', '250k+'].map((tranche, i) => ({ jour, tranche, appels: t[i] }))),
-  // Comparatif hebdo : une ligne par semaine, plafond atteint, projeté depuis un relevé, ou seulement borne basse.
-  // Semaine où un reset a été utilisé (ancienne forme) : le compteur repart de zéro sans que la fin bouge, coût ÷ % n'a plus
-  // de sens → pas de plafond.
-  // Semaines continues (08/11) : la semaine neuve apparaît « en cours » même sans appel depuis la dernière remise à zéro
-  // Semaine coupée par un reset précis (15/11) : une ligne quand même, sur le segment retenu (champs coupeePremier / coupeeDepuis)
-  plafondsHebdo: semainesContinues().map(([debut, v]) => {
-    const reset = RESETS[debut];
-    if (reset) return indicatif(debut, { semaine: debut, ...VIDE_HEBDO, etat: 'reset', resetNote: String(reset), pctFin: null, horsEstime: null,
-      plafond: null, sortie: null, consomme: r2(v.cout), consommeSortie: v.sortie });
-    const coupees = segmentsDe(debut);
-    const segs = coupees.length ? coupees.map(s => ({ debutSegment: s.debut, cout: s.cout })) : [{ debutSegment: ISO(instantDebut(debut)), cout: v.cout }];
-    // Segment retenu : plus grand % local ; à égalité, le plus récent. Aucun relevé ni limite : le dernier segment, sans plafond
-    let choisi = null;
-    for (const s of segs) {
-      const etat = etatSegment(s.debutSegment), loc = localDe(etat);
-      if (loc != null && (!choisi || loc >= choisi.loc)) choisi = { ...s, etat, loc };
-    }
-    choisi ??= { ...segs.at(-1), etat: {} };
-    const ligne = ligneHebdo(debut, choisi.debutSegment, choisi.cout, choisi.etat, v);
-    if (coupees.length) Object.assign(ligne, coupeeDe(debut, choisi.debutSegment));
-    return indicatif(debut, ligne);
-  }),
-  plafonds5h: [
-    ...d.plafonds.filter(p => p.type === '5h').map(p => ({ moment: p.atteinte.slice(0, 16), etat: 'atteint', pct: null, plafond: p.cout, sortie: p.jetonsSortie })),
-    // Relevés à 50 % et plus seulement : en dessous, la projection coût ÷ % est trop bruitée
-    ...d.projections.filter(p => p.type === '5h' && p.pct >= 50).map(p => ({ moment: p.releve.slice(0, 16), etat: 'projete', pct: p.pct, plafond: p.plafondProjete, sortie: p.sortieProjetee })),
-  ].sort((a, b) => a.moment < b.moment ? -1 : 1),
-  // Pente : coût consommé entre deux relevés du % hebdo de la même semaine ÷ écart de % (au moins 8 points).
-  // Insensible à ce qui a été consommé hors journaux AVANT le premier relevé (claude.ai, téléphone, autre PC) ;
-  // une période d'usage hors de ce PC (horsJournaux) coupe la pente : on repart du relevé qui la suit.
-  // Une pente ne relie jamais deux segments (reset précis, 15/11) : groupes par debutSegment
-  pentes: (() => {
-    const out = [];
-    for (const v of Object.values(hebdoParSegment)) {
-      let a = v[0], silence = false;
-      for (const b of v.slice(1)) {
-        if (b.apresCoupure) { a = b; silence = false; continue; }
-        silence ||= !!b.apresSilence;
-        if (b.pctLocal - a.pctLocal < 8) continue;
-        out.push({ debut: a.releve.slice(0, 16), fin: b.releve.slice(0, 16), ecart: Math.round((b.pctLocal - a.pctLocal) * 10) / 10,
-          heures: r2((Date.parse(b.releve) - Date.parse(a.releve)) / 36e5),
-          plafond: Math.round((b.coutAuReleve - a.coutAuReleve) / (b.pctLocal - a.pctLocal) * 100), silence });
-        a = b; silence = false;
-      }
-    }
-    return out.sort((a, b) => a.debut < b.debut ? -1 : 1);
-  })(),
-  // Toutes les sessions (07/11) : la page filtre par période (jour de début, heure de Paris) puis garde les 30 plus chères
-  sessions: d.sessions.sort((a, b) => b.cout - a.cout).map(s => ({
-    session: s.id, projet: s.projet, jour: s.jour, jourFin: s.jourFin, debut: s.debut.slice(0, 16).replace('T', ' '), appels: s.appels,
-    ctxMax: s.ctxMax, cout: r2(s.cout), jetons: jetons(s),
-    modele: Object.entries(s.modeles).sort((a, b) => b[1] - a[1])[0][0],
-  })),
-  // Réglages (11e table) : une seule ligne, valable pour tout le tableau (jour et heure UTC de la remise à zéro)
-  reglages: [{ jour: REMISE_A_ZERO.jour, jourNum: REMISE_A_ZERO.jourNum, heureUTC: REMISE_A_ZERO.heureUTC, fuseau: 'UTC' }],
-  // Resets déclarés à la main (12e table, 15/11) : une ligne par reset, des deux formes. Ancienne forme : quand vide.
-  // Nouvelle forme : « AAAA-MM-JJTHH:MM » en UTC, sans Z (comme les autres tables). Triée par semaine puis par quand.
-  resets: [
-    ...Object.entries(RESETS).map(([semaine, note]) => ({ quand: '', type: 'hebdo', note: String(note), semaine })),
-    ...RESETS_PRECIS.map(p => ({ quand: ISO(p.quand).slice(0, 16), type: p.type, note: p.note, semaine: p.semaine })),
-  ].sort((a, b) => a.semaine < b.semaine ? -1 : a.semaine > b.semaine ? 1 : a.quand < b.quand ? -1 : a.quand > b.quand ? 1 : 0),
-  // Forfaits déclarés à la main (13e table, 15/11) : une ligne par entrée de la clé forfaits, triée par date. Sans clé : liste vide
-  forfaits: FORFAITS.map(f => ({ date: f.date, semaine: f.semaine, forfait: f.forfait, changement: f.changement })),
-};
-
-for (const [nom, rows] of Object.entries(tables)) writeFileSync(join(sortie, `${nom}.json`), JSON.stringify(rows));
-// Manifeste (15/11) : noms des tables écrites à ce passage, triés. La procédure de mise à jour s'en sert pour pousser les tables
-writeFileSync(join(sortie, '_tables.json'), JSON.stringify(Object.keys(tables).sort()));
-console.log(Object.entries(tables).map(([n, r]) => `${n}: ${r.length}`).join(', '), '->', sortie);
-if (inconnus.size) console.log(`Info : modèle(s) hors de GROUPES, chacun en série à part sur la page : ${[...inconnus].join(', ')}`);
-// Contrôles de cohérence (13/11) : n'empêchent pas l'export (code de retour 0), la ligne « CONTRÔLES : … » est à citer telle quelle
-console.log(rapport(controler(d, tables, { maintenant: MAINTENANT, groupes: SERIES, debutSemaine })));
-// Garde-fou de publication (13/11) : un fichier modifié ou nouveau dans le dépôt (hors fichiers ignorés) est signalé.
-// Une mise à jour des données ne doit RIEN changer dans le dépôt : pas de ligne « DÉPÔT » si tout est propre ; sinon, à citer telle quelle.
-// Limites : ne regarde que le dépôt (pas un dossier de données placé ailleurs), ni les fichiers ignorés par git.
-// Paquet installé (issue #19) : pas de dépôt à protéger ; git -C remonterait au dépôt d'un projet hôte → pas de contrôle
-if (MODE === 'clone') {
-  const git = (...a) => execFileSync('git', ['-C', ici, ...a], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 2 ** 20 });
-  const premiereLigne = e => String(e.stderr || e.message).trim().split(/\r?\n/)[0];
-  let estDepot = false;
-  try { estDepot = git('rev-parse', '--is-inside-work-tree').trim() === 'true'; }
-  catch (e) { // copie sans .git, ou git absent : rien à vérifier ; tout autre échec est signalé
-    if (e.code !== 'ENOENT' && !/not a git repository/i.test(String(e.stderr))) console.log(`DÉPÔT : contrôle impossible (${premiereLigne(e)})`);
+  for (const [nom, rows] of Object.entries(tables)) writeFileSync(join(sortie, `${nom}.json`), JSON.stringify(rows));
+  // Manifeste : noms des tables écrites à ce passage, triés ; la procédure de mise à jour s'en sert pour les pousser
+  writeFileSync(join(sortie, '_tables.json'), JSON.stringify(Object.keys(tables).sort()));
+  console.log(Object.entries(tables).map(([nom, rows]) => `${nom}: ${rows.length}`).join(', '), '->', sortie);
+  if (inconnus.length) {
+    console.log(`Info : modèle(s) hors de GROUPES, chacun en série à part sur la page : ${inconnus.join(', ')}`);
   }
-  let aUnCommit = false;
-  if (estDepot) try { git('rev-parse', '--verify', '--quiet', 'HEAD'); aUnCommit = true; } catch { console.log('DÉPÔT : aucun commit encore, contrôle impossible'); }
-  if (aUnCommit) try {
-    // -uall : chaque fichier non suivi est listé, même si status.showUntrackedFiles=no est réglé
-    const lignes = git('status', '--porcelain', '-uall').split(/\r?\n/).filter(Boolean);
-    const etat = xy => xy === '??' ? 'nouveau' : xy.includes('D') ? 'supprimé' : 'modifié';
-    if (lignes.length) console.log(`DÉPÔT : ${lignes.length} fichier(s) modifié(s), nouveau(x) ou supprimé(s), ne rien commiter sans relecture : ${lignes.map(l => `${l.slice(3)} (${etat(l.slice(0, 2))})`).join(', ')}`);
-  } catch (e) { console.log(`DÉPÔT : contrôle impossible (${premiereLigne(e)})`); }
+
+  // Les contrôles n'empêchent pas l'export (code de retour 0) ; la ligne « CONTRÔLES : … » est à citer telle quelle
+  const { debutSemaine } = fabriquer(REMISE_A_ZERO);
+  console.log(rapport(controler(donnees, tables, { maintenant, groupes: series, debutSemaine })));
+  // Paquet installé : pas de dépôt à protéger, et git -C remonterait au dépôt d'un projet hôte
+  if (MODE === 'clone') for (const ligne of etatDepot(ici)) console.log(ligne);
 }
+
+main();

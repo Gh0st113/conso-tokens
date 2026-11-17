@@ -1,14 +1,14 @@
 // Contrôle croisé avec ccusage (17/11) : compare, jour par jour (heure de Paris), les jetons de donnees.json avec ceux que
 // ccusage lit dans les mêmes journaux (~/.claude/projects). N'écrit rien. Télécharge ccusage par npx (réseau) au 1er lancement.
 // Usage : node comparer-ccusage.mjs   (après node agreger.mjs)
-// Écart négatif (ccusage < ici) attendu : journaux effacés mais gardés dans l'archive, --journaux, Cowork local.
+// Écart négatif (ccusage < ici) attendu : journaux effacés mais gardés dans l'archive, --logs, Cowork local.
 // Écart positif (ccusage > ici) : réponses que agreger.mjs ne compte pas → à regarder.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { DONNEES } from './config.mjs';
+import { DONNEES } from './lib/config.mjs';
 
 // Version figée : une nouvelle version de ccusage ne s'exécute pas sans relecture
 const CCUSAGE = 'ccusage@20.0.51';
@@ -58,6 +58,6 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   else {
     console.log(`CCUSAGE : ${ecarts.length} jour(s) sur ${compares} diffèrent (ccusage − ici, jours avant le ${jourLimite}) :`);
     for (const e of ecarts) console.log(`  ${e.jour} : ${e.diffs.map(([nom, n]) => `${nom} ${nb(n)}`).join(', ') || 'mêmes jetons'} ; coût ccusage ${usd(e.coutCc)}, ici ${usd(e.coutIci)}`);
-    console.log('  Écart négatif : journaux effacés gardés dans l\'archive, --journaux ou Cowork local. Écart positif : réponses non comptées par agreger.mjs.');
+    console.log('  Écart négatif : journaux effacés gardés dans l\'archive, --logs ou Cowork local. Écart positif : réponses non comptées par agreger.mjs.');
   }
 }
