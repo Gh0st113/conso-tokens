@@ -730,7 +730,8 @@
     // Trait pointillé au bord gauche de chaque semaine de changement de forfait (15/11)
     svg.append('g').selectAll('line').data(rows.filter(r => r.changement)).join('line').attr('x1', r => x(r.semaine)).attr('x2', r => x(r.semaine))
       .attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--color-fg-muted)').attr('stroke-dasharray', '4 3');
-    // Ligne du plafond : une suite par forfait ; un point de changement n'est relié ni avant ni après (estompé, hors de toute ligne)
+    // Ligne du plafond : une suite par forfait en trait plein ; d'un forfait à l'autre, un pont gris en pointillé passe par le point
+    // de changement (indicatif, estompé) s'il en a un, sinon relie directement les deux forfaits (idée de l'utilisateur, 17/11)
     const pts = rows.filter(r => r.plafond != null);
     const cx = r => x(r.semaine) + x.bandwidth() / 2;
     const suites = [];
@@ -743,9 +744,20 @@
     }
     for (const s of suites) svg.append('path').datum(s.pts).attr('fill', 'none').attr('stroke', dash.colors[0]).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round')
       .attr('d', d3.line().x(cx).y(r => y(r.plafond)));
-    svg.append('g').selectAll('circle').data(pts).join('circle').attr('cx', cx).attr('cy', r => y(r.plafond)).attr('r', 5)
+    // Ponts : entre deux points voisins qui ne sont pas dans la même suite (changement entre eux, ou l'un des deux est le changement)
+    const ponts = [];
+    let prec = null, coupe = false;
+    for (const r of rows) {
+      if (r.changement) coupe = true;
+      if (r.plafond == null) continue;
+      if (prec && (coupe || prec.changement || prec.forfait.toLowerCase() !== r.forfait.toLowerCase())) ponts.push([prec, r]);
+      prec = r; coupe = false;
+    }
+    svg.append('g').selectAll('path').data(ponts).join('path').attr('fill', 'none').attr('stroke', 'var(--color-fg-muted)').attr('stroke-width', 1.5)
+      .attr('stroke-dasharray', '4 3').attr('d', ([a, b]) => `M${cx(a)},${y(a.plafond)}L${cx(b)},${y(b.plafond)}`);
+    svg.append('g').selectAll('circle').data(pts).join('circle').attr('cx', cx).attr('cy', r => y(r.plafond)).attr('r', r => r.changement ? 6 : 5)
       .attr('fill', r => r.changement ? (libelles.atteint(r) ? 'var(--color-fg-muted)' : 'var(--color-panel)') : libelles.atteint(r) ? dash.colors[0] : 'var(--color-panel)')
-      .attr('stroke', r => r.changement ? 'var(--color-fg-muted)' : dash.colors[0]).attr('stroke-width', 2).attr('stroke-dasharray', r => r.changement ? '3 2' : null);
+      .attr('stroke', r => r.changement ? 'var(--color-fg-muted)' : dash.colors[0]).attr('stroke-width', 2).attr('stroke-dasharray', r => r.changement ? '5 3' : null);
     svg.append('g').selectAll('text').data(pts).join('text').text(r => CC.fmt(r.plafond)).attr('x', cx).attr('y', r => y(r.plafond) - 10)
       .attr('text-anchor', 'middle').attr('fill', r => r.changement ? 'var(--color-fg-muted)' : 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)');
     const tip = CC.tip(el);
