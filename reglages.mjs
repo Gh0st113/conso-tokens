@@ -90,3 +90,14 @@ export function lireForfaits(valeur, cycle, debutSemaine) {
   });
   return entrees.map((e, i) => ({ ...e, changement: i > 0 && e.forfait.toLowerCase() !== entrees[i - 1].forfait.toLowerCase() }));
 }
+
+// Dossier de base des réglages et données (issue #19). Pur : les présences de fichiers sont passées par `existe`.
+// CONSO_TOKENS_DIR non vide → ce dossier. Sinon, dossier du code contenant .git, config.local.json ou donnees/ → mode
+// « clone », base = dossier du code (comportement d'origine). Sinon (paquet npm installé) → mode « paquet », base =
+// <maison>/.conso-tokens. Le mode sert aussi aux messages (avertissement de première archive).
+export const INDICES_CLONE = ['.git', 'config.local.json', 'donnees'];
+export function choisirBase({ ici, existe, env = {}, maison, joindre = (a, b) => `${a}/${b}` }) {
+  const mode = INDICES_CLONE.some(n => existe(joindre(ici, n))) ? 'clone' : 'paquet';
+  const force = typeof env.CONSO_TOKENS_DIR === 'string' && env.CONSO_TOKENS_DIR.trim() ? env.CONSO_TOKENS_DIR.trim() : null;
+  return { mode, base: force ?? (mode === 'clone' ? ici : joindre(maison, '.conso-tokens')), force: force !== null };
+}

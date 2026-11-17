@@ -4,9 +4,11 @@
 // Écrit [entrée, sortie, lecture cache] par modèle (même forme que TARIFS d'agreger.mjs) et les paliers « prompts over N tokens ».
 // Au moindre doute (colonne inconnue, prix illisible, doublon, palier non reconnu, écriture cache hors 1,25 × / 2 ×,
 // que calcule agreger.mjs) : erreur, code de retour 1, et l'ancien tarifs.json reste en place (relu par DeepSeek le 13/11).
-import { readFileSync, writeFileSync, renameSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync } from 'node:fs';
+import { join, dirname, resolve, relative, isAbsolute } from 'node:path';
+import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { choisirBase } from './reglages.mjs';
 
 const URL_PAGE = 'https://platform.claude.com/docs/en/about-claude/pricing.md';
 const COLONNES = { entree: /^base input/i, ec5: /^5m cache write/i, ec1: /^1h cache write/i, lecture: /^cache hits/i, sortie: /^output/i };
@@ -61,7 +63,14 @@ export function lireTarifs(md) {
 
 // Lancé directement (pas importé par un test)
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  const ici = dirname(fileURLToPath(import.meta.url)), sortie = join(ici, 'tarifs.json');
+  // Écrit dans le dossier de base (issue #19 : jamais dans le paquet installé). Sans config.mjs : la mise à jour des tarifs
+  // ne dépend pas de config.local.json et ne crée pas le dossier des données (comme avant)
+  const ici = dirname(fileURLToPath(import.meta.url));
+  const { mode, base } = choisirBase({ ici, existe: existsSync, env: process.env, maison: homedir(), joindre: join });
+  const dossier = resolve(base), livre = join(ici, 'tarifs.json'), sortie = join(dossier, 'tarifs.json');
+  if (mode === 'paquet' && !relative(ici, dossier).startsWith('..') && !isAbsolute(relative(ici, dossier)))
+    throw new Error(`CONSO_TOKENS_DIR (${dossier}) est dans le dossier du paquet installé (${ici}) : une mise à jour l'effacerait.`);
+  mkdirSync(dossier, { recursive: true });
   const iPage = process.argv.indexOf('--page');
   const texte = iPage > 0 ? readFileSync(process.argv[iPage + 1], 'utf8') : await (async () => {
     const r = await fetch(URL_PAGE);
@@ -71,7 +80,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const { tarifs, paliers } = lireTarifs(texte);
   // Modèle retiré de la page : son ancien tarif est GARDÉ (sinon son historique tomberait à 0 $), et signalé
   let avant = {};
-  try { avant = JSON.parse(readFileSync(sortie, 'utf8')).tarifs ?? {}; } catch {}
+  for (const f of [sortie, livre]) {
+    try { avant = JSON.parse(readFileSync(f, 'utf8')).tarifs ?? {}; break; } catch {}
+  }
   const partis = Object.keys(avant).filter(m => !tarifs[m]);
   for (const m of partis) tarifs[m] = avant[m];
   writeFileSync(sortie + '.tmp', JSON.stringify({ source: URL_PAGE, luLe: new Date().toISOString(), tarifs, paliers }, null, 1));

@@ -103,3 +103,14 @@ test('lireForfaits : longueur comptée en caractères (et non en unités UTF-16)
   assert.equal(forfaits({ '2026-11-01': '𐐀'.repeat(21) })[0].forfait, '𐐀'.repeat(21));
   assert.throws(() => forfaits({ '2026-11-01': '𐐀'.repeat(41) }), /40 caractères/);
 });
+
+test('choisirBase : mode clone par chacun des indices, mode paquet sans indice, CONSO_TOKENS_DIR prioritaire', async () => {
+  const { choisirBase } = await import('./reglages.mjs');
+  const base = (presents, env) => choisirBase({ ici: '/code', maison: '/moi', env, existe: p => presents.includes(p) });
+  for (const n of ['.git', 'config.local.json', 'donnees'])
+    assert.deepEqual(base([`/code/${n}`]), { mode: 'clone', base: '/code', force: false });
+  assert.deepEqual(base([]), { mode: 'paquet', base: '/moi/.conso-tokens', force: false });
+  assert.deepEqual(base([], { CONSO_TOKENS_DIR: '/ailleurs' }), { mode: 'paquet', base: '/ailleurs', force: true });
+  assert.deepEqual(base(['/code/.git'], { CONSO_TOKENS_DIR: '/ailleurs' }), { mode: 'clone', base: '/ailleurs', force: true });
+  assert.deepEqual(base([], { CONSO_TOKENS_DIR: '   ' }), { mode: 'paquet', base: '/moi/.conso-tokens', force: false });
+});

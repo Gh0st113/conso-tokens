@@ -1,16 +1,23 @@
-// Réglages propres à chaque utilisateur : config.local.json à côté des scripts (ignoré par git ; modèle : config.exemple.json).
-// Sans ce fichier, tout marche avec les valeurs par défaut ci-dessous.
-import { readFileSync, mkdirSync } from 'node:fs';
+// Réglages propres à chaque utilisateur : config.local.json dans le dossier de base (ignoré par git ; modèle : config.exemple.json).
+// Dossier de base (issue #19, choisirBase dans reglages.mjs) : celui des scripts pour un clone, ~/.conso-tokens pour le
+// paquet npm, ou CONSO_TOKENS_DIR. Sans config.local.json, tout marche avec les valeurs par défaut ci-dessous.
+import { readFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname, resolve, relative, isAbsolute, sep } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { lireCycle, lireResets, lireForfaits } from './reglages.mjs';
+import { lireCycle, lireResets, lireForfaits, choisirBase } from './reglages.mjs';
 import { fabriquer } from './semaine.mjs';
 
 export const ici = dirname(fileURLToPath(import.meta.url));
+const choix = choisirBase({ ici, existe: existsSync, env: process.env, maison: homedir(), joindre: join });
+export const MODE = choix.mode;
+export const BASE = resolve(choix.base);
+// Tarifs : celui livré avec le code (lecture seule en mode paquet) et celui que maj-tarifs.mjs écrit (prioritaire)
+export const TARIFS_LIVRES = join(ici, 'tarifs.json');
+export const TARIFS_ECRITS = join(BASE, 'tarifs.json');
 const erreur = m => { throw new Error(`config.local.json : ${m}`); };
 let c = {};
-try { c = JSON.parse(readFileSync(join(ici, 'config.local.json'), 'utf8')); }
+try { c = JSON.parse(readFileSync(join(BASE, 'config.local.json'), 'utf8')); }
 catch (e) { if (e.code !== 'ENOENT') erreur(`illisible (${e.message})`); }
 if (c === null || typeof c !== 'object' || Array.isArray(c)) erreur('doit contenir un objet { … }');
 const texte = (k, v) => { if (typeof v !== 'string' || !v) erreur(`« ${k} » doit être un texte non vide`); return v; };
@@ -20,17 +27,20 @@ const chemin = (k, p) => {
   texte(k, p);
   if (p === '~' || p.startsWith('~/') || p.startsWith('~\\')) return join(homedir(), p.slice(1));
   if (p.startsWith('~')) erreur(`« ${k} » : seuls « ~ » et « ~/… » sont acceptés`);
-  return resolve(ici, p);
+  return resolve(BASE, p);
 };
 
 // Dossier des données (donnees.json, archive-appels.json, releves.json, export/) : hors du dépôt de préférence
-export const DONNEES = c.dossierDonnees === undefined ? join(ici, 'donnees') : chemin('dossierDonnees', c.dossierDonnees);
-// Garde-fou : dans le dépôt, les données ne vont QUE dans donnees/ (ignoré par git) ; ailleurs dans le dépôt, elles
-// pourraient être commitées et publiées → refus
+export const DONNEES = c.dossierDonnees === undefined ? join(BASE, 'donnees') : chemin('dossierDonnees', c.dossierDonnees);
+// Garde-fou, dans tous les modes : dans le dossier du code, les données ne vont QUE dans donnees/ (ignoré par git) ;
+// ailleurs, elles pourraient être commitées et publiées, ou écrasées par une mise à jour du paquet → refus
+const dansCode = p => { const r = relative(ici, p); return !(isAbsolute(r) || r === '..' || r.startsWith('..' + sep) || r.startsWith('../')); };
 const rel = relative(ici, DONNEES);
-const horsDepot = isAbsolute(rel) || rel === '..' || rel.startsWith('..' + sep) || rel.startsWith('../');
-if (!horsDepot && rel.split(/[\\/]/)[0] !== 'donnees')
+if (dansCode(DONNEES) && rel.split(/[\\/]/)[0] !== 'donnees')
   erreur(`dossierDonnees (${DONNEES}) est dans le dépôt hors de donnees/ : les données pourraient être publiées. Choisir un dossier hors du dépôt ou donnees/.`);
+// Paquet installé : rien n'est écrit dans son dossier, même donnees/ (une mise à jour l'effacerait)
+if (MODE === 'paquet' && (dansCode(BASE) || dansCode(DONNEES)))
+  throw new Error(`conso-tokens : ${dansCode(BASE) ? `CONSO_TOKENS_DIR (${BASE})` : `dossierDonnees (${DONNEES})`} est dans le dossier du paquet installé (${ici}) : une mise à jour l'effacerait. Choisir un autre dossier.`);
 try { mkdirSync(DONNEES, { recursive: true }); } catch (e) { erreur(`dossier des données impossible à créer : ${DONNEES} (${e.code})`); }
 
 // Nom d'un dossier de travail à partir de la clé des journaux (ex. « C--Users-moi-Documents-Code-projet »).
