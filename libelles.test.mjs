@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { ETATS_HEBDO } from './controles.mjs';
+import { ETATS_HEBDO } from './lib/controles.mjs';
 
 const html = readFileSync(new URL('./page/index.html', import.meta.url), 'utf8');
 const bloc = (id) => html.match(new RegExp(`<script id="${id}">([\\s\\S]*?)</script>`))[1];
@@ -25,7 +25,7 @@ const PHRASES = L.PHRASES;
 const regler = (code) => { L.langue = code; L.formats = LANGUES[code]; };
 regler('fr');
 
-// Ligne de plafondsHebdo telle qu'exporter.mjs l'écrit (valeurs par défaut de VIDE_HEBDO)
+// Ligne de plafondsHebdo telle que lib/hebdo.mjs l'écrit (valeurs par défaut de VIDE_HEBDO)
 const h = champs => ({ semaine: '2026-10-18', etat: null, pct: null, enCours: false, projete100: false, fourchetteMin: null, fourchetteMax: null,
   fourchetteIncertaine: false, resetNote: null, coupeePremier: null, coupeeDepuis: null, indicatifDe: null, indicatifA: null,
   pctFin: null, horsEstime: null, ...champs });

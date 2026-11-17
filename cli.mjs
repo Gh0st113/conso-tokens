@@ -38,7 +38,7 @@ else if (cmd === 'maj') {
   if (args.includes('--sortie') || args.includes('--output')) { console.error('conso-tokens update : --output refusé (exporter lirait l\'ancien donnees.json) ; utiliser conso-tokens aggregate --output (ou --sortie)'); process.exitCode = 2; }
   else { const code = lancer('agreger.mjs', args); process.exitCode = code !== 0 ? code : lancer('exporter.mjs', []); }
 } else if (cmd === 'page') {
-  const { DONNEES } = await import('./config.mjs');
+  const { DONNEES } = await import('./lib/config.mjs');
   console.log(`Page du tableau de bord : ${script('page/index.html')}`);
   console.log(`Tables à charger        : ${join(DONNEES, 'export')}`);
 } else if (cmd === '--version' || cmd === '-v') {

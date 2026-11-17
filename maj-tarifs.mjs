@@ -1,14 +1,14 @@
 // Génère tarifs.json depuis la page Pricing officielle (13/11) : node maj-tarifs.mjs [--page fichier.md]
 // À lancer à la main quand un modèle sort ou change de prix ; agreger.mjs lit ensuite tarifs.json (pas de réseau à chaque mise à jour).
 // Lit le tableau de la section « Model pricing », colonnes repérées par leur en-tête (pas par position).
-// Écrit [entrée, sortie, lecture cache] par modèle (même forme que TARIFS d'agreger.mjs) et les paliers « prompts over N tokens ».
+// Écrit [entrée, sortie, lecture cache] par modèle (même forme que INTEGRES de lib/tarifs.mjs) et les paliers « prompts over N tokens ».
 // Au moindre doute (colonne inconnue, prix illisible, doublon, palier non reconnu, écriture cache hors 1,25 × / 2 ×,
-// que calcule agreger.mjs) : erreur, code de retour 1, et l'ancien tarifs.json reste en place (relu par DeepSeek le 13/11).
+// que calcule lib/tarifs.mjs) : erreur, code de retour 1, et l'ancien tarifs.json reste en place (relu par DeepSeek le 13/11).
 import { readFileSync, writeFileSync, renameSync, existsSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve, relative, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { choisirBase } from './reglages.mjs';
+import { choisirBase } from './lib/reglages.mjs';
 
 const URL_PAGE = 'https://platform.claude.com/docs/en/about-claude/pricing.md';
 const COLONNES = { entree: /^base input/i, ec5: /^5m cache write/i, ec1: /^1h cache write/i, lecture: /^cache hits/i, sortie: /^output/i };
@@ -39,7 +39,7 @@ export function lireTarifs(md) {
     const p = Object.fromEntries(Object.entries(pos).map(([k, i]) => [k, prix(cols[i])]));
     if (!Object.values(p).every(v => Number.isFinite(v) && v >= 0)) throw new Error(`prix illisible : ${cols[0]}`);
     if (Math.abs(p.ec5 - 1.25 * p.entree) > 1e-9 || Math.abs(p.ec1 - 2 * p.entree) > 1e-9)
-      throw new Error(`${cols[0]} : écriture cache ${p.ec5} / ${p.ec1} ≠ 1,25 × / 2 × l'entrée ${p.entree} (agreger.mjs ne sait pas la calculer)`);
+      throw new Error(`${cols[0]} : écriture cache ${p.ec5} / ${p.ec1} ≠ 1,25 × / 2 × l'entrée ${p.entree} (lib/tarifs.mjs ne sait pas la calculer)`);
     // « Claude Haiku 5.5 (for prompts over 100,000 tokens) » → palier ; « (retired…) », « ([limited…]) » → retirés du nom
     const nom = cols[0].replace(/^Claude\s+/, '').replace(/\s*\(.*$/, '').trim();
     if (!/^[A-Z][a-z]+ \d+(\.\d+)?$/.test(nom)) throw new Error(`nom de modèle inattendu : « ${cols[0]} »`);
