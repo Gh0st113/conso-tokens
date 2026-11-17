@@ -80,6 +80,9 @@ function manquants(langues, phrases, dico) {
   for (const code of Object.keys(langues)) {
     const p = phrases[code];
     if (!p) { probs.push(`${code} : aucune phrase dans PHRASES`); continue; }
+    const L = langues[code];
+    for (const f of ['locale', 'decimal', 'sep']) if (typeof L[f] !== 'string') probs.push(`${code} : ${f} absent de LANGUES`);
+    for (const f of ['monnaie', 'heureInfo', 'heureUTC']) if (typeof L[f] !== 'function') probs.push(`${code} : ${f} absent de LANGUES`);
     for (const k of ref) if (p[k] === undefined) probs.push(`${code} : phrase « ${k} »`);
     for (const t of ['types', 'tranches']) for (const k of Object.keys(phrases.fr[t])) if (p[t]?.[k] === undefined) probs.push(`${code} : ${t}.${k}`);
     if (code !== 'fr') for (const k of [...clesHtml, ...clesJet.map(c => c + '.jet')]) if (dico[k]?.[code] === undefined) probs.push(`${code} : « ${k} » (DICO)`);
@@ -198,6 +201,7 @@ test('page : plus aucune lecture directe de statut, type ou tranche hors du form
 
 test('dictionnaire : un texte du HTML n\'a pas de français ; chaque langue hors fr a sa clé ; tr() a fr et en', () => {
   for (const k of clesHtml) assert.equal(DICO[k]?.fr, undefined, `${k} : une entrée du HTML n'a pas de fr`);
+  for (const k of clesJet.map(c => c + '.jet')) assert.equal(DICO[k]?.fr, undefined, `${k} : une entrée .jet n'a pas de fr`);
   for (const k of [...clesHtml, ...clesJet.map(c => c + '.jet')]) {
     assert.ok(DICO[k], `${k} : pas d'entrée`);
     for (const code of Object.keys(LANGUES)) if (code !== 'fr') assert.ok(DICO[k][code] !== undefined, `${k} : pas de ${code}`);

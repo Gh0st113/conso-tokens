@@ -202,12 +202,19 @@ La page compte deux langues, le français (la référence, texte du HTML) et l'a
 à partir d'une seule table. Pour ajouter une langue (l'exemple ci-dessous est `zh`, un scénario seulement : rien n'est
 traduit ici) :
 
-1. Dans `page/index.html`, `<script id="dico">` : ajoutez une entrée à `LANGUES`, par exemple `zh: { locale: 'zh-CN', decimal: '.', sep: ': ', monnaie: n => `$${n}`, heureInfo: s => s, heureUTC: (h, m) => `${h}:${m} UTC` }`. Le bouton apparaît tout seul.
+1. Dans `page/index.html`, `<script id="dico">` : ajoutez une entrée à `LANGUES`, par exemple l'entrée donnée plus bas. Le bouton apparaît tout seul.
 2. Même fichier, `<script id="libelles">` : ajoutez la même clé à `PHRASES` (mêmes clés que `fr` : `types`, `tranches`, et chaque fonction de phrase).
 3. Même script `#dico` : ajoutez une clé `zh` à chaque entrée de `DICO` (textes du HTML et textes de `tr()` ; un texte du HTML n'a pas de clé `fr`).
 4. Lancez `node --test` : il dit ce qui manque (`zh : phrase « coupee »`, `zh : « titre » (DICO)`, …). Une langue incomplète fait échouer les tests ; dans le navigateur, un texte manquant reste en français.
 
-Rien d'autre à changer : la logique lit les tables. La langue par défaut est celle du navigateur si elle figure dans `LANGUES`
+Exemple d'entrée (`zh`, une illustration seulement) :
+
+```js
+zh: { locale: 'zh-CN', decimal: '.', sep: ': ', monnaie: n => '$' + n, heureInfo: s => s, heureUTC: (h, m) => `${h}:${m} UTC` }
+```
+
+Rien d'autre à changer dans la logique : elle lit les tables. Le test « page : aucune langue en dur… » de `libelles.test.mjs`
+fixe la liste des langues (`['en', 'fr']`) : il faut y ajouter le nouveau code. La langue par défaut est celle du navigateur si elle figure dans `LANGUES`
 (son préfixe, `zh-CN` → `zh`), sinon l'anglais.
 
 ## Essayer avec des données simulées

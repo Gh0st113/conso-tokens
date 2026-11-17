@@ -302,7 +302,7 @@
   // locale : Intl ; decimal : séparateur ; monnaie et heureUTC : formats écrits à la main ; heureInfo : infobulles.
   const LANGUES = {
     fr: { locale: 'fr-FR', decimal: ',', sep: ' : ',monnaie: n => `${n} $`, heureInfo: s => s.replace(':', ' h '), heureUTC: (h, m) => m === '00' ? `${+h} h UTC` : `${+h} h ${m} UTC` },
-    en: { locale: 'en-US', decimal: '.', sep: ': ',monnaie: n => `$${n}`, heureInfo: s => s, heureUTC: (h, m) => `${h}:${m} UTC` },
+    en: { locale: 'en-US', decimal: '.', sep: ': ',monnaie: n => '$' + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','), heureInfo: s => s, heureUTC: (h, m) => `${h}:${m} UTC` },
   };
   // Langue prise quand le navigateur n'est dans aucune entrée de LANGUES
   const LANGUE_PAR_DEFAUT = 'en';
