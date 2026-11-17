@@ -301,7 +301,7 @@
   // chaque autre langue reçoit une clé dans chaque entrée de DICO et des phrases dans #libelles (PHRASES).
   // locale : Intl ; decimal : séparateur ; monnaie et heureUTC : formats écrits à la main ; heureInfo : infobulles.
   const LANGUES = {
-    fr: { locale: 'fr-FR', decimal: ',', sep: ' : ',monnaie: n => `${n} $`, heureInfo: s => s.replace(':', ' h '), heureUTC: (h, m) => m === '00' ? `${+h} h UTC` : `${+h} h ${m} UTC` },
+    fr: { locale: 'fr-FR', decimal: ',', sep: ' : ',monnaie: n => Number(n).toLocaleString('fr-FR') + ' $', heureInfo: s => s.replace(':', ' h '), heureUTC: (h, m) => m === '00' ? `${+h} h UTC` : `${+h} h ${m} UTC` },
     en: { locale: 'en-US', decimal: '.', sep: ': ',monnaie: n => '$' + Number(n).toLocaleString('en-US'), heureInfo: s => s, heureUTC: (h, m) => `${h}:${m} UTC` },
   };
   // Langue prise quand le navigateur n'est dans aucune entrée de LANGUES
@@ -436,7 +436,7 @@
     'tip.jetons': { fr: 'Jetons', en: 'Tokens' },
     'tip.incomplete': { fr: 'Incomplète', en: 'Incomplete' },
     'tip.incomplet': { fr: 'Incomplet', en: 'Incomplete' },
-    'tip.semaine': { fr: 'Semaine du dim.', en: 'Week of Sun.' },
+    'tip.semaine': { fr: 'Semaine du', en: 'Week of' },
     'tip.100': { fr: '100 % hebdo', en: '100 % weekly' },
     'tip.forfait': { fr: 'Forfait', en: 'Plan' },
     'tip.consomme': { fr: 'Consommé', en: 'Used' },
@@ -466,7 +466,9 @@
   // tr() ne reçoit que des clés écrites en dur : libelles.test.mjs relit ces appels et vérifie chaque entrée.
   // Une langue sans cette clé retombe sur le français ; libelles.test.mjs signale toute clé manquante.
   const tr = cle => DICO[cle][libelles.langue] ?? DICO[cle].fr;
-Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr });
+// Jour de la semaine (début de cycle, midi UTC) dans la langue : « dim. 15 nov. » / « Sun, Nov 15 »
+const jourSemaine = (s, code) => new Date(s + 'T12:00:00Z').toLocaleDateString(LANGUES[code].locale, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
 </script>
 
 <script>
@@ -1042,7 +1044,7 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr });
     svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', r => x(r.semaine)).attr('width', x.bandwidth())
       .attr('y', m.t).attr('height', H - m.t - m.b).attr('fill', 'transparent')
       .on('pointermove', (ev, r) => {
-        tip.show(`${tr('tip.semaine')} ${CC.jourCourt(r.semaine)}`,
+        tip.show(`${tr('tip.semaine')} ${jourSemaine(r.semaine, CC.langue)}`,
           [[null, tr('tip.100'), libelles.statutHebdo(r)], ...(r.forfait ? [[null, tr('tip.forfait'), r.forfait]] : []), [null, j ? tr('tip.consomme.sortie') : tr('tip.consomme'), CC.fmt(r.consomme)], ...(j ? [[null, tr('tip.consomme.usd'), CC.usd(r.usd)]] : []),
            ...(r.horsEstime == null ? [] : [[null, tr('tip.horsPC'), `≈ ${CC.dec(r.horsEstime)} ${tr('tip.pts')} ${tr('tip.sur')} ${r.pctFin} %`]]),
            [null, (r.changement ? tr('tip.plafond.indicatif') : tr('tip.plafond')) + (j ? tr('tip.sortie') : ''), r.plafond == null ? `${tr('tip.au.moins')} ${CC.fmt(r.consomme)}` : CC.fmt(r.plafond)]],

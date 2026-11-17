@@ -251,7 +251,27 @@ test('scripts : chaque script dans sa propre portée ; LANGUES, LANGUE_PAR_DEFAU
   for (const s of scripts.filter(s => s.attrs === 'id="libelles"' || s.attrs === 'id="dico"')) {
     vm.runInContext(`(function () {\n${s.corps}\n})();`, w);
   }
-  for (const nom of ['LANGUES', 'LANGUE_PAR_DEFAUT', 'DICO', 'tr', 'libelles']) {
+  for (const nom of ['LANGUES', 'LANGUE_PAR_DEFAUT', 'DICO', 'tr', 'jourSemaine', 'libelles']) {
     assert.notEqual(vm.runInContext(`typeof window.${nom}`, w), 'undefined', `window.${nom} absent`);
   }
+});
+
+// Montant FR du plafond : milliers groupés comme CC.usd (espace fine insécable U+202F), montant < 1000 inchangé
+test('monnaie FR : 1000 $ groupé comme CC.usd ; 174 $ inchangé', () => {
+  assert.equal(LANGUES.fr.monnaie(1000), '1 000 $');
+  assert.equal(LANGUES.fr.monnaie(12345), '12 345 $');
+  assert.equal(LANGUES.fr.monnaie(174), '174 $');
+});
+
+// Infobulle du graphe par semaine : le jour se calcule depuis le début de la semaine (cycle variable)
+test('jour de semaine : dimanche et mardi, en fr et en', () => {
+  const jourSemaine = vm.runInContext('jourSemaine', ctx);
+  assert.equal(jourSemaine('2026-11-15', 'fr'), 'dim. 15 nov.');
+  assert.equal(jourSemaine('2026-11-17', 'fr'), 'mar. 17 nov.');
+  assert.equal(jourSemaine('2026-11-15', 'en'), 'Sun, Nov 15');
+});
+
+test('infobulle semaine : « Semaine du » / « Week of » (le jour vient du cycle, pas du texte)', () => {
+  assert.equal(DICO['tip.semaine'].fr, 'Semaine du');
+  assert.equal(DICO['tip.semaine'].en, 'Week of');
 });
