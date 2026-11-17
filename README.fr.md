@@ -72,7 +72,8 @@ d'environnement `CONSO_TOKENS_DIR` remplace ce dossier dans les deux cas.
 **Passer d'un clone au paquet** : **avant** le premier `conso-tokens maj`, copier le `config.local.json` du clone dans
 `~/.conso-tokens/`. Si ses données étaient dans le dossier `donnees/` du clone (défaut) ou à un `dossierDonnees`
 relatif, copier aussi ce dossier de données (dans `~/.conso-tokens/donnees/`, ou au même endroit relatif) ; un
-`dossierDonnees` absolu ou en `~/…` continue de viser les mêmes données. L'archive des compteurs de `donnees/` garde des réponses dont
+`dossierDonnees` absolu ou en `~/…` continue de viser les mêmes données. Si vous avez lancé `node maj-tarifs.mjs` dans
+le clone, copier aussi son `tarifs.json` : il garde le prix des modèles retirés depuis de la page Pricing. L'archive des compteurs de `donnees/` garde des réponses dont
 Claude Code a depuis effacé les journaux : une archive neuve ne peut pas les retrouver. Le premier passage sans archive
 le signale.
 
@@ -163,7 +164,7 @@ Gardez l'artefact privé : qui l'ouvre peut lire les fichiers (noms de dossiers,
 
 `demo/generer-demo.mjs` écrit un faux dossier personnel : huit semaines de journaux Claude Code (dossiers inventés,
 tirage à graine fixe) et le journal de quota sonar qui va avec, pour un plafond hebdo d'environ 180 $. C'est ainsi
-qu'ont été faites les captures ci-dessus. À lancer dans une **copie** de ce dépôt sans `config.local.json`, pour que
+qu'ont été faites les captures ci-dessus. À lancer dans un **second clone** de ce dépôt (avec son `.git`) sans `config.local.json`, pour que
 les résultats aillent dans le `donnees/` de la copie et pas dans votre dossier de données :
 
 ```powershell

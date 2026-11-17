@@ -73,7 +73,8 @@ variable `CONSO_TOKENS_DIR` replaces that folder in both cases.
 **Moving from a clone to the package**: **before** the first `conso-tokens maj`, copy the clone's `config.local.json`
 into `~/.conso-tokens/`. If its data were in the clone's `donnees/` folder (the default) or at a relative
 `dossierDonnees`, copy that data folder too (to `~/.conso-tokens/donnees/`, or to the same relative place); an absolute
-or `~/…` `dossierDonnees` keeps pointing at the same data. The counter archive in `donnees/` keeps answers whose logs
+or `~/…` `dossierDonnees` keeps pointing at the same data. If you ran `node maj-tarifs.mjs` in the clone, copy its
+`tarifs.json` too: it keeps the price of models since removed from the Pricing page. The counter archive in `donnees/` keeps answers whose logs
 Claude Code has since deleted: a new archive cannot get them back. The first run with no archive says so.
 
 **Windows**: if PowerShell refuses to run scripts (execution policy), it also refuses the `conso-tokens.ps1` launcher
@@ -160,7 +161,7 @@ Keep the artifact private: whoever opens it can read the files (folder names, co
 
 `demo/generer-demo.mjs` writes a fake home folder: eight weeks of Claude Code logs (invented folders, fixed random
 seed) and a matching sonar quota log, with a weekly cap of about 180 $. It is how the screenshots above were made.
-Run it in a **copy** of this repository without `config.local.json`, so the results land in the copy's `donnees/`,
+Run it in a **second clone** of this repository (with its `.git`) without `config.local.json`, so the results land in the copy's `donnees/`,
 not in your own data folder:
 
 ```powershell

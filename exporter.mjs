@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { controler, rapport, suffixeCoupee, forfaitDe, SUFFIXE_INDICATIF } from './controles.mjs';
-import { DONNEES, RESETS, RESETS_PRECIS, FORFAITS, TROUS, REMISE_A_ZERO, ici } from './config.mjs';
+import { DONNEES, RESETS, RESETS_PRECIS, FORFAITS, TROUS, REMISE_A_ZERO, ici, MODE } from './config.mjs';
 import { fabriquer } from './semaine.mjs';
 import { execFileSync } from 'node:child_process';
 
@@ -288,7 +288,8 @@ console.log(rapport(controler(d, tables, { maintenant: MAINTENANT, groupes: SERI
 // Garde-fou de publication (13/11) : un fichier modifié ou nouveau dans le dépôt (hors fichiers ignorés) est signalé.
 // Une mise à jour des données ne doit RIEN changer dans le dépôt : pas de ligne « DÉPÔT » si tout est propre ; sinon, à citer telle quelle.
 // Limites : ne regarde que le dépôt (pas un dossier de données placé ailleurs), ni les fichiers ignorés par git.
-{
+// Paquet installé (issue #19) : pas de dépôt à protéger ; git -C remonterait au dépôt d'un projet hôte → pas de contrôle
+if (MODE === 'clone') {
   const git = (...a) => execFileSync('git', ['-C', ici, ...a], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 64 * 2 ** 20 });
   const premiereLigne = e => String(e.stderr || e.message).trim().split(/\r?\n/)[0];
   let estDepot = false;

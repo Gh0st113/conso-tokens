@@ -114,3 +114,12 @@ test('choisirBase : mode clone par chacun des indices, mode paquet sans indice, 
   assert.deepEqual(base(['/code/.git'], { CONSO_TOKENS_DIR: '/ailleurs' }), { mode: 'clone', base: '/ailleurs', force: true });
   assert.deepEqual(base([], { CONSO_TOKENS_DIR: '   ' }), { mode: 'paquet', base: '/moi/.conso-tokens', force: false });
 });
+
+test('choisirBase : CONSO_TOKENS_DIR en ~/ développé, chemin relatif refusé (il dépendrait du dossier courant)', async () => {
+  const { choisirBase } = await import('./reglages.mjs');
+  const base = env => choisirBase({ ici: '/code', maison: '/moi', env, existe: () => false }).base;
+  assert.equal(base({ CONSO_TOKENS_DIR: '~/alt' }), '/moi/alt');
+  assert.equal(base({ CONSO_TOKENS_DIR: '~' }), '/moi');
+  assert.equal(base({ CONSO_TOKENS_DIR: 'C:/alt' }), 'C:/alt');
+  for (const v of ['data', './data', '../data', 'C:alt', '~autre']) assert.throws(() => base({ CONSO_TOKENS_DIR: v }), /chemin absolu/);
+});

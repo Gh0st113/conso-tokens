@@ -98,6 +98,10 @@ export function lireForfaits(valeur, cycle, debutSemaine) {
 export const INDICES_CLONE = ['.git', 'config.local.json', 'donnees'];
 export function choisirBase({ ici, existe, env = {}, maison, joindre = (a, b) => `${a}/${b}` }) {
   const mode = INDICES_CLONE.some(n => existe(joindre(ici, n))) ? 'clone' : 'paquet';
-  const force = typeof env.CONSO_TOKENS_DIR === 'string' && env.CONSO_TOKENS_DIR.trim() ? env.CONSO_TOKENS_DIR.trim() : null;
+  let force = typeof env.CONSO_TOKENS_DIR === 'string' && env.CONSO_TOKENS_DIR.trim() ? env.CONSO_TOKENS_DIR.trim() : null;
+  // « ~ » / « ~/… » = dossier personnel ; un chemin relatif dépendrait du dossier courant (deux bases selon où l'on tape) → refus
+  if (force && (force === '~' || /^~[\\/]/.test(force))) force = force === '~' ? maison : joindre(maison, force.slice(2));
+  if (force && !/^([A-Za-z]:[\\/]|[\\/])/.test(force))
+    throw new Error(`CONSO_TOKENS_DIR (${force}) doit être un chemin absolu ou commencer par ~/`);
   return { mode, base: force ?? (mode === 'clone' ? ici : joindre(maison, '.conso-tokens')), force: force !== null };
 }

@@ -137,7 +137,8 @@ catch (e) {
   // Paquet npm, premier passage (issue #19) : l'archive d'un clone éventuel n'est pas reprise d'elle-même
   if (MODE === 'paquet') console.log(`Info : nouvelle archive des compteurs créée dans ${DONNEES}. Si vous aviez un clone de conso-tokens, `
     + `copiez son config.local.json dans ${BASE} et, si ses données étaient dans son dossier donnees/ (défaut) ou à un chemin relatif `
-    + `(dossierDonnees), copiez aussi ce dossier de données dans ${DONNEES}, AVANT le prochain passage, pour garder son historique.`);
+    + `(dossierDonnees), copiez aussi ce dossier de données dans ${DONNEES}, et son tarifs.json s'il a été mis à jour, `
+    + `AVANT le prochain passage, pour garder son historique.`);
 }
 const objet = o => o && typeof o === 'object' && !Array.isArray(o);
 if (!objet(archive) || !['appels', 'limites', 'releves'].every(k => objet(archive[k])))

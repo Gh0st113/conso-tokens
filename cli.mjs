@@ -17,7 +17,8 @@ const AIDE = `conso-tokens : coût de l'usage de Claude Code, d'après les journ
   conso-tokens page                      chemin de la page du tableau de bord et du dossier export/
   conso-tokens --version
 
-Réglages et données : ~/.conso-tokens (ou la variable CONSO_TOKENS_DIR). Détails : README.`;
+Réglages et données : dans le dossier du code pour un clone, sinon dans ~/.conso-tokens ; la variable
+CONSO_TOKENS_DIR (chemin absolu ou ~/…) remplace ce dossier. Détails : README.`;
 
 const lancer = (nom, args) => {
   const r = spawnSync(process.execPath, [script(nom), ...args], { stdio: 'inherit' });
