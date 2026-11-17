@@ -463,8 +463,16 @@
   CC.fmt = v => CC.enJetons() ? CC.compact(v) : CC.usd(v);        // format de la valeur tracée
   CC.serie = c => CC.enJetons() ? 'j' + c : c;                    // opus55 → jopus55 en jetons
   // Drawings qui dépendent de l'unité ou de la langue : gardés pour être redessinés au changement
+  // Un même nom peut avoir plusieurs éléments (ex. cycleJour dans le titre et dans la légende) : une liste par nom
   CC.vues = new Map();
-  CC.draw = (nom, fn) => dash.draw(nom, el => { CC.vues.set(nom, [el, fn]); fn(el); });
+  CC.draw = (nom, fn) => dash.draw(nom, el => {
+    const liste = CC.vues.get(nom) ?? [];
+    const entree = liste.find(([e]) => e === el);
+    if (entree) entree[1] = fn; else liste.push([el, fn]);
+    CC.vues.set(nom, liste);
+    fn(el);
+  });
+  CC.redessiner = () => { for (const liste of CC.vues.values()) for (const [el, fn] of liste) fn(el); };
   // Textes fixes (data-t, data-t-aria) et variantes jetons (data-jet) : le français d'origine est gardé au premier passage
   CC.libelles = () => {
     const en = CC.langue === 'en';
@@ -483,7 +491,7 @@
     try { localStorage.setItem('cc-unite', u); } catch (e) {}
     document.querySelectorAll('[data-unite]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.unite === u)));
     CC.libelles();
-    for (const [el, fn] of CC.vues.values()) fn(el);
+    CC.redessiner();
   };
   document.querySelectorAll('[data-unite]').forEach(b => b.addEventListener('click', () => CC.choisir(b.dataset.unite)));
   // Langue (bouton FR / EN) : même redessin que pour l'unité, sans recharger la page
@@ -493,7 +501,7 @@
     document.documentElement.lang = l;
     document.querySelectorAll('[data-langue]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.langue === l)));
     CC.libelles();
-    for (const [el, fn] of CC.vues.values()) fn(el);
+    CC.redessiner();
   };
   document.querySelectorAll('[data-langue]').forEach(b => b.addEventListener('click', () => CC.choisirLangue(b.dataset.langue)));
   CC.choisir(CC.unite);
