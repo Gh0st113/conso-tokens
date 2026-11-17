@@ -49,7 +49,7 @@ const fichierReleves = (() => {
   return join(DONNEES, n ? 'readings.json' : 'releves.json');
 })();
 if (!existsSync(racine) && !racinesEnPlus.length && !racinesCowork.length) {
-  console.error(`Aucun journal Claude Code dans ${racine} : lancer d'abord une session Claude Code, ou indiquer --journaux <dossier>.`);
+  console.error(`Aucun journal Claude Code dans ${racine} : lancer d'abord une session Claude Code, ou indiquer --logs <dossier>.`);
   process.exit(1);
 }
 
@@ -152,8 +152,8 @@ catch (e) {
   if (e.code !== 'ENOENT') throw new Error(`archive illisible, rien n'est écrit : ${fichierArchive} (${e.message})`);
   // Paquet npm, premier passage (issue #19) : l'archive d'un clone éventuel n'est pas reprise d'elle-même
   if (MODE === 'paquet') console.log(`Info : nouvelle archive des compteurs créée dans ${DONNEES}. Si vous aviez un clone de conso-tokens, `
-    + `copiez son config.local.json dans ${BASE} et, si ses données étaient dans son dossier donnees/ (défaut) ou à un chemin relatif `
-    + `(dossierDonnees), copiez aussi ce dossier de données dans ${DONNEES}, et son tarifs.json s'il a été mis à jour, `
+    + `copiez son config.local.json dans ${BASE} et, si ses données étaient dans son dossier data/ ou donnees/ (défaut) ou à un chemin relatif `
+    + `(dataDir), copiez aussi ce dossier de données dans ${DONNEES}, et son tarifs.json s'il a été mis à jour, `
     + `AVANT le prochain passage, pour garder son historique.`);
 }
 const objet = o => o && typeof o === 'object' && !Array.isArray(o);

@@ -43,10 +43,10 @@ export const DONNEES = c.dossierDonnees === undefined
 const dansCode = p => { const r = relative(ici, p); return !(isAbsolute(r) || r === '..' || r.startsWith('..' + sep) || r.startsWith('../')); };
 const rel = relative(ici, DONNEES);
 if (dansCode(DONNEES) && !DOSSIERS_DONNEES.includes(rel.split(/[\\/]/)[0]))
-  erreur(`dossierDonnees (${DONNEES}) est dans le dépôt hors de data/ ou donnees/ : les données pourraient être publiées. Choisir un dossier hors du dépôt ou data/.`);
+  erreur(`dataDir (ou dossierDonnees) (${DONNEES}) est dans le dépôt hors de data/ ou donnees/ : les données pourraient être publiées. Choisir un dossier hors du dépôt ou data/.`);
 // Paquet installé : rien n'est écrit dans son dossier, même donnees/ (une mise à jour l'effacerait)
 if (MODE === 'paquet' && (dansCode(BASE) || dansCode(DONNEES)))
-  throw new Error(`conso-tokens : ${dansCode(BASE) ? `CONSO_TOKENS_DIR (${BASE})` : `dossierDonnees (${DONNEES})`} est dans le dossier du paquet installé (${ici}) : une mise à jour l'effacerait. Choisir un autre dossier.`);
+  throw new Error(`conso-tokens : ${dansCode(BASE) ? `CONSO_TOKENS_DIR (${BASE})` : `dataDir (ou dossierDonnees) (${DONNEES})`} est dans le dossier du paquet installé (${ici}) : une mise à jour l'effacerait. Choisir un autre dossier.`);
 try { mkdirSync(DONNEES, { recursive: true }); } catch (e) { erreur(`dossier des données impossible à créer : ${DONNEES} (${e.code})`); }
 
 // Nom d'un dossier de travail à partir de la clé des journaux (ex. « C--Users-moi-Documents-Code-projet »).
