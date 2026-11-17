@@ -2,6 +2,7 @@
 config.local.json
 config.local.json.*
 donnees/
+data/
 page/index.doc.json
 *.tmp
 .env*
@@ -18,3 +19,4 @@ desktop.ini
 .idea/
 # Relevés posés par erreur à la racine (leur place : le dossier des données)
 /releves.json
+/readings.json

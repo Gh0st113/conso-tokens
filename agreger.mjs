@@ -1,8 +1,9 @@
 // Agrège les compteurs de jetons des journaux Claude Code (~/.claude/projects/**/*.jsonl).
 // Lit seulement les champs usage / model / timestamp / chemin : jamais le contenu des messages.
-// Usage : node agreger.mjs [--sortie chemin.json] [--journaux dossier]...   (défaut : donnees.json dans le dossier des données)
-//   --journaux : dossier « projects » supplémentaire au format Claude Code (ex. copie venue d'un autre PC), répétable.
-// Données (donnees.json, archive, releves.json) : dossier « dossierDonnees » de config.local.json (voir config.mjs).
+// Usage : node agreger.mjs [--output chemin.json] [--logs dossier]...   (défaut : donnees.json dans le dossier des données)
+//   --logs (ancien nom : --journaux) : dossier « projects » supplémentaire au format Claude Code (ex. copie venue d'un autre PC), répétable.
+//   --output (ancien nom : --sortie) ; --quota-log (ancien nom : --journal-quota) : voir plus bas.
+// Données (donnees.json, archive, releves.json) : dossier « dataDir » (ancien nom : dossierDonnees) de config.local.json (voir config.mjs).
 // Archive (archive-appels.json, dans le dossier des données) : compteurs de chaque réponse déjà vue, complétée à chaque passage.
 // Claude Code efface les journaux non modifiés depuis cleanupPeriodDays jours (30 par défaut) : l'archive garde leurs compteurs.
 import { readdirSync, statSync, createReadStream, writeFileSync, readFileSync, renameSync, existsSync } from 'node:fs';
@@ -22,16 +23,29 @@ const racinesCowork = (() => {
       .filter(p => { try { return statSync(p).isDirectory(); } catch { return false; } });
   } catch { return []; }
 })();
-const iSortie = process.argv.indexOf('--sortie');
+// Option et son ancien nom français (lot 1, 17/11) : les deux ensemble = arrêt. Rend l'indice du nom trouvé, sinon -1.
+function indiceOption(nouveau, ancien) {
+  const n = process.argv.indexOf(nouveau), a = process.argv.indexOf(ancien);
+  if (n > 0 && a > 0) throw new Error(`${nouveau} et ${ancien} : deux noms de la même option, n'en garder qu'un`);
+  return Math.max(n, a);
+}
+const iSortie = indiceOption('--output', '--sortie');
 const sortie = iSortie > 0 ? process.argv[iSortie + 1] : join(DONNEES, 'donnees.json');
 const racinesEnPlus = [...new Set(process.argv.flatMap((v, i) => {
-  if (v !== '--journaux') return [];
+  if (v !== '--logs' && v !== '--journaux') return [];
   const r = process.argv[i + 1];
-  if (!r || r.startsWith('--')) throw new Error('--journaux : il manque le dossier');
-  if (!statSync(r, { throwIfNoEntry: false })?.isDirectory()) throw new Error(`--journaux : dossier introuvable : ${r}`);
+  if (!r || r.startsWith('--')) throw new Error(`${v} : il manque le dossier`);
+  if (!statSync(r, { throwIfNoEntry: false })?.isDirectory()) throw new Error(`${v} : dossier introuvable : ${r}`);
   return [resolve(r)];
 }))].filter(r => r !== resolve(racine)); // le dossier par défaut est déjà lu
 const fichierArchive = join(DONNEES, 'archive-appels.json');
+// Relevés à la main (lot 1, 17/11) : readings.json (nom anglais) ou releves.json (ancien nom), jamais les deux.
+// Contrôlé avant toute écriture (l'archive est réécrite plus bas).
+const fichierReleves = (() => {
+  const n = existsSync(join(DONNEES, 'readings.json')), a = existsSync(join(DONNEES, 'releves.json'));
+  if (n && a) throw new Error(`readings.json et releves.json présents dans ${DONNEES} : n'en garder qu'un`);
+  return join(DONNEES, n ? 'readings.json' : 'releves.json');
+})();
 if (!existsSync(racine) && !racinesEnPlus.length && !racinesCowork.length) {
   console.error(`Aucun journal Claude Code dans ${racine} : lancer d'abord une session Claude Code, ou indiquer --journaux <dossier>.`);
   process.exit(1);
@@ -282,9 +296,9 @@ const coutEntre = (debut, fin) => tri.reduce((s, a) => { const t = Date.parse(a.
 const sortieEntre = (debut, fin) => tri.reduce((s, a) => { const t = Date.parse(a.ts); return t >= debut && t <= fin ? s + a.sortie : s; }, 0);
 let releves = [];
 // Format : [{ "ts": "ISO", "hebdo": %, "hebdoReset": "ISO", "cinqH": %, "cinqHReset": "ISO" }, …] (README, « releves.json »)
-try { releves = JSON.parse(readFileSync(join(DONNEES, 'releves.json'), 'utf8')); }
-catch (e) { if (e.code !== 'ENOENT') console.error(`ATTENTION : releves.json illisible, ignoré (${e.message})`); }
-if (!Array.isArray(releves)) { console.error('ATTENTION : releves.json doit contenir une liste [ … ], ignoré'); releves = []; }
+try { releves = JSON.parse(readFileSync(fichierReleves, 'utf8')); }
+catch (e) { if (e.code !== 'ENOENT') console.error(`ATTENTION : ${basename(fichierReleves)} illisible, ignoré (${e.message})`); }
+if (!Array.isArray(releves)) { console.error(`ATTENTION : ${basename(fichierReleves)} doit contenir une liste [ … ], ignoré`); releves = []; }
 releves = releves.filter(r => r && typeof r.ts === 'string' && Number.isFinite(Date.parse(r.ts)));
 // Relevés de l'appli convertis au même format (pct en %, resets en ISO). Un % sous 10 rend la division trop bruitée :
 // il est gardé pour la trace mais ne sert pas aux plafonds (filtre par métrique, dans projections).
@@ -295,7 +309,7 @@ for (const { ts, w } of relevesAuto.values()) {
 }
 // Journal du mod sonar (option quotaLog) : une ligne par changement de % ou d'heure de remise à zéro.
 // Autre chemin (quotaLogPath de sonar) : --journal-quota chemin.jsonl
-const iJournal = process.argv.indexOf('--journal-quota');
+const iJournal = indiceOption('--quota-log', '--journal-quota');
 const journalQuota = iJournal > 0 ? process.argv[iJournal + 1] : join(homedir(), '.claude', 'sonar', 'quota-log.jsonl');
 let lignesSonar = 0;
 try {
