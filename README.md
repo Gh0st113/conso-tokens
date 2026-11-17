@@ -13,7 +13,7 @@ Companion project: [**sonar**](https://github.com/Gh0st113/sonar), a mod for the
 quota log (`~/.claude/sonar/quota-log.jsonl`) gives this dashboard the usage percentage readings it needs to estimate the
 weekly cap. Without sonar, only the readings written into the Claude Code logs are used, and until late October 2026 those of Cowork local (fewer of them).
 
-> The code, comments and dashboard text are in French.
+> The code, comments and console output are in French. The dashboard page exists in French and in English: an FR / EN button switches it, and by default it follows the browser language.
 
 ![Summary tiles and cost per plan week, stacked by model](docs/apercu-semaines.png)
 
