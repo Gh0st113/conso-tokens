@@ -97,7 +97,7 @@
     <div class="cc-table-box">
       <table data-source="plafondsHebdo" data-row-key="semaine">
         <thead><tr>
-          <th data-field="semaine">Semaine dès le</th><th data-field="statut">100 % hebdo</th><th data-field="consomme" class="cc-num">Consommé</th>
+          <th data-field="semaine">Semaine dès le</th><th data-field="etat">100 % hebdo</th><th data-field="consomme" class="cc-num">Consommé</th>
           <th data-field="horsEstime" class="cc-num">Hors PC (repéré)</th><th data-field="plafond" class="cc-num">Plafond en $</th><th data-field="sortie" class="cc-num cc-hide-narrow">Plafond en jetons de sortie</th>
         </tr></thead>
         <tbody data-draw="tabPlafond" data-source="plafondsHebdo"></tbody>
@@ -188,6 +188,61 @@
     </ul>
   </section>
 </div>
+
+<script id="libelles">
+  // Libellés affichés à partir des codes des tables exportées (lot 2a de #17, 17/11) : SEUL endroit qui fabrique ces phrases.
+  // Sans dépendance (ni dash, ni d3, ni DOM) : libelles.test.mjs extrait ce bloc et l'exécute sous Node.
+  // Champs plats (pas d'objet imbriqué) : un dataset d'artefact est une table de lignes simples.
+  // Repli : une table d'avant le 17/11 (champ statut, libellés français) s'affiche telle quelle.
+  (() => {
+    const fr = n => String(n).replace('.', ',');
+    const usd = n => `${Math.round(n)} $`;
+    const jjmm = iso => `${iso.slice(8, 10)}/${iso.slice(5, 7)} ${iso.slice(11, 16)}`;
+    // Les datasets d'un artefact Dashboard peuvent arriver en texte : « true », « 12.5 », « » ou « null » pour null
+    const vrai = v => v === true || v === 'true';
+    const vide = v => v == null || v === '' || v === 'null';
+    const TYPES = { cacheRead: 'Lecture du cache', cacheWrite: 'Écriture en cache', output: 'Sortie (réponses + réflexion)', input: 'Entrée neuve' };
+    const TRANCHES = { '0-50k': 'moins de 50k', '50-100k': '50k à 100k', '100-150k': '100k à 150k', '150-250k': '150k à 250k', '250k+': 'plus de 250k' };
+    const codeDe = (table, v) => Object.hasOwn(table, v) ? v : Object.keys(table).find(k => table[k] === v) ?? v;
+    // Note commune : points hors de ce PC, puis fourchette du plafond s'il y en a une
+    const note = r => vide(r.horsEstime) ? '' : `, dont ${fr(r.horsEstime)} pts hors de ce PC${vide(r.fourchetteMin) ? ''
+      : ` ; plafond ${vrai(r.fourchetteIncertaine) ? 'incertain : ' : ''}entre ${usd(r.fourchetteMin)} et ${vide(r.fourchetteMax) ? '?' : usd(r.fourchetteMax)}`}`;
+    const base = r => {
+      const n = note(r);
+      switch (r.etat) {
+        case 'atteint': return `atteint${n}`;
+        case 'plein': return `atteint (relevé à 100 %${n})`;
+        case 'depasse': return `${vrai(r.enCours) ? 'en cours' : 'pas atteint'} (projection à ${r.pct} % dépassée${n})`;
+        case 'projete': return `projeté (${r.pct} %${n})`;
+        case 'enCours': return vide(r.pct) ? 'en cours' : `en cours (${r.pct} %${n})`;
+        case 'pasAtteint': return vide(r.pct) ? 'pas atteint' : `pas atteint (fini à ${r.pct} %${vrai(r.projete100) ? ', 100 % projeté' : ''}${n})`;
+        case 'reset': return `reset utilisé (${r.resetNote})`;
+        default: return `état inconnu (${r.etat})`;
+      }
+    };
+    const libelles = globalThis.libelles = {
+      TRANCHES: Object.keys(TRANCHES),
+      GROS: ['150-250k', '250k+'], // au-delà de 150k de contexte
+      type: v => TYPES[codeDe(TYPES, v)] ?? v,
+      tranche: v => TRANCHES[codeDe(TRANCHES, v)] ?? v,
+      codeTranche: v => codeDe(TRANCHES, v),
+      SUFFIXE_INDICATIF: 'plafond indicatif : mêle deux forfaits',
+      // Ligne du comparatif hebdo
+      statutHebdo: r => {
+        if (r.etat === undefined) return r.statut ?? '';
+        let s = base(r);
+        if (!vide(r.coupeeDepuis)) s += ` ; coupée par reset hebdo le ${jjmm(r.coupeePremier)} UTC (segment retenu : depuis le ${jjmm(r.coupeeDepuis)})`;
+        if (!vide(r.indicatifA)) s += ` ; ${libelles.SUFFIXE_INDICATIF} (${r.indicatifDe} → ${r.indicatifA})`;
+        return s;
+      },
+      // Ligne des plafonds 5 h
+      statut5h: r => r.etat === undefined ? r.statut ?? '' : r.etat === 'atteint' ? 'atteint' : `projeté (${r.pct} %)`,
+      ETATS: ['atteint', 'plein', 'depasse', 'projete', 'enCours', 'pasAtteint', 'reset'],
+      // Limite atteinte (relevé à 100 % compris) : pleine couleur sur les graphiques
+      atteint: r => r.etat === undefined ? String(r.statut ?? '').startsWith('atteint') : r.etat === 'atteint' || r.etat === 'plein',
+    };
+  })();
+</script>
 
 <script>
   // Outils partagés par les drawings de la page
@@ -426,7 +481,7 @@
     inputs: ['contexte'],
     fn: (contexte) => {
       const tot = contexte.reduce((s, r) => s + Number(r.appels), 0);
-      const gros = contexte.filter(r => r.tranche === '150k à 250k' || r.tranche === 'plus de 250k').reduce((s, r) => s + Number(r.appels), 0);
+      const gros = contexte.filter(r => libelles.GROS.includes(libelles.codeTranche(r.tranche))).reduce((s, r) => s + Number(r.appels), 0);
       return [{ part: tot ? gros / tot : 0 }];
     },
   });
@@ -440,7 +495,7 @@
         const borne = n && Number.isFinite(t) ? new Date(t - (n - 1) * 864e5).toISOString().slice(0, 10) : '';
         const lignes = contexte.filter(r => String(r.jour) >= borne);
         const tot = lignes.reduce((s, r) => s + Number(r.appels), 0);
-        const gros = lignes.filter(r => r.tranche === '150k à 250k' || r.tranche === 'plus de 250k').reduce((s, r) => s + Number(r.appels), 0);
+        const gros = lignes.filter(r => libelles.GROS.includes(libelles.codeTranche(r.tranche))).reduce((s, r) => s + Number(r.appels), 0);
         return { periode, part: tot ? gros / tot : 0, appels: tot };
       });
     },
@@ -599,7 +654,7 @@
     const tj = d3.sum(rows, r => r.jetons) || 1, tc = d3.sum(rows, r => r.cout) || 1;
     for (const r of rows) {
       const bloc = document.createElement('div'); bloc.className = 'cc-split-row';
-      const t = document.createElement('div'); t.textContent = `${r.type} : ${CC.compact(r.jetons)} jetons, ${CC.usd(r.cout)}`; bloc.append(t);
+      const t = document.createElement('div'); t.textContent = `${libelles.type(r.type)} : ${CC.compact(r.jetons)} jetons, ${CC.usd(r.cout)}`; bloc.append(t);
       const bars = document.createElement('div'); bars.className = 'cc-split-bars';
       for (const [nom, part, c] of [['jetons', r.jetons / tj, dash.colors[4]], ['coût', r.cout / tc, dash.colors[0]]]) {
         const l = document.createElement('span'); l.textContent = nom;
@@ -616,11 +671,11 @@
     const g = dash.data('contexte');
     if (g.status !== 'ok') { el.replaceChildren(); return; }
     // Une ligne par jour et par tranche : somme par tranche sur la période, dans l'ordre des tranches
-    const somme = new Map(['moins de 50k', '50k à 100k', '100k à 150k', '150k à 250k', 'plus de 250k'].map(t => [t, 0]));
-    for (const r of CC.dansPeriode(g.data)) if (somme.has(r.tranche)) somme.set(r.tranche, somme.get(r.tranche) + Number(r.appels));
-    const rows = [...somme].map(([tranche, appels]) => ({ tranche, appels }));
+    const somme = new Map(libelles.TRANCHES.map(t => [t, 0]));
+    for (const r of CC.dansPeriode(g.data)) { const c = libelles.codeTranche(r.tranche); if (somme.has(c)) somme.set(c, somme.get(c) + Number(r.appels)); }
+    const rows = [...somme].map(([code, appels]) => ({ code, tranche: libelles.tranche(code), appels }));
     CC.hbars(el, rows, 'tranche', 'appels', CC.int, dash.colors[0]);
-    d3.select(el).selectAll('svg g:nth-of-type(3) rect').attr('fill', d => (d.tranche === '150k à 250k' || d.tranche === 'plus de 250k') ? 'var(--cds-chart-status-critical)' : dash.colors[0]);
+    d3.select(el).selectAll('svg g:nth-of-type(3) rect').attr('fill', d => libelles.GROS.includes(d.code) ? 'var(--cds-chart-status-critical)' : dash.colors[0]);
   });
   // Barres par dossier et par modèle : triées sur l'unité affichée
   const parUnite = rows => rows.map(r => ({ ...r, v: Number(r[CC.champ()]) })).sort((a, b) => b.v - a.v);
@@ -689,7 +744,7 @@
     for (const s of suites) svg.append('path').datum(s.pts).attr('fill', 'none').attr('stroke', dash.colors[0]).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round')
       .attr('d', d3.line().x(cx).y(r => y(r.plafond)));
     svg.append('g').selectAll('circle').data(pts).join('circle').attr('cx', cx).attr('cy', r => y(r.plafond)).attr('r', 5)
-      .attr('fill', r => r.changement ? (r.statut.startsWith('atteint') ? 'var(--color-fg-muted)' : 'var(--color-panel)') : r.statut.startsWith('atteint') ? dash.colors[0] : 'var(--color-panel)')
+      .attr('fill', r => r.changement ? (libelles.atteint(r) ? 'var(--color-fg-muted)' : 'var(--color-panel)') : libelles.atteint(r) ? dash.colors[0] : 'var(--color-panel)')
       .attr('stroke', r => r.changement ? 'var(--color-fg-muted)' : dash.colors[0]).attr('stroke-width', 2).attr('stroke-dasharray', r => r.changement ? '3 2' : null);
     svg.append('g').selectAll('text').data(pts).join('text').text(r => CC.fmt(r.plafond)).attr('x', cx).attr('y', r => y(r.plafond) - 10)
       .attr('text-anchor', 'middle').attr('fill', r => r.changement ? 'var(--color-fg-muted)' : 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)');
@@ -698,7 +753,7 @@
       .attr('y', m.t).attr('height', H - m.t - m.b).attr('fill', 'transparent')
       .on('pointermove', (ev, r) => {
         tip.show(`Semaine du dim. ${CC.jourCourt(r.semaine)}`,
-          [[null, '100 % hebdo', r.statut], ...(r.forfait ? [[null, 'Forfait', r.forfait]] : []), [null, j ? 'Consommé (sortie)' : 'Consommé', CC.fmt(r.consomme)], ...(j ? [[null, 'Consommé en $', CC.usd(r.usd)]] : []),
+          [[null, '100 % hebdo', libelles.statutHebdo(r)], ...(r.forfait ? [[null, 'Forfait', r.forfait]] : []), [null, j ? 'Consommé (sortie)' : 'Consommé', CC.fmt(r.consomme)], ...(j ? [[null, 'Consommé en $', CC.usd(r.usd)]] : []),
            ...(r.horsEstime == null ? [] : [[null, 'Hors PC (repéré)', `≈ ${String(r.horsEstime).replace('.', ',')} pts sur ${r.pctFin} %`]]), [null, (r.changement ? 'Plafond indicatif (deux forfaits)' : 'Plafond') + (j ? ' (sortie)' : ''), r.plafond == null ? `au moins ${CC.fmt(r.consomme)}` : CC.fmt(r.plafond)]],
           defil.x(cx(r)), defil.y(y(Math.max(r.consomme, r.plafond ?? 0))));
       })
@@ -711,7 +766,7 @@
     if (g.status !== 'ok') return;
     for (const r of g.data) {
       const tr = document.createElement('tr'); tr.dataset.key = r.semaine;
-      const cel = [[r.semaine], [r.statut], [CC.usd(Number(r.consomme)), 'cc-num'],
+      const cel = [[r.semaine], [libelles.statutHebdo(r)], [CC.usd(Number(r.consomme)), 'cc-num'],
         [r.horsEstime == null ? '' : `≈ ${String(r.horsEstime).replace('.', ',')} pts sur ${r.pctFin} %`, 'cc-num'],
         [r.plafond == null ? '' : CC.usd(Number(r.plafond)), 'cc-num'], [r.sortie == null ? '' : CC.compact(Number(r.sortie)), 'cc-num cc-hide-narrow']];
       for (const [v, c] of cel) { const td = document.createElement('td'); td.textContent = v; if (c) td.className = c; tr.append(td); }
@@ -763,13 +818,13 @@
     CC.axe(svg.append('g').attr('transform', `translate(0,${H - m.b})`), d3.axisBottom(x).ticks(Math.max(2, Math.floor(W / 90))).tickSize(0).tickPadding(8)
       .tickFormat(d => d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', timeZone: 'UTC' })));
     svg.append('g').selectAll('circle').data(rows).join('circle').attr('cx', r => x(r.t)).attr('cy', r => y(r.plafond)).attr('r', 4.5)
-      .attr('fill', r => r.statut.startsWith('atteint') ? dash.colors[0] : 'var(--color-panel)').attr('stroke', dash.colors[0]).attr('stroke-width', 2);
+      .attr('fill', r => libelles.atteint(r) ? dash.colors[0] : 'var(--color-panel)').attr('stroke', dash.colors[0]).attr('stroke-width', 2);
     const tip = CC.tip(el);
     svg.append('g').selectAll('circle').data(rows).join('circle').attr('cx', r => x(r.t)).attr('cy', r => y(r.plafond)).attr('r', 12).attr('fill', 'transparent')
       .on('pointermove', (ev, r) => {
         const k = el.clientWidth / W;
         tip.show(r.t.toLocaleString('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }),
-          [[null, '', r.statut], [null, 'Plafond', CC.usd(r.usd)], [null, 'Jetons de sortie', CC.compact(Number(r.sortie))]], x(r.t) * k, y(r.plafond) * k);
+          [[null, '', libelles.statut5h(r)], [null, 'Plafond', CC.usd(r.usd)], [null, 'Jetons de sortie', CC.compact(Number(r.sortie))]], x(r.t) * k, y(r.plafond) * k);
       })
       .on('pointerleave', () => tip.hide());
   });
