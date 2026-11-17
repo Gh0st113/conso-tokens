@@ -15,7 +15,7 @@ weekly cap. Without sonar, only the readings written into the Claude Code logs a
 
 > The code, comments and console output are in French. The dashboard page exists in French and in English: an FR / EN button switches it, and by default it follows the browser language.
 
-![Summary tiles and cost per plan week, stacked by model](docs/apercu-semaines.png)
+![Summary tiles and cost per plan week, stacked by model](docs/apercu-semaines-en.png)
 
 <sub>Screenshots made from **simulated data** (see [Try it with simulated data](#try-it-with-simulated-data)), not real usage.</sub>
 
@@ -30,9 +30,9 @@ weekly cap. Without sonar, only the readings written into the Claude Code logs a
 - Context size per call (share of calls above 150k tokens).
 - Consistency checks run after every export: one line, `CONTRÔLES : OK`, or a precise list of what is wrong.
 
-![Weekly cap, week by week, with the table of reached and projected caps](docs/apercu-plafond.png)
+![Weekly cap, week by week, with the table of reached and projected caps](docs/apercu-plafond-en.png)
 
-![Price of 100 % of the weekly limit, measured between two readings](docs/apercu-pentes.png)
+![Price of 100 % of the weekly limit, measured between two readings](docs/apercu-pentes-en.png)
 
 ## Requirements
 
