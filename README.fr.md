@@ -50,6 +50,36 @@ node --test             # tests
 
 Chemins donnés pour le dossier de données par défaut `donnees/` (ignoré par git) ; avec `dossierDonnees`, regarder là.
 
+### En commande (`conso-tokens`)
+
+Les mêmes scripts se lancent aussi en une seule commande, depuis n'importe quel dossier. Depuis un clone, `npm link`
+(une fois, dans le clone) met `conso-tokens` dans le PATH ; le code, `config.local.json` et `donnees/` restent dans le
+clone. Un paquet npm publié (`npm install -g conso-tokens`) est **à venir, pas encore disponible**.
+
+```
+conso-tokens maj        # agreger puis exporter (exporter n'est pas lancé si agreger échoue)
+conso-tokens agreger    # mêmes options que node agreger.mjs (--journaux, --sortie, …)
+conso-tokens exporter
+conso-tokens tarifs     # node maj-tarifs.mjs
+conso-tokens page       # chemin de la page du tableau de bord et du dossier export/
+```
+
+**Où vont réglages et données.** Lancé depuis un clone (un dossier qui contient `.git`, `config.local.json` ou
+`donnees/`), rien ne change : tout reste dans le clone. Installé en paquet, `config.local.json`, `donnees/` et le
+`tarifs.json` mis à jour vont dans `~/.conso-tokens/`, pour qu'une mise à jour du paquet n'y touche jamais. La variable
+d'environnement `CONSO_TOKENS_DIR` remplace ce dossier dans les deux cas.
+
+**Passer d'un clone au paquet** : **avant** le premier `conso-tokens maj`, copier le `config.local.json` du clone dans
+`~/.conso-tokens/`. Si ses données étaient dans le dossier `donnees/` du clone (défaut) ou à un `dossierDonnees`
+relatif, copier aussi ce dossier de données (dans `~/.conso-tokens/donnees/`, ou au même endroit relatif) ; un
+`dossierDonnees` absolu ou en `~/…` continue de viser les mêmes données. Si vous avez lancé `node maj-tarifs.mjs` dans
+le clone, copier aussi son `tarifs.json` : il garde le prix des modèles retirés depuis de la page Pricing. L'archive des compteurs de `donnees/` garde des réponses dont
+Claude Code a depuis effacé les journaux : une archive neuve ne peut pas les retrouver. Le premier passage sans archive
+le signale.
+
+**Windows** : si PowerShell refuse d'exécuter des scripts (stratégie d'exécution), il refuse aussi le lanceur
+`conso-tokens.ps1` créé par npm : taper `conso-tokens.cmd` à la place (et `npm.cmd link`).
+
 `node --test` lance les tests du lecteur de tarifs, puis vérifie vos propres données exportées : ces tests sont sautés
 tant que les deux commandes ci-dessus n'ont pas tourné, et chacun de ceux qui demandent plus d'historique que vous n'en
 avez (plusieurs semaines, quelques pentes) l'est aussi. Un test de données en échec signale un export incohérent : lire
@@ -59,7 +89,7 @@ Réglages facultatifs : copier `config.exemple.json` en `config.local.json` (ign
 
 | Clé | Rôle |
 |---|---|
-| `dossierDonnees` | où vont les données (défaut `donnees/` dans ce dossier ; `~/…` accepté). Hors du dépôt, c'est plus sûr |
+| `dossierDonnees` | où vont les données (défaut `donnees/` à côté de `config.local.json` ; `~/…` accepté, un chemin relatif part du dossier de `config.local.json`). Hors du dépôt, c'est plus sûr |
 | `motifProjet` | expression régulière dont le groupe 1 tire un nom court de dossier de la clé des journaux |
 | `renommerProjets` | `[[expression, nom], …]` testés d'abord, par ex. pour afficher un dossier sensible sous un nom neutre |
 | `remiseAZero` | jour et heure UTC de la remise à zéro hebdo : `{ "jour": "lundi", "heureUTC": "08:00" }` (nom du jour en français ou en anglais, `HH:MM`). Défaut : dimanche 10:00 UTC. Un changement redécoupe tout l'historique : les clés de `resets` doivent alors être des débuts de semaine du nouveau cycle |
@@ -126,13 +156,15 @@ navigateur n'affiche rien**.
    `contexte`, `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `forfaits`).
 3. Après chaque nouvel export : *« Recharge les 13 données de mon tableau depuis `donnees/export/` »*.
 
+Avec la commande `conso-tokens`, `conso-tokens page` affiche où sont la page et le dossier `export/`.
+
 Gardez l'artefact privé : qui l'ouvre peut lire les fichiers (noms de dossiers, coûts, sessions).
 
 ## Essayer avec des données simulées
 
 `demo/generer-demo.mjs` écrit un faux dossier personnel : huit semaines de journaux Claude Code (dossiers inventés,
 tirage à graine fixe) et le journal de quota sonar qui va avec, pour un plafond hebdo d'environ 180 $. C'est ainsi
-qu'ont été faites les captures ci-dessus. À lancer dans une **copie** de ce dépôt sans `config.local.json`, pour que
+qu'ont été faites les captures ci-dessus. À lancer dans un **second clone** de ce dépôt (avec son `.git`) sans `config.local.json`, pour que
 les résultats aillent dans le `donnees/` de la copie et pas dans votre dossier de données :
 
 ```powershell

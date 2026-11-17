@@ -1,0 +1,23 @@
+{
+  "name": "conso-tokens",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local dashboard of Claude Code usage: API-price cost of the logs, per week, day, folder, model and session, plus the weekly plan cap.",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "git+https://github.com/Gh0st113/conso-tokens.git" },
+  "bin": { "conso-tokens": "cli.mjs" },
+  "engines": { "node": ">=20" },
+  "files": [
+    "cli.mjs",
+    "agreger.mjs",
+    "exporter.mjs",
+    "config.mjs",
+    "reglages.mjs",
+    "semaine.mjs",
+    "controles.mjs",
+    "maj-tarifs.mjs",
+    "tarifs.json",
+    "config.exemple.json",
+    "page/index.html"
+  ]
+}

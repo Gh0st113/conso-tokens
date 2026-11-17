@@ -6,11 +6,10 @@
 // Archive (archive-appels.json, dans le dossier des données) : compteurs de chaque réponse déjà vue, complétée à chaque passage.
 // Claude Code efface les journaux non modifiés depuis cleanupPeriodDays jours (30 par défaut) : l'archive garde leurs compteurs.
 import { readdirSync, statSync, createReadStream, writeFileSync, readFileSync, renameSync, existsSync } from 'node:fs';
-import { join, dirname, basename, relative, sep, resolve } from 'node:path';
+import { join, basename, relative, sep, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { createInterface } from 'node:readline';
-import { fileURLToPath } from 'node:url';
-import { DONNEES, nomProjet, REMISE_A_ZERO, RESETS, RESETS_PRECIS } from './config.mjs';
+import { DONNEES, nomProjet, REMISE_A_ZERO, RESETS, RESETS_PRECIS, MODE, BASE, TARIFS_ECRITS, TARIFS_LIVRES } from './config.mjs';
 import { fabriquer } from './semaine.mjs';
 
 // Deux sources : Claude Code (~/.claude/projects) et Cowork (sessions locales de Claude Desktop,
@@ -23,7 +22,6 @@ const racinesCowork = (() => {
       .filter(p => { try { return statSync(p).isDirectory(); } catch { return false; } });
   } catch { return []; }
 })();
-const ici = dirname(fileURLToPath(import.meta.url));
 const iSortie = process.argv.indexOf('--sortie');
 const sortie = iSortie > 0 ? process.argv[iSortie + 1] : join(DONNEES, 'donnees.json');
 const racinesEnPlus = [...new Set(process.argv.flatMap((v, i) => {
@@ -78,9 +76,13 @@ const INTEGRES = {
 // Haiku 5.5 : prompt (entrée + écriture cache + lecture cache) > 100 000 jetons → TOUTE la requête au tarif haut
 // (page Pricing, « Long context pricing » : chaque requête est tarifée seule, même si une partie est lue du cache).
 const PALIERS_INTEGRES = { 'Haiku 5.5': { seuil: 100000, tarif: [0.50, 2.50, 0.05] } };
+// tarifs.json écrit par maj-tarifs.mjs (dossier de base) d'abord, sinon celui livré avec le code (identiques pour un clone)
 const fichierTarifs = (() => {
-  try { return JSON.parse(readFileSync(join(ici, 'tarifs.json'), 'utf8')); }
-  catch (e) { if (e.code !== 'ENOENT') console.log(`ATTENTION : tarifs.json illisible (${e.message}) : tarifs intégrés utilisés`); return {}; }
+  for (const f of [...new Set([TARIFS_ECRITS, TARIFS_LIVRES])]) {
+    try { return JSON.parse(readFileSync(f, 'utf8')); }
+    catch (e) { if (e.code !== 'ENOENT') console.log(`ATTENTION : ${f} illisible (${e.message}) : ignoré`); }
+  }
+  return {}; // aucun fichier lisible : tarifs intégrés
 })();
 // Entrée valide = 3 nombres finis ≥ 0 ; une entrée invalide est ignorée (le tarif intégré reste) et signalée
 const tarifValide = t => Array.isArray(t) && t.length === 3 && t.every(v => Number.isFinite(v) && v >= 0);
@@ -130,7 +132,14 @@ let lignes = 0, illisibles = 0;
 // Archive des passages précédents : même format que les Map ci-dessus. Illisible → arrêt, pour ne jamais l'écraser par moins.
 let archive = { appels: {}, limites: {}, releves: {} };
 try { archive = JSON.parse(readFileSync(fichierArchive, 'utf8')); }
-catch (e) { if (e.code !== 'ENOENT') throw new Error(`archive illisible, rien n'est écrit : ${fichierArchive} (${e.message})`); }
+catch (e) {
+  if (e.code !== 'ENOENT') throw new Error(`archive illisible, rien n'est écrit : ${fichierArchive} (${e.message})`);
+  // Paquet npm, premier passage (issue #19) : l'archive d'un clone éventuel n'est pas reprise d'elle-même
+  if (MODE === 'paquet') console.log(`Info : nouvelle archive des compteurs créée dans ${DONNEES}. Si vous aviez un clone de conso-tokens, `
+    + `copiez son config.local.json dans ${BASE} et, si ses données étaient dans son dossier donnees/ (défaut) ou à un chemin relatif `
+    + `(dossierDonnees), copiez aussi ce dossier de données dans ${DONNEES}, et son tarifs.json s'il a été mis à jour, `
+    + `AVANT le prochain passage, pour garder son historique.`);
+}
 const objet = o => o && typeof o === 'object' && !Array.isArray(o);
 if (!objet(archive) || !['appels', 'limites', 'releves'].every(k => objet(archive[k])))
   throw new Error(`archive de forme inattendue, rien n'est écrit : ${fichierArchive}`);

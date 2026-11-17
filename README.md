@@ -51,6 +51,35 @@ node --test             # tests
 
 Paths above are for the default data folder `donnees/` (ignored by git); with `dossierDonnees` set, look there instead.
 
+### As a command (`conso-tokens`)
+
+The same scripts can be run as one command from any folder. From a clone, `npm link` (run once in the clone) puts
+`conso-tokens` in your PATH; the code, `config.local.json` and `donnees/` stay in the clone. A published npm package
+(`npm install -g conso-tokens`) is **coming, not available yet**.
+
+```
+conso-tokens maj        # agreger then exporter (exporter is skipped if agreger fails)
+conso-tokens agreger    # same options as node agreger.mjs (--journaux, --sortie, …)
+conso-tokens exporter
+conso-tokens tarifs     # node maj-tarifs.mjs
+conso-tokens page       # path of the dashboard page and of the export/ folder
+```
+
+**Where settings and data go.** Run from a clone (a folder holding `.git`, `config.local.json` or `donnees/`), nothing
+changes: everything stays in the clone. Installed as a package, `config.local.json`, `donnees/` and an updated
+`tarifs.json` go to `~/.conso-tokens/` instead, so that an update of the package never touches them. The environment
+variable `CONSO_TOKENS_DIR` replaces that folder in both cases.
+
+**Moving from a clone to the package**: **before** the first `conso-tokens maj`, copy the clone's `config.local.json`
+into `~/.conso-tokens/`. If its data were in the clone's `donnees/` folder (the default) or at a relative
+`dossierDonnees`, copy that data folder too (to `~/.conso-tokens/donnees/`, or to the same relative place); an absolute
+or `~/…` `dossierDonnees` keeps pointing at the same data. If you ran `node maj-tarifs.mjs` in the clone, copy its
+`tarifs.json` too: it keeps the price of models since removed from the Pricing page. The counter archive in `donnees/` keeps answers whose logs
+Claude Code has since deleted: a new archive cannot get them back. The first run with no archive says so.
+
+**Windows**: if PowerShell refuses to run scripts (execution policy), it also refuses the `conso-tokens.ps1` launcher
+that npm creates: type `conso-tokens.cmd` instead (and `npm.cmd link`).
+
 `node --test` runs the price-parser tests, then checks your own exported data: those data tests are skipped until
 the two commands above have run, and each one that needs more history than you have (several weeks, a few slopes) is
 skipped too. A failing data test means your export looks inconsistent: read its message.
@@ -59,7 +88,7 @@ Optional settings: copy `config.exemple.json` to `config.local.json` (ignored by
 
 | Key | Meaning |
 |---|---|
-| `dossierDonnees` | where data goes (default `donnees/` in this folder; `~/…` accepted). Keeping it outside the repository is safer |
+| `dossierDonnees` | where data goes (default `donnees/` next to `config.local.json`; `~/…` accepted, a relative path starts from the folder of `config.local.json`). Keeping it outside the repository is safer |
 | `motifProjet` | regular expression whose group 1 turns a log folder key into a short folder name |
 | `renommerProjets` | `[[regex, name], …]` tried first, e.g. to show a sensitive folder under a neutral name |
 | `remiseAZero` | day and UTC hour of the weekly reset: `{ "jour": "monday", "heureUTC": "08:00" }` (day name in French or English, `HH:MM`). Default: Sunday 10:00 UTC. A change re-cuts the whole history: the keys of `resets` must then be week starts of the new cycle |
@@ -124,13 +153,15 @@ chart library and data loader that claude.ai provides, so **opening it directly 
    `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `forfaits`).
 3. After each new export: *"Reload the 13 datasets of my dashboard from `donnees/export/`"*.
 
+With the `conso-tokens` command, `conso-tokens page` prints where the page and the `export/` folder are.
+
 Keep the artifact private: whoever opens it can read the files (folder names, costs, sessions).
 
 ## Try it with simulated data
 
 `demo/generer-demo.mjs` writes a fake home folder: eight weeks of Claude Code logs (invented folders, fixed random
 seed) and a matching sonar quota log, with a weekly cap of about 180 $. It is how the screenshots above were made.
-Run it in a **copy** of this repository without `config.local.json`, so the results land in the copy's `donnees/`,
+Run it in a **second clone** of this repository (with its `.git`) without `config.local.json`, so the results land in the copy's `donnees/`,
 not in your own data folder:
 
 ```powershell
