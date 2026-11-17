@@ -3,7 +3,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { controler, rapport, suffixeCoupee, forfaitDe, SUFFIXE_INDICATIF } from './controles.mjs';
+import { controler, rapport, forfaitDe } from './controles.mjs';
 import { DONNEES, RESETS, RESETS_PRECIS, FORFAITS, TROUS, REMISE_A_ZERO, ici, MODE } from './config.mjs';
 import { fabriquer } from './semaine.mjs';
 import { execFileSync } from 'node:child_process';
@@ -86,7 +86,7 @@ const jetons = v => v.entree + v.ecritureCache + v.lectureCache + v.sortie;
 // silence est invisible : la pente qui l'enjambe est gardée mais marquée `silence` (jamais « définitive » pour la fiche Haiku).
 const HORS = { duree: 36e5, points: 1, dollarsParPoint: 0.5, prixPoint: 2.44, silenceDollars: 5 };
 // Plafond trop incertain : fourchette plus large que 25 % du plafond central → pas de plafond, la fourchette
-// seule dans le statut (ex. semaine où la majorité du % a été prise hors de ce PC).
+// seule (champs fourchetteMin / fourchetteMax, fourchetteIncertaine) (ex. semaine où la majorité du % a été prise hors de ce PC).
 const LARGEUR_MAX = 0.25;
 // Relevés hebdo groupés par segment (debutSegment : début de fenêtre, ou reset précis de la semaine, 15/11) :
 // une pente ne relie jamais deux relevés de segments différents
@@ -116,7 +116,6 @@ const horsAvant = (debutSegment, ts) => horsJournaux.filter(h => h.semaine === d
 const nbHorsAvant = (debutSegment, ts) => horsJournaux.filter(h => h.semaine === debutSegment && Date.parse(h.debut) < Date.parse(ts)).length;
 // Fourchette du plafond : part locale entre local − n et local + n points ; sous 10 % local, borne haute inconnue
 const fourchette = (cout, local, n) => ({ min: r2(cout * 100 / (local + n)), max: local - n >= 10 ? r2(cout * 100 / (local - n)) : null });
-const usd = n => `${Math.round(n)} $`;
 
 // Découpage par reset précis (15/11) : une semaine coupée a un segment par reset. Le statut suit le segment retenu : celui
 // de plus grand % local (à égalité, le plus récent). Chaque segment a son propre coût (segmentsHebdo) et ses propres relevés.
@@ -132,12 +131,15 @@ const localDe = ({ atteint, proj }) => {
   const hors = Math.round((atteint ? horsAvant(atteint.debutSegment, atteint.atteinte) : proj.pct - proj.pctLocal) * 10) / 10;
   return Math.max(0, (atteint ? 100 : proj.pct) - hors);
 };
-// Suffixe du statut d'une semaine coupée : premier reset précis de la semaine, et début du segment retenu (format : controles.mjs)
-const suffixeDe = (debut, debutSegment) => {
+// Semaine coupée : premier reset précis de la semaine, et début du segment retenu (ISO UTC à la minute ; phrase : page, #libelles)
+const coupeeDe = (debut, debutSegment) => {
   // Premier reset qui coupe vraiment : le 2e segment (le 1er part du début de semaine, reset à cet instant exclu, tour 4)
   const premier = segmentsDe(debut)[1]?.debut ?? debutSegment;
-  return suffixeCoupee(premier, debutSegment);
+  return { coupeePremier: premier.slice(0, 16), coupeeDepuis: debutSegment.slice(0, 16) };
 };
+// Champs de plafondsHebdo (lot 2a de #17) : codes et nombres, jamais de phrase ; mêmes colonnes dans chaque ligne
+const VIDE_HEBDO = { etat: null, pct: null, enCours: false, projete100: false, fourchetteMin: null, fourchetteMax: null, fourchetteIncertaine: false,
+  resetNote: null, coupeePremier: null, coupeeDepuis: null, indicatifDe: null, indicatifA: null };
 
 // Une ligne du comparatif hebdo, pour le segment retenu (coutSeg = coût de ce segment ; v = agrégat de toute la semaine)
 const ligneHebdo = (debut, debutSegment, coutSeg, { atteint, proj }, v) => {
@@ -156,22 +158,25 @@ const ligneHebdo = (debut, debutSegment, coutSeg, { atteint, proj }, v) => {
   const plafondCentral = atteint && echelle ? r2(atteint.cout * echelle) : proj && echelle ? r2(proj.coutAuReleve * echelle) : null;
   const tropLarge = f != null && plafondCentral != null && (f.max == null || f.max - f.min > LARGEUR_MAX * plafondCentral);
   const plafond = tropLarge ? null : plafondCentral;
-  const note = hors ? `, dont ${String(hors).replace('.', ',')} pts hors de ce PC${f ? ` ; plafond ${tropLarge ? 'incertain : ' : ''}entre ${usd(f.min)} et ${f.max == null ? '?' : usd(f.max)}` : ''}` : '';
   // Points hors de ce PC affichés (colonne « Hors PC ») : ceux repérés période par période (13/11). L'ancienne estimation
   // globale (% − coût local ÷ prix fixe d'un point) est retirée : le prix d'un point varie beaucoup selon les semaines,
   // elle inventait du hors PC. Usage hors PC simultané à Claude Code :
   // invisible (il se fond dans le prix du point de la pente).
-  // Même valeur que le statut (au dixième) : un arrondi à l'entier afficherait « ≈ 0 pts » pour 0,4 pt repéré
+  // Même valeur que la note « dont N pts » de la page (au dixième) : un arrondi à l'entier afficherait « ≈ 0 pts » pour 0,4 pt repéré
   const horsEstime = hors > 0 ? hors : null;
   // Projection contredite (04/11) : le segment a consommé plus que le 100 % projeté sans l'atteindre → pas de plafond,
   // seulement « au moins le consommé »
   // Comparé au plafond central même quand il n'est pas affiché (fourchette trop large) : un dépassement reste un dépassement
   const contredit = !atteint && !plein && plafondCentral != null && coutSeg > plafondCentral;
+  // État de la semaine (la page en fait la phrase) ; semaine finie sans blocage ni relevé à 100 % (08/11) : pasAtteint
+  const etat = atteint ? 'atteint' : plein ? 'plein' : contredit ? 'depasse' : proj && enCours ? (plafond != null ? 'projete' : 'enCours')
+    : proj ? 'pasAtteint' : enCours ? 'enCours' : 'pasAtteint';
   return {
     semaine: debut,
-    statut: atteint ? `atteint${note}` : plein ? `atteint (relevé à 100 %${note})` : contredit ? `${enCours ? 'en cours' : 'pas atteint'} (projection à ${proj.pct} % dépassée${note})` : proj && enCours ? `${plafond != null ? 'projeté' : 'en cours'} (${proj.pct} %${note})`
-      // Semaine finie sans message de blocage ni relevé à 100 % (08/11) : le plafond reste une projection
-      : proj ? `pas atteint (fini à ${proj.pct} %${plafond != null ? ', 100 % projeté' : ''}${note})` : enCours ? 'en cours' : 'pas atteint',
+    ...VIDE_HEBDO,
+    etat, pct: atteint || plein || !proj ? null : proj.pct, enCours, projete100: !!proj && plafond != null,
+    // Fourchette affichée seulement avec des points hors de ce PC (comme avant : elle vit dans la note « dont N pts »)
+    ...(f && horsEstime != null ? { fourchetteMin: f.min, fourchetteMax: f.max, fourchetteIncertaine: tropLarge } : {}),
     pctFin: horsEstime == null ? null : pctFin, horsEstime,
     plafond: contredit ? null : plafond,
     sortie: contredit || tropLarge ? null : atteint && echelle ? Math.round(atteint.jetonsSortie * echelle) : proj && echelle ? Math.round(proj.sortieProjetee * proj.pct / 100 * echelle) : null,
@@ -180,13 +185,13 @@ const ligneHebdo = (debut, debutSegment, coutSeg, { atteint, proj }, v) => {
   };
 };
 
-// Semaine de changement de forfait (clé forfaits, 15/11, décision 5) : statut suffixé « plafond indicatif (A → B) » (A = forfait
+// Semaine de changement de forfait (clé forfaits, 15/11, décision 5) : champs indicatifDe / indicatifA (A → B) (A = forfait
 // de la semaine d'avant, « inconnu » si aucun). Ni comparée aux autres semaines ni contrôlée côté plafond : controles.mjs et la page le savent
 const changementsSemaines = new Set(FORFAITS.filter(f => f.changement).map(f => f.semaine));
 const indicatif = (debut, ligne) => {
   if (!changementsSemaines.has(debut)) return ligne;
   const avant = forfaitDe(FORFAITS, new Date(Date.parse(debut + 'T12:00:00Z') - 7 * 864e5).toISOString().slice(0, 10)) || 'inconnu';
-  return { ...ligne, statut: ligne.statut + ` ; ${SUFFIXE_INDICATIF} (${avant} → ${forfaitDe(FORFAITS, debut)})` };
+  return { ...ligne, indicatifDe: avant, indicatifA: forfaitDe(FORFAITS, debut) };
 };
 
 // Coût par groupe = somme des coûts calculés appel par appel (agreger.mjs) ; colonnes j… = jetons, jamais un coût
@@ -203,25 +208,27 @@ const tables = {
   // Une ligne par jour (heure de Paris) et par dossier : la page additionne sur la période choisie (7 j, 30 j, tout ; 07/11)
   projets: Object.entries(d.jourProjet).sort().flatMap(([jour, parDossier]) => Object.entries(parDossier)
     .map(([projet, v]) => ({ jour, projet, cout: r2(v.cout), appels: v.appels, jetons: jetons(v) }))),
+  // Codes de type et de tranche (lot 2a de #17) : le libellé est fabriqué par la page (#libelles)
   types: [
-    ['Lecture du cache', d.total.lectureCache, d.total.coutLecture],
-    ['Écriture en cache', d.total.ecritureCache, d.total.coutEcriture],
-    ['Sortie (réponses + réflexion)', d.total.sortie, d.total.coutSortie],
-    ['Entrée neuve', d.total.entree, d.total.coutEntree],
+    ['cacheRead', d.total.lectureCache, d.total.coutLecture],
+    ['cacheWrite', d.total.ecritureCache, d.total.coutEcriture],
+    ['output', d.total.sortie, d.total.coutSortie],
+    ['input', d.total.entree, d.total.coutEntree],
   ].map(([type, jetons, cout]) => ({ type, jetons, cout: r2(cout) })),
   // Une ligne par jour (heure de Paris) et par modèle / par tranche de contexte : la page additionne sur la période (07/11)
   modeles: Object.entries(d.jourModeleTotal).sort().flatMap(([jour, parModele]) => Object.entries(parModele)
     .map(([modele, v]) => ({ jour, modele, cout: r2(v.cout), appels: v.appels, jetons: jetons(v) }))),
   contexte: Object.entries(d.jourTailles).sort().flatMap(([jour, t]) =>
-    ['moins de 50k', '50k à 100k', '100k à 150k', '150k à 250k', 'plus de 250k'].map((tranche, i) => ({ jour, tranche, appels: t[i] }))),
+    ['0-50k', '50-100k', '100-150k', '150-250k', '250k+'].map((tranche, i) => ({ jour, tranche, appels: t[i] }))),
   // Comparatif hebdo : une ligne par semaine, plafond atteint, projeté depuis un relevé, ou seulement borne basse.
   // Semaine où un reset a été utilisé (ancienne forme) : le compteur repart de zéro sans que la fin bouge, coût ÷ % n'a plus
   // de sens → pas de plafond.
   // Semaines continues (08/11) : la semaine neuve apparaît « en cours » même sans appel depuis la dernière remise à zéro
-  // Semaine coupée par un reset précis (15/11) : une ligne quand même, sur le segment retenu (suffixe dans le statut)
+  // Semaine coupée par un reset précis (15/11) : une ligne quand même, sur le segment retenu (champs coupeePremier / coupeeDepuis)
   plafondsHebdo: semainesContinues().map(([debut, v]) => {
     const reset = RESETS[debut];
-    if (reset) return indicatif(debut, { semaine: debut, statut: `reset utilisé (${reset})`, plafond: null, sortie: null, consomme: r2(v.cout), consommeSortie: v.sortie });
+    if (reset) return indicatif(debut, { semaine: debut, ...VIDE_HEBDO, etat: 'reset', resetNote: String(reset), pctFin: null, horsEstime: null,
+      plafond: null, sortie: null, consomme: r2(v.cout), consommeSortie: v.sortie });
     const coupees = segmentsDe(debut);
     const segs = coupees.length ? coupees.map(s => ({ debutSegment: s.debut, cout: s.cout })) : [{ debutSegment: ISO(instantDebut(debut)), cout: v.cout }];
     // Segment retenu : plus grand % local ; à égalité, le plus récent. Aucun relevé ni limite : le dernier segment, sans plafond
@@ -232,13 +239,13 @@ const tables = {
     }
     choisi ??= { ...segs.at(-1), etat: {} };
     const ligne = ligneHebdo(debut, choisi.debutSegment, choisi.cout, choisi.etat, v);
-    if (coupees.length) ligne.statut += suffixeDe(debut, choisi.debutSegment);
+    if (coupees.length) Object.assign(ligne, coupeeDe(debut, choisi.debutSegment));
     return indicatif(debut, ligne);
   }),
   plafonds5h: [
-    ...d.plafonds.filter(p => p.type === '5h').map(p => ({ moment: p.atteinte.slice(0, 16), statut: 'atteint', plafond: p.cout, sortie: p.jetonsSortie })),
+    ...d.plafonds.filter(p => p.type === '5h').map(p => ({ moment: p.atteinte.slice(0, 16), etat: 'atteint', pct: null, plafond: p.cout, sortie: p.jetonsSortie })),
     // Relevés à 50 % et plus seulement : en dessous, la projection coût ÷ % est trop bruitée
-    ...d.projections.filter(p => p.type === '5h' && p.pct >= 50).map(p => ({ moment: p.releve.slice(0, 16), statut: `projeté (${p.pct} %)`, plafond: p.plafondProjete, sortie: p.sortieProjetee })),
+    ...d.projections.filter(p => p.type === '5h' && p.pct >= 50).map(p => ({ moment: p.releve.slice(0, 16), etat: 'projete', pct: p.pct, plafond: p.plafondProjete, sortie: p.sortieProjetee })),
   ].sort((a, b) => a.moment < b.moment ? -1 : 1),
   // Pente : coût consommé entre deux relevés du % hebdo de la même semaine ÷ écart de % (au moins 8 points).
   // Insensible à ce qui a été consommé hors journaux AVANT le premier relevé (claude.ai, téléphone, autre PC) ;

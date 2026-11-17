@@ -8,7 +8,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { DONNEES, REMISE_A_ZERO } from './config.mjs';
 import { fabriquer } from './semaine.mjs';
-import { controler, rapport, suffixeCoupee, forfaitDe, SUFFIXE_INDICATIF } from './controles.mjs';
+import { controler, rapport, forfaitDe } from './controles.mjs';
 
 const ici = DONNEES;
 const sansDonnees = !existsSync(join(ici, 'donnees.json')) || !existsSync(join(ici, 'export'));
@@ -75,10 +75,21 @@ test('semaine intermédiaire absente du comparatif', () => {
   assert.ok(verifier(x).anomalies.some(a => a.includes('semaines du comparatif hebdo')));
 }, n('plafondsHebdo', 4));
 
-test('statut absent : anomalie, pas plantage', () => {
-  const x = lire(); delete x.tables.plafondsHebdo[0].statut;
-  assert.ok(verifier(x).anomalies.some(a => a.includes('statut absent')));
-}, n('plafondsHebdo'));
+test('état absent ou inconnu : anomalie, pas plantage', () => {
+  const x = lire(); delete x.tables.plafondsHebdo[0].etat; x.tables.plafondsHebdo[1].etat = 'atteint (relevé à 100 %)';
+  const a = verifier(x).anomalies;
+  assert.ok(a.some(a => a.includes(`semaine ${x.tables.plafondsHebdo[0].semaine} : état « undefined » inconnu`)), a.join('\n'));
+  assert.ok(a.some(a => a.includes('état « atteint (relevé à 100 %) » inconnu')), a.join('\n'));
+}, n('plafondsHebdo', 2));
+
+test('état reset sans note, ou note hors état reset : anomalie', () => {
+  // r1 : une autre semaine qui n'est pas déjà une semaine de reset (les données peuvent en avoir une)
+  const x = lire(); const r0 = x.tables.plafondsHebdo[0], r1 = x.tables.plafondsHebdo.slice(1).find(r => r.etat !== 'reset');
+  r0.etat = 'reset'; r0.resetNote = null; r1.resetNote = 'oubli';
+  const a = verifier(x).anomalies;
+  assert.ok(a.some(a => a.includes(`semaine ${r0.semaine} : état reset et resetNote = null`)), a.join('\n'));
+  assert.ok(a.some(a => a.includes(`semaine ${r1.semaine} : état ${r1.etat} et resetNote = oubli`)), a.join('\n'));
+}, x => (x.tables.plafondsHebdo ?? []).slice(1).some(r => r.etat !== 'reset'));
 
 test('NaN dans une table', () => {
   const x = lire(); x.tables.jours[0].cout = NaN;
@@ -110,20 +121,38 @@ test('modèle sans tarif', () => {
   assert.ok(verifier(x).anomalies.some(a => a.includes('« Truc 9 » sans tarif')));
 });
 
-test('statut et colonne hors PC en désaccord', () => {
-  const x = lire(); const r = x.tables.plafondsHebdo.find(r => r.horsEstime != null); r.horsEstime = 11;
-  assert.ok(verifier(x).anomalies.some(a => a.includes(`semaine ${r.semaine} : statut dit`)));
-}, x => (x.tables.plafondsHebdo ?? []).some(r => r.horsEstime != null));
-
-test('% du statut différent de pctFin', () => {
+// Depuis le lot 2a de #17, plus de contrôle « le statut dit N pts / N % » : la phrase est fabriquée par la page depuis ces
+// mêmes colonnes (une seule source). Restent les contrôles entre colonnes :
+test('plus de points hors PC que de % atteints', () => {
   const x = lire(); const r = x.tables.plafondsHebdo.at(-1);
-  r.statut = 'en cours (81 %, dont 10 pts hors de ce PC)'; r.horsEstime = 10; r.pctFin = 86; // ligne construite, pas de sortie anticipée
-  assert.ok(verifier(x).anomalies.some(a => a.includes('colonne pctFin')));
+  r.etat = 'enCours'; r.pct = 20; r.pctFin = 20; r.horsEstime = 25;
+  assert.ok(verifier(x).anomalies.some(a => a.includes(`semaine ${r.semaine} : 25 pts hors PC > 20 % atteints`)));
+}, n('plafondsHebdo'));
+
+test('pct différent de pctFin', () => {
+  const x = lire(); const r = x.tables.plafondsHebdo.at(-1);
+  r.etat = 'enCours'; r.pct = 81; r.horsEstime = 10; r.pctFin = 86; // ligne construite, pas de sortie anticipée
+  assert.ok(verifier(x).anomalies.some(a => a.includes('pct = 81, pctFin = 86')));
+}, n('plafondsHebdo'));
+
+test('pct en texte (relevé sonar non typé) égal à pctFin : pas d’anomalie', () => {
+  const x = lire(); const r = x.tables.plafondsHebdo.at(-1);
+  r.etat = 'enCours'; r.pct = '50'; r.horsEstime = 10; r.pctFin = 50;
+  assert.ok(!verifier(x).anomalies.some(a => a.includes('pctFin')), verifier(x).anomalies.join('\n'));
 }, n('plafondsHebdo'));
 
 test('plafond affiché inférieur au consommé', () => {
-  const x = lire(); const r = x.tables.plafondsHebdo.at(-1); r.statut = 'projeté (50 %)'; r.plafond = r.consomme - 10; r.horsEstime = null; r.pctFin = null;
+  // Semaine non coupée (sinon le contrôle compare au coût du segment retenu, pas à r.consomme)
+  const x = lire(); const r = x.tables.plafondsHebdo.at(-1); r.etat = 'projete'; r.pct = 50; r.plafond = r.consomme - 10; r.horsEstime = null; r.pctFin = null;
+  r.coupeePremier = r.coupeeDepuis = null;
   assert.ok(verifier(x).anomalies.some(a => a.includes('> plafond')));
+}, n('plafondsHebdo'));
+
+test('plafond inférieur au consommé : permis quand la limite est atteinte ou le relevé à 100 %', () => {
+  for (const etat of ['atteint', 'plein']) {
+    const x = lire(); const r = x.tables.plafondsHebdo.at(-1); r.etat = etat; r.pct = null; r.plafond = r.consomme - 10; r.horsEstime = null; r.pctFin = null;
+    assert.ok(!verifier(x).anomalies.some(a => a.includes('> plafond')), etat);
+  }
 }, n('plafondsHebdo'));
 
 test('semaine en cours absente du comparatif', () => {
@@ -139,7 +168,7 @@ test('pente invalide', () => {
 test('plafond récent invraisemblable → à vérifier, pas anomalie', () => {
   const x = lire(); const r = x.tables.plafondsHebdo.at(-1);
   const haut = Math.max(5000, Math.ceil(r.consomme + 1000)) + 7; // au-dessus du consommé : pas d'anomalie « > plafond »
-  r.plafond = haut; r.statut = 'projeté (90 %)'; r.horsEstime = null; r.pctFin = null;
+  r.plafond = haut; r.etat = 'projete'; r.pct = 90; r.horsEstime = null; r.pctFin = null;
   const v = verifier(x);
   assert.ok(v.aVerifier.some(a => a.includes(`plafond de la semaine ${r.semaine} = ${haut} $`)));
   assert.ok(!v.anomalies.some(a => a.includes(String(haut))));
@@ -223,7 +252,7 @@ const coupee = cout => {
   ];
   const tables = {
     semaines: [{ debut: '2026-11-01', cout: 100, appels: 1, jetons: 0 }],
-    plafondsHebdo: [{ semaine: '2026-11-01', statut: 'projeté (50 %) ; coupée par reset hebdo le 03/11 21:00 UTC (segment retenu : depuis le 03/11 21:00)',
+    plafondsHebdo: [{ semaine: '2026-11-01', etat: 'projete', pct: 50, coupeePremier: '2026-11-03T21:00', coupeeDepuis: '2026-11-03T21:00',
       plafond: 40, consomme: 100, horsEstime: null, pctFin: 50, sortie: null, consommeSortie: 0 }],
   };
   return controler(d, tables, { maintenant: MAINT });
@@ -231,20 +260,27 @@ const coupee = cout => {
 tester('semaine coupée : consommé du segment retenu (30 $ ≤ plafond 40 $) → pas d’anomalie', () => {
   assert.ok(!coupee(30).anomalies.some(a => a.includes('> plafond')), JSON.stringify(coupee(30)));
 });
-tester('suffixe de coupure : aller-retour exporter → contrôle (le segment retenu est bien retrouvé)', () => {
-  // Dates distinctes (paramètres non inversables) ; segment leurre placé avant le bon : seul le segment nommé par le suffixe compte
-  const s = suffixeCoupee('2026-11-03T21:00:00.000Z', '2026-11-05T08:00:00.000Z');
-  assert.equal(s, ' ; coupée par reset hebdo le 03/11 21:00 UTC (segment retenu : depuis le 05/11 08:00)');
+// Segment retenu nommé par coupeeDepuis (ISO à la minute, comme l'écrit exporter.mjs) : retrouvé dans segmentsHebdo, ou anomalie
+const coupeeDepuis = depuis => {
+  // Dates distinctes (premier ≠ depuis) ; segment leurre placé avant le bon : seul le segment nommé par coupeeDepuis compte
   const d = dFab([]);
   d.segmentsHebdo = [
     { semaine: '2026-11-01', debut: '2026-11-03T21:00:00.000Z', fin: '2026-11-05T08:00:00.000Z', cout: 10, sortie: 0 },
     { semaine: '2026-11-01', debut: '2026-11-05T08:00:00.000Z', fin: '2026-11-08T10:00:00.000Z', cout: 50, sortie: 0 },
   ];
   const tables = { semaines: [{ debut: '2026-11-01', cout: 100, appels: 1, jetons: 0 }],
-    plafondsHebdo: [{ semaine: '2026-11-01', statut: 'projeté (50 %)' + s, plafond: 40, consomme: 100, horsEstime: null, pctFin: 50, sortie: null, consommeSortie: 0 }] };
-  const v = controler(d, tables, { maintenant: MAINT });
-  assert.ok(!v.anomalies.some(a => a.includes('segment retenu absent')), JSON.stringify(v));
+    plafondsHebdo: [{ semaine: '2026-11-01', etat: 'projete', pct: 50, coupeePremier: '2026-11-03T21:00', coupeeDepuis: depuis,
+      plafond: 40, consomme: 100, horsEstime: null, pctFin: 50, sortie: null, consommeSortie: 0 }] };
+  return controler(d, tables, { maintenant: MAINT });
+};
+tester('coupeeDepuis : le segment retenu est bien retrouvé (et pas le leurre)', () => {
+  const v = coupeeDepuis('2026-11-05T08:00');
+  assert.ok(!v.anomalies.some(a => a.includes('absent de segmentsHebdo')), JSON.stringify(v));
   assert.ok(v.anomalies.some(a => a.includes('consommé 50 $ > plafond 40 $')), JSON.stringify(v));
+});
+tester('coupeeDepuis qui ne nomme aucun segment → anomalie', () => {
+  const v = coupeeDepuis('2026-11-05T09:00');
+  assert.ok(v.anomalies.some(a => a.includes('segment retenu (2026-11-05T09:00) absent de segmentsHebdo')), JSON.stringify(v));
 });
 tester('semaine coupée : consommé du segment retenu (50 $ > plafond 40 $) → anomalie', () => {
   assert.ok(coupee(50).anomalies.some(a => a.includes('consommé 50 $ > plafond 40 $')), JSON.stringify(coupee(50)));
@@ -256,8 +292,10 @@ const FORF = [
   { date: '2026-10-25', semaine: '2026-10-25', forfait: 'Max 5x', changement: true },
 ];
 const pente = (debut, plafond, silence = false) => ({ debut, fin: debut.slice(0, 11) + '20:00', ecart: 10, heures: 10, plafond, silence });
-const ligneHebdo = (semaine, statut, plafond = null, consomme = 0) =>
-  ({ semaine, statut, plafond, consomme, horsEstime: null, pctFin: null, sortie: null, consommeSortie: 0 });
+// indicatif = forfait d'avant → forfait de la semaine, comme exporter.mjs les écrit (indicatifDe / indicatifA), ou null
+const ligneHebdo = (semaine, etat, plafond = null, consomme = 0, indicatif = null) =>
+  ({ semaine, etat, pct: etat === 'projete' ? 50 : null, indicatifDe: indicatif?.[0] ?? null, indicatifA: indicatif?.[1] ?? null,
+    plafond, consomme, horsEstime: null, pctFin: null, sortie: null, consommeSortie: 0 });
 const semainesVides = (...debuts) => debuts.map(debut => ({ debut, cout: 0, appels: 0, jetons: 0 }));
 
 tester('forfaitDe : « » avant la première entrée, libellé de l’entrée sur sa semaine et après', () => {
@@ -285,17 +323,17 @@ tester('bande par forfait : un écart reste signalé dans son propre forfait', (
 tester('semaine de changement : son plafond indicatif et ses pentes ne sont ni comparés ni dans la médiane', () => {
   const v = controler(dFab([]), { forfaits: FORF,
     semaines: [...semainesVides('2026-11-01'), { debut: '2026-10-25', cout: 10, appels: 1, jetons: 0 }],
-    plafondsHebdo: [ligneHebdo('2026-10-25', `projeté (50 %) ; ${SUFFIXE_INDICATIF} (Pro → Max 5x)`, 5000, 10), ligneHebdo('2026-11-01', 'en cours')],
+    plafondsHebdo: [ligneHebdo('2026-10-25', 'projete', 5000, 10, ['Pro', 'Max 5x']), ligneHebdo('2026-11-01', 'enCours')],
     pentes: [pente('2026-10-20T10:00', 100), pente('2026-10-21T10:00', 100), pente('2026-10-27T10:00', 5000)] }, { maintenant: MAINT });
   assert.ok(!v.aVerifier.some(a => a.includes('5000')), JSON.stringify(v));
-  assert.ok(!v.anomalies.some(a => a.includes('suffixe') || a.includes('changement de forfait')), JSON.stringify(v));
+  assert.ok(!v.anomalies.some(a => a.includes('plafond indicatif') || a.includes('changement de forfait')), JSON.stringify(v));
 });
 
-tester('suffixe « plafond indicatif » : manquant sur une semaine de changement, ou présent ailleurs → anomalie', () => {
+tester('mention « plafond indicatif » : manquante sur une semaine de changement, ou présente ailleurs → anomalie', () => {
   const v = controler(dFab([]), { forfaits: FORF, semaines: semainesVides('2026-10-25', '2026-11-01'),
-    plafondsHebdo: [ligneHebdo('2026-10-25', 'en cours'), ligneHebdo('2026-11-01', `en cours ; ${SUFFIXE_INDICATIF} (Pro → Max 5x)`)] }, { maintenant: MAINT });
-  assert.ok(v.anomalies.some(a => a.includes('semaine 2026-10-25 : changement de forfait sans suffixe')), JSON.stringify(v));
-  assert.ok(v.anomalies.some(a => a.includes('semaine 2026-11-01 : suffixe') && a.includes("hors d'une semaine de changement")), JSON.stringify(v));
+    plafondsHebdo: [ligneHebdo('2026-10-25', 'enCours'), ligneHebdo('2026-11-01', 'enCours', null, 0, ['Pro', 'Max 5x'])] }, { maintenant: MAINT });
+  assert.ok(v.anomalies.some(a => a.includes('semaine 2026-10-25 : changement de forfait sans mention')), JSON.stringify(v));
+  assert.ok(v.anomalies.some(a => a.includes('semaine 2026-11-01 : mention') && a.includes("hors d'une semaine de changement")), JSON.stringify(v));
 });
 
 tester('baisse du % dans une semaine de changement : pas de « reset probable » ; hors changement : signalée', () => {

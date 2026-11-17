@@ -8,7 +8,13 @@
 import { fabriquer, CYCLE_DEFAUT } from './semaine.mjs';
 
 // Champs qui ont le droit d'être null (estimation impossible) ; tout autre nombre doit être fini
-const NULLS_PERMIS = new Set(['plafond', 'sortie', 'pctFin', 'horsEstime']);
+// (plafondsHebdo / plafonds5h, lot 2a de #17 : champs d'un état qui ne s'appliquent pas à tous les états)
+const NULLS_PERMIS = new Set(['plafond', 'sortie', 'pctFin', 'horsEstime', 'pct', 'fourchetteMin', 'fourchetteMax', 'resetNote',
+  'coupeePremier', 'coupeeDepuis', 'indicatifDe', 'indicatifA']);
+// États de plafondsHebdo (exporter.mjs) ; la page en fait la phrase (#libelles de page/index.html, même liste : ETATS)
+export const ETATS_HEBDO = ['atteint', 'plein', 'depasse', 'projete', 'enCours', 'pasAtteint', 'reset'];
+// « Atteint » à l'écran : limite vue, ou relevé à 100 % (même prédicat que libelles.atteint dans la page)
+const atteintOuPlein = r => r.etat === 'atteint' || r.etat === 'plein';
 // Plausibilité d'un plafond hebdo ou d'une pente ($ pour 100 %) : entre la moitié et le double de la médiane des pentes
 // sans silence ; seulement sur les 2 dernières semaines (l'historique peut avoir des cas connus et expliqués)
 const BANDE = [0.5, 2];
@@ -24,23 +30,14 @@ const dateUTC = s => Date.parse(/T\d\d:\d\d$/.test(s) ? s + ':00Z' : s);
 const jourParis = t => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(t);
 // « JJ/MM HH:MM » UTC d'un instant ISO
 const jjmm = iso => `${iso.slice(8, 10)}/${iso.slice(5, 7)} ${iso.slice(11, 16)}`;
-// Suffixe du statut d'une semaine coupée, écrit par exporter.mjs et relu par segmentRetenu ci-dessous : un seul endroit
-// pour le format, protégé par un test aller-retour (controles.test.mjs)
-export const suffixeCoupee = (premierISO, debutSegmentISO) =>
-  ` ; coupée par reset hebdo le ${jjmm(premierISO)} UTC (segment retenu : depuis le ${jjmm(debutSegmentISO)})`;
-// Segment retenu d'une semaine coupée (suffixe « segment retenu : depuis le JJ/MM HH:MM » du statut) : entrée de segmentsHebdo, ou null
-const segmentRetenu = (d, r) => {
-  const m = r.statut.match(/segment retenu : depuis le (\d\d\/\d\d \d\d:\d\d)\)/);
-  if (!m) return null;
-  return (d.segmentsHebdo ?? []).find(s => s.semaine === r.semaine && jjmm(s.debut) === m[1]) ?? null;
-};
+// Segment retenu d'une semaine coupée (champ coupeeDepuis, ISO UTC à la minute) : entrée de segmentsHebdo, ou null
+const segmentRetenu = (d, r) =>
+  (d.segmentsHebdo ?? []).find(s => s.semaine === r.semaine && s.debut.slice(0, 16) === r.coupeeDepuis) ?? null;
 
 // Forfait d'une semaine (clé forfaits, 15/11) : libellé de la dernière entrée dont la semaine est ≤ celle-ci, « » si aucune
 // (inconnu). entrees = table « forfaits » (triée par date). Même règle que forfaitDe dans page/index.html (la page ne peut
 // pas importer ce module) : aucun test ne les compare, à garder d'accord à la main.
 export const forfaitDe = (entrees, semaine) => entrees.reduce((f, e) => e.semaine <= semaine ? e.forfait : f, '');
-// Suffixe du statut d'une semaine de changement de forfait (écrit par exporter.mjs, contrôlé ici)
-export const SUFFIXE_INDICATIF = 'plafond indicatif : mêle deux forfaits';
 
 // `debutSemaine` : même fonction que celle de l'export (exporter.mjs) ; par défaut, cycle de config par défaut
 export function controler(d, tables, { maintenant = Date.now(), groupes = [], debutSemaine = fabriquer(CYCLE_DEFAUT).debutSemaine } = {}) {
@@ -90,32 +87,31 @@ export function controler(d, tables, { maintenant = Date.now(), groupes = [], de
     else if (v.appels > 0 && !(v.cout > 0)) anomalies.push(`modèle « ${m} » : ${v.appels} appels pour ${v.cout} $ (tarif nul ou mal lu)`);
   }
 
-  // 5. Comparatif hebdo : mêmes semaines que « semaines », même consommé, statut d'accord avec ses colonnes
+  // 5. Comparatif hebdo : mêmes semaines que « semaines », même consommé, état d'accord avec ses colonnes
   // Semaines de changement de forfait (table « forfaits », 15/11) : leur plafond est indicatif, leurs pentes sont exclues du contrôle 6
   const entrees = tables.forfaits ?? [], chg = new Set(entrees.filter(e => e.changement === true).map(e => e.semaine));
   const hebdo = tables.plafondsHebdo ?? [], parDebut = new Map((tables.semaines ?? []).map(s => [s.debut, s]));
   const sH = hebdo.map(r => r.semaine).join(), sS = [...parDebut.keys()].join();
   if (sH !== sS) anomalies.push(`semaines du comparatif hebdo (${hebdo.length}) ≠ semaines de « semaines » (${parDebut.size})`);
   for (const r of hebdo) {
-    if (typeof r.statut !== 'string') { anomalies.push(`semaine ${r.semaine} : statut absent`); continue; }
-    // Suffixe « indicatif » : celui des semaines de changement de forfait, et seulement celles-là (15/11)
-    const indicatif = r.statut.includes(SUFFIXE_INDICATIF);
-    if (chg.has(r.semaine) && !indicatif) anomalies.push(`semaine ${r.semaine} : changement de forfait sans suffixe « ${SUFFIXE_INDICATIF} »`);
-    if (!chg.has(r.semaine) && indicatif) anomalies.push(`semaine ${r.semaine} : suffixe « ${SUFFIXE_INDICATIF} » hors d'une semaine de changement`);
+    // Champs lus tels quels depuis le lot 2a de #17 : plus de phrase à analyser (les contrôles « le statut dit N pts » et
+    // « le statut dit N % » n'ont plus d'objet : une seule source, le formateur de la page fabrique la phrase depuis ces champs)
+    if (!ETATS_HEBDO.includes(r.etat)) { anomalies.push(`semaine ${r.semaine} : état « ${r.etat} » inconnu (attendu : ${ETATS_HEBDO.join(', ')})`); continue; }
+    if ((r.etat === 'reset') !== (r.resetNote != null)) anomalies.push(`semaine ${r.semaine} : état ${r.etat} et resetNote = ${r.resetNote}`);
+    // Mention « indicatif » : celle des semaines de changement de forfait, et seulement celles-là (15/11)
+    const indicatif = r.indicatifA != null;
+    if (chg.has(r.semaine) && !indicatif) anomalies.push(`semaine ${r.semaine} : changement de forfait sans mention « plafond indicatif » (indicatifA vide)`);
+    if (!chg.has(r.semaine) && indicatif) anomalies.push(`semaine ${r.semaine} : mention « plafond indicatif » hors d'une semaine de changement`);
     const s = parDebut.get(r.semaine);
     if (s && Math.abs(s.cout - r.consomme) > 0.01) anomalies.push(`semaine ${r.semaine} : consommé ${fr(r.consomme)} $ ≠ coût de la semaine ${fr(s.cout)} $`);
-    const m = r.statut.match(/dont ([\d,]+) pts hors de ce PC/);
-    const lu = m ? Number(m[1].replace(',', '.')) : null;
-    if (lu !== (r.horsEstime ?? null)) anomalies.push(`semaine ${r.semaine} : statut dit ${lu ?? 'aucun'} pts hors PC, colonne horsEstime = ${r.horsEstime}`);
     if (r.horsEstime != null && r.pctFin != null && r.horsEstime > r.pctFin) anomalies.push(`semaine ${r.semaine} : ${fr(r.horsEstime)} pts hors PC > ${r.pctFin} % atteints`);
-    const pm = r.statut.match(/\((\d+) %/);
-    if (pm && r.pctFin != null && Number(pm[1]) !== r.pctFin && !r.statut.startsWith('atteint')) anomalies.push(`semaine ${r.semaine} : statut dit ${pm[1]} %, colonne pctFin = ${r.pctFin}`);
+    if (r.pct != null && r.pctFin != null && Number(r.pct) !== Number(r.pctFin)) anomalies.push(`semaine ${r.semaine} : pct = ${r.pct}, pctFin = ${r.pctFin}`);
     // Un plafond affiché doit couvrir ce que la semaine a déjà coûté (sinon la projection est contredite).
     // Semaine coupée par un reset précis (15/11) : on compare au coût du segment retenu (segmentsHebdo), pas à la semaine
-    const coupee = /coupée par reset hebdo/.test(r.statut), seg = segmentRetenu(d, r);
-    if (coupee && !seg) anomalies.push(`semaine ${r.semaine} : segment retenu absent de segmentsHebdo`);
+    const coupee = r.coupeeDepuis != null, seg = coupee ? segmentRetenu(d, r) : null;
+    if (coupee && !seg) anomalies.push(`semaine ${r.semaine} : segment retenu (${r.coupeeDepuis}) absent de segmentsHebdo`);
     const coutRef = coupee && seg ? seg.cout : r.consomme;
-    if (r.plafond != null && !r.statut.startsWith('atteint') && coutRef > r.plafond + 0.01) anomalies.push(`semaine ${r.semaine} : consommé ${fr(coutRef)} $ > plafond ${fr(r.plafond)} $ sans statut « dépassée »`);
+    if (r.plafond != null && !atteintOuPlein(r) && coutRef > r.plafond + 0.01) anomalies.push(`semaine ${r.semaine} : consommé ${fr(coutRef)} $ > plafond ${fr(r.plafond)} $ sans état « depasse »`);
   }
   const debutCourante = debutSemaine(maintenant);
   // Export vide (installation neuve) : rien à comparer

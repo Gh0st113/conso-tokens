@@ -62,7 +62,7 @@ export function lireResets(valeur, debutSemaine) {
 
 // Forfaits déclarés à la main (clé forfaits, 15/11) : { "AAAA-MM-JJ": "libellé" } = ce forfait à partir de la semaine qui
 // contient cette date. Libellé = texte libre, espaces de bord retirés, alphabet restreint (pas de parenthèse ni de % : elles
-// fausseraient les expressions de controles.mjs qui lisent le statut). Rend la liste triée par date :
+// rendraient ambiguë la phrase du statut, fabriquée par la page). Rend la liste triée par date :
 // [{ date, semaine, forfait, changement }], changement = vrai si le libellé diffère du précédent (sans tenir compte de la casse).
 // debutSemaine : même fonction que l'export. Semaine d'une date = l'instant de remise à zéro de ce jour-là : le jour de la
 // remise à zéro tombe dans la nouvelle semaine, quelle que soit l'heure du cycle.

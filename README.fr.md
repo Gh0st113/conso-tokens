@@ -147,7 +147,7 @@ Une valeur invalide arrête le script avec un message `config.local.json : reset
 ```
 
 - La semaine d'une date suit l'heure de remise à zéro de ce jour-là : avec le cycle par défaut (dimanche 10:00 UTC), un jour de remise à zéro appartient à la **nouvelle** semaine, quelle que soit l'heure du cycle.
-- Le libellé est un texte libre : 1 à 40 caractères, lettres, chiffres, espaces et `. + -` (ni parenthèse ni `%`, qui fausseraient les contrôles qui lisent le statut). Les espaces de bord sont ignorés, et `Pro` / `pro` désignent le même forfait. Le libellé **est publié sur la page** : n'y mettez jamais un nom personnel (employeur, client…).
+- Le libellé est un texte libre : 1 à 40 caractères, lettres, chiffres, espaces et `. + -` (ni parenthèse ni `%`, qui rendraient la phrase du statut ambiguë). Les espaces de bord sont ignorés, et `Pro` / `pro` désignent le même forfait. Le libellé **est publié sur la page** : n'y mettez jamais un nom personnel (employeur, client…).
 - Un **changement** (libellé différent de l'entrée précédente) fait de sa semaine une *semaine de changement*. Son plafond est calculé comme d'habitude mais marqué `plafond indicatif : mêle deux forfaits (A → B)` : la semaine mêle deux limites, le chiffre est affiché mais **jamais comparé** aux autres semaines (ni dans la bande de plausibilité, ni dans la ligne du plafond de la page). Pour un plafond propre à cette semaine, déclarez l'heure du changement comme reset précis dans `resets` : la semaine est alors coupée, et la marque « indicatif » reste.
 - Les semaines avant la première entrée n'ont pas de forfait : elles forment un groupe à part dans la bande de plausibilité. Sans la clé, rien ne change.
 - Forfaits **Team** : la limite dépend du siège (Standard ou Premium) ; écrivez-le dans le libellé (`"Team Premium"`). **Enterprise** (usage au tarif de l'API) et tout forfait sans limite hebdo en % : sans relevé de %, aucun plafond n'est estimé ; le tableau montre le montant consommé, comme avant.
@@ -184,6 +184,11 @@ navigateur n'affiche rien**.
    `data/export/`, chacun nommé comme son fichier »* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`,
    `contexte`, `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `forfaits`).
 3. Après chaque nouvel export : *« Recharge les 13 données de mon tableau depuis `data/export/` »*.
+
+**Passage à la 0.3.0 ou plus** : les exports portent désormais des codes et des nombres au lieu de phrases (c'est la
+page qui écrit les phrases). Republier la page avec le nouveau `page/index.html`, puis relancer un export et recharger
+les 13 données. La page neuve lit encore les anciens exports, mais une ancienne page ne lit pas les nouveaux : mettre
+la page à jour d'abord.
 
 Avec la commande `conso-tokens`, `conso-tokens page` affiche où sont la page et le dossier `export/`.
 
