@@ -43,5 +43,5 @@ else if (cmd === 'maj') {
   console.log(`Tables à charger        : ${join(DONNEES, 'export')}`);
 } else if (cmd === '--version' || cmd === '-v') {
   console.log(JSON.parse(readFileSync(script('package.json'), 'utf8')).version);
-} else if (cmd === undefined || cmd === 'aide' || cmd === '--help' || cmd === '-h') console.log(AIDE);
+} else if (cmd === undefined || cmd === 'aide') console.log(AIDE);
 else { console.error(`conso-tokens : commande inconnue « ${cmd} »\n\n${AIDE}`); process.exitCode = 2; }

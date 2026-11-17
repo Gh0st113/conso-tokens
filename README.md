@@ -88,7 +88,7 @@ conso-tokens help       # the list of commands
 The old French names still work: `maj`, `agreger`, `exporter`, `tarifs`, `aide`, and the options `--journaux`, `--sortie`,
 `--journal-quota`; so do the old keys of `config.local.json` (see below). Nothing has to be renamed.
 
-**Where settings and data go.** Run from a clone (a folder holding `.git`, `config.local.json` or `data/`), nothing
+**Where settings and data go.** Run from a clone (a folder holding `.git`, `config.local.json` or `donnees/`), nothing
 changes: everything stays in the clone. Installed as a package, `config.local.json`, `data/` and an updated
 `tarifs.json` go to `~/.conso-tokens/` instead, so that an update of the package never touches them. The environment
 variable `CONSO_TOKENS_DIR` replaces that folder in both cases. If the folder holds both `data/` and `donnees/` and no

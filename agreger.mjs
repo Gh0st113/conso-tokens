@@ -31,6 +31,8 @@ function indiceOption(nouveau, ancien) {
 }
 const iSortie = indiceOption('--output', '--sortie');
 const sortie = iSortie > 0 ? process.argv[iSortie + 1] : join(DONNEES, 'donnees.json');
+// Journal quota (--quota-log / --journal-quota) : contrôlé ici, avant toute écriture de l'archive
+const iJournal = indiceOption('--quota-log', '--journal-quota');
 const racinesEnPlus = [...new Set(process.argv.flatMap((v, i) => {
   if (v !== '--logs' && v !== '--journaux') return [];
   const r = process.argv[i + 1];
@@ -309,7 +311,6 @@ for (const { ts, w } of relevesAuto.values()) {
 }
 // Journal du mod sonar (option quotaLog) : une ligne par changement de % ou d'heure de remise à zéro.
 // Autre chemin (quotaLogPath de sonar) : --journal-quota chemin.jsonl
-const iJournal = indiceOption('--quota-log', '--journal-quota');
 const journalQuota = iJournal > 0 ? process.argv[iJournal + 1] : join(homedir(), '.claude', 'sonar', 'quota-log.jsonl');
 let lignesSonar = 0;
 try {

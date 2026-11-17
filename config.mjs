@@ -1,7 +1,7 @@
 // Réglages propres à chaque utilisateur : config.local.json dans le dossier de base (ignoré par git ; modèle : config.exemple.json).
 // Dossier de base (issue #19, choisirBase dans reglages.mjs) : celui des scripts pour un clone, ~/.conso-tokens pour le
 // paquet npm, ou CONSO_TOKENS_DIR. Sans config.local.json, tout marche avec les valeurs par défaut ci-dessous.
-import { readFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, mkdirSync, existsSync, statSync } from 'node:fs';
 import { join, dirname, resolve, relative, isAbsolute, sep } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -36,7 +36,7 @@ const chemin = (k, p) => {
 // Sans chemin explicite (dataDir ou dossierDonnees) : data/, ou donnees/ s'il est seul à exister (choisirDossierDonnees).
 const DOSSIERS_DONNEES = ['data', 'donnees'];
 export const DONNEES = c.dossierDonnees === undefined
-  ? join(BASE, choisirDossierDonnees({ base: BASE, existe: existsSync, joindre: join }))
+  ? join(BASE, choisirDossierDonnees({ base: BASE, existe: p => statSync(p, { throwIfNoEntry: false })?.isDirectory() ?? false, joindre: join }))
   : chemin('dossierDonnees', c.dossierDonnees);
 // Garde-fou, dans tous les modes : dans le dossier du code, les données ne vont QUE dans data/ ou donnees/ (ignorés par git) ;
 // ailleurs, elles pourraient être commitées et publiées, ou écrasées par une mise à jour du paquet → refus

@@ -87,7 +87,7 @@ conso-tokens help       # la liste des commandes
 Les anciens noms français marchent toujours : `maj`, `agreger`, `exporter`, `tarifs`, `aide`, et les options `--journaux`,
 `--sortie`, `--journal-quota` ; de même les anciennes clés de `config.local.json` (voir plus bas). Rien à renommer.
 
-**Où vont réglages et données.** Lancé depuis un clone (un dossier qui contient `.git`, `config.local.json` ou `data/`),
+**Où vont réglages et données.** Lancé depuis un clone (un dossier qui contient `.git`, `config.local.json` ou `donnees/`),
 rien ne change : tout reste dans le clone. Installé en paquet, `config.local.json`, `data/` et le `tarifs.json` mis à
 jour vont dans `~/.conso-tokens/`, pour qu'une mise à jour du paquet n'y touche jamais. La variable d'environnement
 `CONSO_TOKENS_DIR` remplace ce dossier dans les deux cas. Si le dossier contient à la fois `data/` et `donnees/` sans
