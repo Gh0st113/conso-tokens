@@ -115,6 +115,13 @@ test('choisirBase : mode clone par chacun des indices, mode paquet sans indice, 
   assert.deepEqual(base([], { CONSO_TOKENS_DIR: '   ' }), { mode: 'paquet', base: '/moi/.conso-tokens', force: false });
 });
 
+test('INDICES_CLONE : data/ n’en fait pas partie (un data/ égaré dans le paquet ne le fait pas passer en mode clone)', async () => {
+  const { INDICES_CLONE, choisirBase } = await import('./reglages.mjs');
+  assert.ok(!INDICES_CLONE.includes('data'));
+  assert.ok(INDICES_CLONE.includes('donnees'));
+  assert.equal(choisirBase({ ici: '/paquet', maison: '/moi', env: {}, existe: p => p === '/paquet/data' }).mode, 'paquet');
+});
+
 test('choisirBase : CONSO_TOKENS_DIR en ~/ développé, chemin relatif refusé (il dépendrait du dossier courant)', async () => {
   const { choisirBase } = await import('./reglages.mjs');
   const base = env => choisirBase({ ici: '/code', maison: '/moi', env, existe: () => false }).base;

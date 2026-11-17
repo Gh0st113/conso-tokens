@@ -46,7 +46,7 @@ export const DONNEES = c.dossierDonnees === undefined
 const dansCode = p => { const r = relative(ici, p); return !(isAbsolute(r) || r === '..' || r.startsWith('..' + sep) || r.startsWith('../')); };
 const rel = relative(ici, DONNEES);
 if (dansCode(DONNEES) && !DOSSIERS_DONNEES.includes(rel.split(/[\\/]/)[0]))
-  erreur(`dataDir (ou dossierDonnees) (${DONNEES}) est dans le dépôt hors de data/ ou donnees/ : les données pourraient être publiées. Choisir un dossier hors du dépôt ou data/.`);
+  erreur(`dataDir (ou dossierDonnees) (${DONNEES}) est dans le dépôt hors de data/ ou donnees/ : les données pourraient être publiées. Choisir un dossier hors du dépôt, ou data/ (donnees/ aussi accepté).`);
 // Paquet installé : rien n'est écrit dans son dossier, même donnees/ (une mise à jour l'effacerait)
 if (MODE === 'paquet' && (dansCode(BASE) || dansCode(DONNEES)))
   throw new Error(`conso-tokens : ${dansCode(BASE) ? `CONSO_TOKENS_DIR (${BASE})` : `dataDir (ou dossierDonnees) (${DONNEES})`} est dans le dossier du paquet installé (${ici}) : une mise à jour l'effacerait. Choisir un autre dossier.`);

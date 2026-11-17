@@ -44,7 +44,8 @@ const fichierArchive = join(DONNEES, 'archive-appels.json');
 // Relevés à la main (lot 1, 17/11) : readings.json (nom anglais) ou releves.json (ancien nom), jamais les deux.
 // Contrôlé avant toute écriture (l'archive est réécrite plus bas).
 const fichierReleves = (() => {
-  const n = existsSync(join(DONNEES, 'readings.json')), a = existsSync(join(DONNEES, 'releves.json'));
+  const estFichier = p => statSync(p, { throwIfNoEntry: false })?.isFile() ?? false; // un dossier homonyme ne compte pas
+  const n = estFichier(join(DONNEES, 'readings.json')), a = estFichier(join(DONNEES, 'releves.json'));
   if (n && a) throw new Error(`readings.json et releves.json présents dans ${DONNEES} : n'en garder qu'un`);
   return join(DONNEES, n ? 'readings.json' : 'releves.json');
 })();
