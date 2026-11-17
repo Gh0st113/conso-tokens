@@ -34,11 +34,29 @@ estimer le plafond hebdo. Sans sonar, seuls les relevés écrits dans les journa
 
 ## Prérequis
 
-- Node.js 20 ou plus, rien à installer.
+- Node.js 20 ou plus, aucune dépendance à installer.
 - Les journaux de Claude Code dans `~/.claude/projects` (sous Windows, les sessions locales de Cowork sont lues **si présentes** ; depuis fin octobre 2026, Cowork n'en écrit plus sur le PC : son usage passe dans le hors PC, déduit ; pas
   sous macOS ni Linux).
 
+## Installation
+
+**Avec npm** (le plus simple, sans clone). Réglages et données vont dans `~/.conso-tokens/` :
+
+```
+npm install -g conso-tokens
+conso-tokens maj        # lit les journaux et prépare les données du tableau de bord
+conso-tokens page       # où sont la page du tableau de bord et ses données
+```
+
+Mise à jour ensuite par `npm update -g conso-tokens`. Sous Windows, si PowerShell refuse de lancer `conso-tokens`, taper
+plutôt `conso-tokens.cmd` (voir [En commande](#en-commande-conso-tokens)). Ensuite : [Afficher le tableau](#afficher-le-tableau). Vous utilisiez déjà un clone ?
+Lire d'abord « Passer d'un clone au paquet » dans [En commande](#en-commande-conso-tokens).
+
+**Depuis un clone**, pour lire ou modifier le code, ou lancer les tests : voir [Utilisation](#utilisation) juste en dessous.
+
 ## Utilisation
+
+Depuis un clone :
 
 ```
 git clone https://github.com/Gh0st113/conso-tokens
@@ -52,10 +70,9 @@ Chemins donnés pour le dossier de données par défaut `donnees/` (ignoré par 
 
 ### En commande (`conso-tokens`)
 
-Les mêmes scripts se lancent aussi en une seule commande, depuis n'importe quel dossier. Sans clone :
-`npm install -g conso-tokens` (Node 20+ ; mise à jour ensuite par `npm update -g conso-tokens`). Depuis un clone,
-`npm link` (une fois, dans le clone) met plutôt `conso-tokens` dans le PATH ; le code, `config.local.json` et `donnees/`
-restent dans le clone.
+Les mêmes scripts se lancent aussi en une seule commande, depuis n'importe quel dossier, une fois installés avec npm
+(voir [Installation](#installation)). Depuis un clone, `npm link` (une fois, dans le clone) met plutôt `conso-tokens`
+dans le PATH ; le code, `config.local.json` et `donnees/` restent dans le clone.
 
 ```
 conso-tokens maj        # agreger puis exporter (exporter n'est pas lancé si agreger échoue)

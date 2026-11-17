@@ -39,7 +39,25 @@ weekly cap. Without sonar, only the readings written into the Claude Code logs a
 - Node.js 20 or later, no dependency to install.
 - Claude Code logs in `~/.claude/projects` (on Windows, Cowork local sessions are read **if present**; since late October 2026 Cowork no longer writes them on the PC, so its usage is deduced as outside this PC; not on macOS or Linux).
 
+## Install
+
+**With npm** (simplest, no clone). Settings and data go to `~/.conso-tokens/`:
+
+```
+npm install -g conso-tokens
+conso-tokens maj        # reads the logs and builds the dashboard data
+conso-tokens page       # where the dashboard page and its data are
+```
+
+Update later with `npm update -g conso-tokens`. On Windows, if PowerShell refuses to run `conso-tokens`, type
+`conso-tokens.cmd` instead (see [As a command](#as-a-command-conso-tokens)). Next: [Displaying the dashboard](#displaying-the-dashboard). Already using a clone?
+Read "Moving from a clone to the package" in [As a command](#as-a-command-conso-tokens) first.
+
+**From a clone**, to read or change the code or run the tests: see [Use](#use) just below.
+
 ## Use
+
+From a clone:
 
 ```
 git clone https://github.com/Gh0st113/conso-tokens
@@ -53,9 +71,9 @@ Paths above are for the default data folder `donnees/` (ignored by git); with `d
 
 ### As a command (`conso-tokens`)
 
-The same scripts can be run as one command from any folder. Without a clone: `npm install -g conso-tokens` (Node 20+;
-update later with `npm update -g conso-tokens`). From a clone, `npm link` (run once in the clone) puts `conso-tokens` in
-your PATH instead; the code, `config.local.json` and `donnees/` stay in the clone.
+The same scripts can be run as one command from any folder, once installed with npm (see [Install](#install)). From a
+clone, `npm link` (run once in the clone) puts `conso-tokens` in your PATH instead; the code, `config.local.json` and
+`donnees/` stay in the clone.
 
 ```
 conso-tokens maj        # agreger then exporter (exporter is skipped if agreger fails)
