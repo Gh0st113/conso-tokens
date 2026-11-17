@@ -196,6 +196,20 @@ Avec la commande `conso-tokens`, `conso-tokens page` affiche où sont la page et
 
 Gardez l'artefact privé : qui l'ouvre peut lire les fichiers (noms de dossiers, coûts, sessions).
 
+## Ajouter une langue
+
+La page compte deux langues, le français (la référence, texte du HTML) et l'anglais ; les boutons FR / EN sont fabriqués
+à partir d'une seule table. Pour ajouter une langue (l'exemple ci-dessous est `zh`, un scénario seulement : rien n'est
+traduit ici) :
+
+1. Dans `page/index.html`, `<script id="dico">` : ajoutez une entrée à `LANGUES`, par exemple `zh: { locale: 'zh-CN', decimal: '.', sep: ': ', monnaie: n => `$${n}`, heureInfo: s => s, heureUTC: (h, m) => `${h}:${m} UTC` }`. Le bouton apparaît tout seul.
+2. Même fichier, `<script id="libelles">` : ajoutez la même clé à `PHRASES` (mêmes clés que `fr` : `types`, `tranches`, et chaque fonction de phrase).
+3. Même script `#dico` : ajoutez une clé `zh` à chaque entrée de `DICO` (textes du HTML et textes de `tr()` ; un texte du HTML n'a pas de clé `fr`).
+4. Lancez `node --test` : il dit ce qui manque (`zh : phrase « coupee »`, `zh : « titre » (DICO)`, …). Une langue incomplète fait échouer les tests ; dans le navigateur, un texte manquant reste en français.
+
+Rien d'autre à changer : la logique lit les tables. La langue par défaut est celle du navigateur si elle figure dans `LANGUES`
+(son préfixe, `zh-CN` → `zh`), sinon l'anglais.
+
 ## Essayer avec des données simulées
 
 `demo/generer-demo.mjs` écrit un faux dossier personnel : huit semaines de journaux Claude Code (dossiers inventés,

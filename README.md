@@ -189,6 +189,19 @@ With the `conso-tokens` command, `conso-tokens page` prints where the page and t
 
 Keep the artifact private: whoever opens it can read the files (folder names, costs, sessions).
 
+## Adding a language
+
+The page has two languages, French (the reference, the text of the HTML) and English, and the FR / EN buttons are built
+from one table. To add a language (the example below is `zh`, a scenario only: nothing is translated here):
+
+1. In `page/index.html`, `<script id="dico">`: add an entry to `LANGUES`, e.g. `zh: { locale: 'zh-CN', decimal: '.', sep: ': ', monnaie: n => `$${n}`, heureInfo: s => s, heureUTC: (h, m) => `${h}:${m} UTC` }`. The button appears by itself.
+2. Same file, `<script id="libelles">`: add the same key to `PHRASES` (same keys as `fr`: `types`, `tranches`, and every phrase function).
+3. Same `#dico` script: add a `zh` key to each `DICO` entry (texts of the HTML and `tr()` texts; a text of the HTML has no `fr` key).
+4. Run `node --test`: it names what is missing (`zh : phrase « coupee »`, `zh : « titre » (DICO)`, …). A language left incomplete fails the tests; the browser falls back to French for a missing text.
+
+Nothing else changes: the logic reads the tables. The default language is the browser's one if it is in `LANGUES` (its
+prefix, `zh-CN` → `zh`), otherwise `en`.
+
 ## Try it with simulated data
 
 `demo/generer-demo.mjs` writes a fake home folder: eight weeks of Claude Code logs (invented folders, fixed random

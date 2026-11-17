@@ -67,7 +67,7 @@
     <p class="cc-lead"><span data-t="lead.a">Semaine de forfait en cours (depuis le </span><b data-draw="semDebut" data-source="semCourante" data-field="debut">—</b>, <span data-draw="heureReset" data-source="reglages">—</span><span data-t="lead.c">) : </span><b data-draw="semCout" data-source="semCourante" data-field="cout">—</b> <span data-jet="jetons" data-t="lead.d">en équivalent API</span><span data-t="lead.e">, contre </span><b data-draw="semPrec" data-source="semCourante" data-field="prec">—</b><span data-t="lead.f"> sur toute la semaine précédente.</span></p>
     <div class="cc-unite">
       <span class="cc-muted" data-t="langue.label">Langue</span>
-      <span class="cc-seg" role="group" data-t-aria="langue.aria" aria-label="Langue d'affichage"><button type="button" data-langue="fr" aria-pressed="true">FR</button><button type="button" data-langue="en" aria-pressed="false">EN</button></span>
+      <span class="cc-seg" id="langues" role="group" data-t-aria="langue.aria" aria-label="Langue d'affichage"></span>
     </div>
     <div class="cc-unite">
       <span class="cc-muted" data-t="unite.label">Afficher en</span>
@@ -196,58 +196,99 @@
 <script id="libelles">
   // Libellés affichés à partir des codes des tables exportées (lots 2a et 2b de #17) : SEUL endroit qui fabrique ces phrases.
   // Sans dépendance (ni dash, ni d3, ni DOM) : libelles.test.mjs extrait ce bloc et l'exécute sous Node.
-  // La langue (libelles.langue, 'fr' ou 'en') est réglée par la page (bouton FR / EN) ; défaut : français.
+  // La langue (libelles.langue, un code de LANGUES) et ses formats (libelles.formats) sont réglés par la page.
+  // Ajouter une langue : une entrée dans PHRASES (mêmes clés que fr), une dans LANGUES, une clé par langue dans DICO.
   // Champs plats (pas d'objet imbriqué) : un dataset d'artefact est une table de lignes simples.
   // Repli : une table d'avant le 17/11 (champ statut, libellés français) s'affiche telle quelle.
   (() => {
-    const L = (fr, en) => libelles.langue === 'en' ? en : fr;
-    const dec = n => libelles.langue === 'en' ? String(n) : String(n).replace('.', ',');
-    const montant = n => libelles.langue === 'en' ? `$${Math.round(n)}` : `${Math.round(n)} $`;
-    const jjmm = iso => `${iso.slice(8, 10)}/${iso.slice(5, 7)} ${iso.slice(11, 16)}`;
+    const PHRASES = {
+      fr: {
+        types: { cacheRead: 'Lecture du cache', cacheWrite: 'Écriture en cache', output: 'Sortie (réponses + réflexion)', input: 'Entrée neuve' },
+        tranches: { '0-50k': 'moins de 50k', '50-100k': '50k à 100k', '100-150k': '100k à 150k', '150-250k': '150k à 250k', '250k+': 'plus de 250k' },
+        dont: h => `, dont ${h} pts hors de ce PC`,
+        fourchette: (min, max, incertaine) => ` ; plafond ${incertaine ? 'incertain : ' : ''}entre ${min} et ${max ?? '?'}`,
+        atteint: n => `atteint${n}`,
+        plein: n => `atteint (relevé à 100 %${n})`,
+        depasse: (enCours, pct, n) => `${enCours ? 'en cours' : 'pas atteint'} (projection à ${pct} % dépassée${n})`,
+        projete: (pct, n) => `projeté (${pct} %${n})`,
+        enCours: (pct, n) => pct == null ? 'en cours' : `en cours (${pct} %${n})`,
+        pasAtteint: (pct, projete100, n) => pct == null ? 'pas atteint' : `pas atteint (fini à ${pct} %${projete100 ? ', 100 % projeté' : ''}${n})`,
+        reset: note => `reset utilisé (${note})`,
+        inconnu: etat => `état inconnu (${etat})`,
+        coupee: (premier, depuis) => ` ; coupée par reset hebdo le ${premier} UTC (segment retenu : depuis le ${depuis})`,
+        indicatif: (de, a) => ` ; plafond indicatif : mêle deux forfaits (${de} → ${a})`,
+        date: iso => `${iso.slice(8, 10)}/${iso.slice(5, 7)} ${iso.slice(11, 16)}`,
+        cinqAtteint: 'atteint',
+        cinqProjete: pct => `projeté (${pct} %)`,
+      },
+      en: {
+        types: { cacheRead: 'Cache read', cacheWrite: 'Cache write', output: 'Output (replies + reasoning)', input: 'Fresh input' },
+        tranches: { '0-50k': 'under 50k', '50-100k': '50k to 100k', '100-150k': '100k to 150k', '150-250k': '150k to 250k', '250k+': 'over 250k' },
+        dont: h => `, of which ${h} pts off this PC`,
+        fourchette: (min, max, incertaine) => `; cap ${incertaine ? 'uncertain: ' : ''}between ${min} and ${max ?? '?'}`,
+        atteint: n => `reached${n}`,
+        plein: n => `reached (100 % reading${n})`,
+        depasse: (enCours, pct, n) => `${enCours ? 'in progress' : 'not reached'} (projection of ${pct} % exceeded${n})`,
+        projete: (pct, n) => `projected (${pct} %${n})`,
+        enCours: (pct, n) => pct == null ? 'in progress' : `in progress (${pct} %${n})`,
+        pasAtteint: (pct, projete100, n) => pct == null ? 'not reached' : `not reached (ended at ${pct} %${projete100 ? ', 100 % projected' : ''}${n})`,
+        reset: note => `reset used (${note})`,
+        inconnu: etat => `unknown state (${etat})`,
+        coupee: (premier, depuis) => `; cut by weekly reset on ${premier} UTC (segment kept: from ${depuis})`,
+        indicatif: (de, a) => `; indicative cap: mixes two plans (${de} → ${a})`,
+        date: iso => `${iso.slice(5, 7)}/${iso.slice(8, 10)} ${iso.slice(11, 16)}`,
+        cinqAtteint: 'reached',
+        cinqProjete: pct => `projected (${pct} %)`,
+      },
+    };
+    const F = () => PHRASES[libelles.langue];
     // Les datasets d'un artefact Dashboard peuvent arriver en texte : « true », « 12.5 », « » ou « null » pour null
     const vrai = v => v === true || v === 'true';
     const vide = v => v == null || v === '' || v === 'null';
-    // [français, anglais] pour chaque code ; le libellé de l'une ou l'autre langue remonte au même code
-    const TYPES = { cacheRead: ['Lecture du cache', 'Cache read'], cacheWrite: ['Écriture en cache', 'Cache write'], output: ['Sortie (réponses + réflexion)', 'Output (replies + reasoning)'], input: ['Entrée neuve', 'Fresh input'] };
-    const TRANCHES = { '0-50k': ['moins de 50k', 'under 50k'], '50-100k': ['50k à 100k', '50k to 100k'], '100-150k': ['100k à 150k', '100k to 150k'], '150-250k': ['150k à 250k', '150k to 250k'], '250k+': ['plus de 250k', 'over 250k'] };
-    const codeDe = (table, v) => Object.hasOwn(table, v) ? v : Object.keys(table).find(k => table[k].includes(v)) ?? v;
-    const libDe = (table, v) => { const k = codeDe(table, v); return Object.hasOwn(table, k) ? table[k][libelles.langue === 'en' ? 1 : 0] : v; };
+    const dec = n => String(n).replace('.', libelles.formats.decimal);
+    const montant = n => libelles.formats.monnaie(Math.round(n));
+    // Une table (types, tranches) se lit par son code (fr) ; un libellé de n'importe quelle langue remonte à ce code
+    const codeDe = (table, v) => {
+      const cles = Object.keys(PHRASES.fr[table]);
+      return cles.includes(v) ? v : cles.find(k => Object.values(PHRASES).some(p => p[table][k] === v)) ?? v;
+    };
+    const libDe = (table, v) => F()[table][codeDe(table, v)] ?? v;
     // Note commune : points hors de ce PC, puis fourchette du plafond s'il y en a une
-    const note = r => vide(r.horsEstime) ? '' : L(`, dont ${dec(r.horsEstime)} pts hors de ce PC`, `, of which ${dec(r.horsEstime)} pts off this PC`)
-      + (vide(r.fourchetteMin) ? '' : L(` ; plafond ${vrai(r.fourchetteIncertaine) ? 'incertain : ' : ''}entre ${montant(r.fourchetteMin)} et ${vide(r.fourchetteMax) ? '?' : montant(r.fourchetteMax)}`,
-        ` ; cap ${vrai(r.fourchetteIncertaine) ? 'uncertain: ' : ''}between ${montant(r.fourchetteMin)} and ${vide(r.fourchetteMax) ? '?' : montant(r.fourchetteMax)}`));
+    const note = r => vide(r.horsEstime) ? '' : F().dont(dec(r.horsEstime))
+      + (vide(r.fourchetteMin) ? '' : F().fourchette(montant(r.fourchetteMin), vide(r.fourchetteMax) ? null : montant(r.fourchetteMax), vrai(r.fourchetteIncertaine)));
     const base = r => {
-      const n = note(r);
+      const n = note(r), p = F();
       switch (r.etat) {
-        case 'atteint': return L(`atteint${n}`, `reached${n}`);
-        case 'plein': return L(`atteint (relevé à 100 %${n})`, `reached (100 % reading${n})`);
-        case 'depasse': return `${vrai(r.enCours) ? L('en cours', 'in progress') : L('pas atteint', 'not reached')} (${L(`projection à ${r.pct} % dépassée`, `projection of ${r.pct} % exceeded`)}${n})`;
-        case 'projete': return L(`projeté (${r.pct} %${n})`, `projected (${r.pct} %${n})`);
-        case 'enCours': return vide(r.pct) ? L('en cours', 'in progress') : L(`en cours (${r.pct} %${n})`, `in progress (${r.pct} %${n})`);
-        case 'pasAtteint': return vide(r.pct) ? L('pas atteint', 'not reached') : L(`pas atteint (fini à ${r.pct} %${vrai(r.projete100) ? ', 100 % projeté' : ''}${n})`, `not reached (ended at ${r.pct} %${vrai(r.projete100) ? ', 100 % projected' : ''}${n})`);
-        case 'reset': return L(`reset utilisé (${r.resetNote})`, `reset used (${r.resetNote})`);
-        default: return L(`état inconnu (${r.etat})`, `unknown state (${r.etat})`);
+        case 'atteint': return p.atteint(n);
+        case 'plein': return p.plein(n);
+        case 'depasse': return p.depasse(vrai(r.enCours), r.pct, n);
+        case 'projete': return p.projete(r.pct, n);
+        case 'enCours': return p.enCours(vide(r.pct) ? null : r.pct, n);
+        case 'pasAtteint': return p.pasAtteint(vide(r.pct) ? null : r.pct, vrai(r.projete100), n);
+        case 'reset': return p.reset(r.resetNote);
+        default: return p.inconnu(r.etat);
       }
     };
     const libelles = globalThis.libelles = {
       langue: 'fr',
-      TRANCHES: Object.keys(TRANCHES),
+      formats: undefined, // { decimal, monnaie } de la langue : réglé par la page (table LANGUES)
+      CODES: Object.keys(PHRASES), // les codes de langue que ce bloc sait écrire (comparés à LANGUES par un test)
+      PHRASES,
+      TRANCHES: Object.keys(PHRASES.fr.tranches),
       GROS: ['150-250k', '250k+'], // au-delà de 150k de contexte
-      type: v => libDe(TYPES, v),
-      tranche: v => libDe(TRANCHES, v),
-      codeTranche: v => codeDe(TRANCHES, v),
+      type: v => libDe('types', v),
+      tranche: v => libDe('tranches', v),
+      codeTranche: v => codeDe('tranches', v),
       // Ligne du comparatif hebdo
       statutHebdo: r => {
         if (r.etat === undefined) return r.statut ?? '';
         let s = base(r);
-        if (!vide(r.coupeeDepuis)) s += L(` ; coupée par reset hebdo le ${jjmm(r.coupeePremier)} UTC (segment retenu : depuis le ${jjmm(r.coupeeDepuis)})`,
-          ` ; cut by weekly reset on ${jjmm(r.coupeePremier)} UTC (segment kept: from ${jjmm(r.coupeeDepuis)})`);
-        if (!vide(r.indicatifA)) s += L(` ; plafond indicatif : mêle deux forfaits (${r.indicatifDe} → ${r.indicatifA})`,
-          ` ; indicative cap: mixes two plans (${r.indicatifDe} → ${r.indicatifA})`);
+        if (!vide(r.coupeeDepuis)) s += F().coupee(F().date(r.coupeePremier), F().date(r.coupeeDepuis));
+        if (!vide(r.indicatifA)) s += F().indicatif(r.indicatifDe, r.indicatifA);
         return s;
       },
       // Ligne des plafonds 5 h
-      statut5h: r => r.etat === undefined ? r.statut ?? '' : r.etat === 'atteint' ? L('atteint', 'reached') : L(`projeté (${r.pct} %)`, `projected (${r.pct} %)`),
+      statut5h: r => r.etat === undefined ? r.statut ?? '' : r.etat === 'atteint' ? F().cinqAtteint : F().cinqProjete(r.pct),
       ETATS: ['atteint', 'plein', 'depasse', 'projete', 'enCours', 'pasAtteint', 'reset'],
       // Limite atteinte (relevé à 100 % compris) : pleine couleur sur les graphiques
       atteint: r => r.etat === undefined ? String(r.statut ?? '').startsWith('atteint') : r.etat === 'atteint' || r.etat === 'plein',
@@ -256,6 +297,15 @@
 </script>
 
 <script id="dico">
+  // Langues de la page : une entrée par code. Le français est la langue de référence (textes du HTML) ;
+  // chaque autre langue reçoit une clé dans chaque entrée de DICO et des phrases dans #libelles (PHRASES).
+  // locale : Intl ; decimal : séparateur ; monnaie et heureUTC : formats écrits à la main ; heureInfo : infobulles.
+  const LANGUES = {
+    fr: { locale: 'fr-FR', decimal: ',', sep: ' : ',monnaie: n => `${n} $`, heureInfo: s => s.replace(':', ' h '), heureUTC: (h, m) => m === '00' ? `${+h} h UTC` : `${+h} h ${m} UTC` },
+    en: { locale: 'en-US', decimal: '.', sep: ': ',monnaie: n => `$${n}`, heureInfo: s => s, heureUTC: (h, m) => `${h}:${m} UTC` },
+  };
+  // Langue prise quand le navigateur n'est dans aucune entrée de LANGUES
+  const LANGUE_PAR_DEFAUT = 'en';
   // Dictionnaire de la page (lot 2b de #17, 17/11). Une entrée par clé :
   // - texte du HTML (data-t, data-t-aria) : { en } seulement, le français est celui du HTML (une seconde source FR diverge) ;
   // - variante jetons d'un élément data-jet : clé « cle.jet » → { en } ;
@@ -414,22 +464,25 @@
     'jour.samedi': { fr: 'samedi', en: 'Saturday' },
   };
   // tr() ne reçoit que des clés écrites en dur : libelles.test.mjs relit ces appels et vérifie chaque entrée.
-  const tr = cle => libelles.langue === 'en' ? DICO[cle].en : DICO[cle].fr;
+  // Une langue sans cette clé retombe sur le français ; libelles.test.mjs signale toute clé manquante.
+  const tr = cle => DICO[cle][libelles.langue] ?? DICO[cle].fr;
 </script>
 
 <script>
   // Outils partagés par les drawings de la page
   const CC = window.CC = {};
-  // Langue : gardée dans ce navigateur ; sans choix, celle du navigateur (fr → français, sinon anglais)
-  CC.langue = /^fr/i.test(navigator.language || '') ? 'fr' : 'en';
-  try { const l = localStorage.getItem('cc-langue'); if (l === 'fr' || l === 'en') CC.langue = l; } catch (e) {}
+  // Langue : gardée dans ce navigateur ; sans choix, celle du navigateur si elle est dans LANGUES (préfixe : fr-FR → fr)
+  const codeNavigateur = (navigator.language || '').toLowerCase().split('-')[0];
+  CC.langue = Object.hasOwn(LANGUES, codeNavigateur) ? codeNavigateur : LANGUE_PAR_DEFAUT;
+  try { const l = localStorage.getItem('cc-langue'); if (Object.hasOwn(LANGUES, l)) CC.langue = l; } catch (e) {}
   libelles.langue = CC.langue;
-  CC.locale = () => CC.langue === 'en' ? 'en-US' : 'fr-FR';
+  libelles.formats = LANGUES[CC.langue];
+  CC.locale = () => LANGUES[CC.langue].locale;
   CC.usd = v => new Intl.NumberFormat(CC.locale(), { style: 'currency', currency: 'USD', currencyDisplay: 'narrowSymbol', maximumFractionDigits: 0 }).format(v);
   CC.compact = v => new Intl.NumberFormat(CC.locale(), { notation: 'compact', maximumFractionDigits: 1 }).format(v);
   CC.int = v => new Intl.NumberFormat(CC.locale()).format(v);
   // Décimale d'un nombre écrit par le Dashboard : virgule en français, point en anglais
-  CC.dec = s => CC.langue === 'en' ? String(s) : String(s).replace('.', ',');
+  CC.dec = s => String(s).replace('.', LANGUES[CC.langue].decimal);
   // Pente qui enjambe un silence des relevés (08/11) ; absent dans les anciennes données = false
   CC.silence = r => r.silence === true || r.silence === 'true';
   CC.pct = v => new Intl.NumberFormat(CC.locale(), { style: 'percent', maximumFractionDigits: 0 }).format(v);
@@ -475,15 +528,16 @@
   CC.redessiner = () => { for (const liste of CC.vues.values()) for (const [el, fn] of liste) fn(el); };
   // Textes fixes (data-t, data-t-aria) et variantes jetons (data-jet) : le français d'origine est gardé au premier passage
   CC.libelles = () => {
-    const en = CC.langue === 'en';
+    // Le texte du HTML est le français ; une langue qui a une entrée dans DICO le remplace, sinon le français reste
+    const lang = CC.langue;
     document.querySelectorAll('[data-t]').forEach(el => {
       if (el.dataset.fr === undefined) el.dataset.fr = el.textContent;
       const cle = el.dataset.t, jet = CC.enJetons() && el.dataset.jet !== undefined;
-      el.textContent = jet ? (en ? DICO[cle + '.jet'].en : el.dataset.jet) : (en ? DICO[cle].en : el.dataset.fr);
+      el.textContent = DICO[jet ? cle + '.jet' : cle][lang] ?? (jet ? el.dataset.jet : el.dataset.fr);
     });
     document.querySelectorAll('[data-t-aria]').forEach(el => {
       if (el.dataset.frAria === undefined) el.dataset.frAria = el.getAttribute('aria-label');
-      el.setAttribute('aria-label', en ? DICO[el.dataset.tAria].en : el.dataset.frAria);
+      el.setAttribute('aria-label', DICO[el.dataset.tAria][lang] ?? el.dataset.frAria);
     });
   };
   CC.choisir = u => {
@@ -495,17 +549,28 @@
   };
   document.querySelectorAll('[data-unite]').forEach(b => b.addEventListener('click', () => CC.choisir(b.dataset.unite)));
   // Langue (bouton FR / EN) : même redessin que pour l'unité, sans recharger la page
-  CC.choisirLangue = l => {
-    CC.langue = l; libelles.langue = l;
-    try { localStorage.setItem('cc-langue', l); } catch (e) {}
+  // Applique une langue à la page sans la mémoriser (au chargement, le défaut ne doit pas devenir un choix)
+  CC.appliquerLangue = l => {
+    CC.langue = l; libelles.langue = l; libelles.formats = LANGUES[l];
     document.documentElement.lang = l;
     document.querySelectorAll('[data-langue]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.langue === l)));
     CC.libelles();
     CC.redessiner();
   };
-  document.querySelectorAll('[data-langue]').forEach(b => b.addEventListener('click', () => CC.choisirLangue(b.dataset.langue)));
+  // Le bouton, lui, mémorise le choix
+  CC.choisirLangue = l => {
+    try { localStorage.setItem('cc-langue', l); } catch (e) {}
+    CC.appliquerLangue(l);
+  };
+  // Un bouton par langue de LANGUES (rien de figé dans le HTML)
+  for (const code of Object.keys(LANGUES)) {
+    const b = document.createElement('button');
+    b.setAttribute('type', 'button'); b.dataset.langue = code; b.textContent = code.toUpperCase();
+    b.addEventListener('click', () => CC.choisirLangue(code));
+    document.getElementById('langues').append(b);
+  }
   CC.choisir(CC.unite);
-  CC.choisirLangue(CC.langue);
+  CC.appliquerLangue(CC.langue);
 
   // Période des sections « dossiers » et « sessions » (07/11) : 7 j, 30 j ou tout, comptés jusqu'au dernier jour
   // présent dans les données (pas jusqu'à aujourd'hui : le tableau n'est rechargé qu'à la demande). Gardée dans ce navigateur.
@@ -559,15 +624,14 @@
   // « 10:00 » → « 10 h UTC » ; « 17:30 » → « 17 h 30 UTC » ; en anglais « 10:00 UTC » / « 17:30 UTC »
   CC.heureUTCTexte = () => {
     const [h, m] = CC.cycle().heureUTC.split(':');
-    if (CC.langue === 'en') return `${h}:${m} UTC`;
-    return m === '00' ? `${+h} h UTC` : `${+h} h ${m} UTC`;
+    return LANGUES[CC.langue].heureUTC(h, m);
   };
   // Instant de remise à zéro du jour UTC « AAAA-MM-JJ » (même calcul que semaine.mjs)
   CC.resetDu = jour => new Date(Date.parse(jour + 'T' + CC.cycle().heureUTC + ':00Z'));
   CC.jourParis = d => d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
   CC.heureParis = d => d.toLocaleTimeString(CC.locale(), { timeZone: 'Europe/Paris', hour: 'numeric', minute: '2-digit' });
   // Heure de Paris pour les infobulles : « 21 h 37 » en français, « 9:37 PM » en anglais
-  CC.heureTexte = d => CC.langue === 'en' ? CC.heureParis(d) : CC.heureParis(d).replace(':', ' h ');
+  CC.heureTexte = d => LANGUES[CC.langue].heureInfo(CC.heureParis(d));
   // Heure de Paris en décimal (11,5 pour 11 h 30), pour placer un trait sur la journée du graphe
   CC.heureParisDec = d => {
     const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
@@ -627,7 +691,7 @@
         for (const [couleur, nom, val] of lignes) {
           const l = document.createElement('div');
           if (couleur) { const i = document.createElement('i'); i.style.background = couleur; l.append(i); }
-          l.append(document.createTextNode(nom ? `${nom} : ${val}` : val)); t.append(l);
+          l.append(document.createTextNode(nom ? `${nom}${LANGUES[CC.langue].sep}${val}` : val)); t.append(l);
         }
         t.hidden = false;
         const w = t.offsetWidth, W = el.clientWidth;
@@ -797,7 +861,7 @@
         const debutFen = CC.resetDu(r.debut), finFen = new Date(debutFen.getTime() + 7 * 864e5);
         tip.show(`${tr('mot.du')} ${CC.jourLong(CC.jourParis(debutFen))} ${CC.heureParis(debutFen)} ${tr('mot.au')} ${CC.jourLong(CC.jourParis(finFen))} ${CC.heureParis(finFen)} ${tr('paris')}`,
           [[null, tr('tip.total'), CC.fmt(r.cout)], ...SERIES.map(([c, n, ci]) => [CC.couleur(ci), n, CC.fmt(Number(r[CC.serie(c)]) || 0)]),
-           ...(CC.enJetons() ? [[null, tr('tip.cout'), CC.usd(r.usd)]] : []), [null, tr('tip.reponses'), CC.int(r.appels)], ...(r.manque ? [[null, null, `${tr('tip.incomplete')} : ${r.manque}`]] : [])],
+           ...(CC.enJetons() ? [[null, tr('tip.cout'), CC.usd(r.usd)]] : []), [null, tr('tip.reponses'), CC.int(r.appels)], ...(r.manque ? [[null, null, `${tr('tip.incomplete')}${LANGUES[CC.langue].sep}${r.manque}`]] : [])],
           defil.x(x(r.debut) + x.bandwidth() / 2), defil.y(y(r.cout)));
       })
       .on('pointerleave', () => tip.hide());
@@ -851,7 +915,7 @@
       .on('pointermove', (ev, r) => {
         tip.show(CC.jourLong(r.jour) + (remiseDe(r.jour) ? ` (${tr('remise')} ${tr('mot.a')} ${CC.heureParis(remiseDe(r.jour))})` : '')
           + precisDe(r.jour).map(p => ` ; ${tr('reset.decl')} ${tr('mot.a')} ${CC.heureTexte(p.t)}${p.note ? ` (${p.note})` : ''}`).join(''),
-          [[null, tr('tip.cout'), CC.usd(r.cout)], [null, tr('tip.reponses'), CC.int(r.appels)], [null, tr('tip.jetons'), CC.compact(r.jetons)], ...(r.manque ? [[null, null, `${tr('tip.incomplet')} : ${r.manque}`]] : [])],
+          [[null, tr('tip.cout'), CC.usd(r.cout)], [null, tr('tip.reponses'), CC.int(r.appels)], [null, tr('tip.jetons'), CC.compact(r.jetons)], ...(r.manque ? [[null, null, `${tr('tip.incomplet')}${LANGUES[CC.langue].sep}${r.manque}`]] : [])],
           defil.x(x(r.jour) + x.bandwidth() / 2), defil.y(y(r.v)));
       })
       .on('pointerleave', () => tip.hide());
@@ -867,7 +931,7 @@
     const tj = d3.sum(rows, r => r.jetons) || 1, tc = d3.sum(rows, r => r.cout) || 1;
     for (const r of rows) {
       const bloc = document.createElement('div'); bloc.className = 'cc-split-row';
-      const t = document.createElement('div'); t.textContent = `${libelles.type(r.type)} : ${CC.compact(r.jetons)} ${tr('mot.jetons')}, ${CC.usd(r.cout)}`; bloc.append(t);
+      const t = document.createElement('div'); t.textContent = `${libelles.type(r.type)}${LANGUES[CC.langue].sep}${CC.compact(r.jetons)} ${tr('mot.jetons')}, ${CC.usd(r.cout)}`; bloc.append(t);
       const bars = document.createElement('div'); bars.className = 'cc-split-bars';
       for (const [nom, part, c] of [[tr('mot.jetons'), r.jetons / tj, dash.colors[4]], [tr('mot.cout'), r.cout / tc, dash.colors[0]]]) {
         const l = document.createElement('span'); l.textContent = nom;
@@ -1063,7 +1127,7 @@
     const top = CC.dansPeriode(g.data, 'jourFin').slice().sort((a, b) => Number(b.cout) - Number(a.cout)).slice(0, 30);
     const champ = CC.tri.champ === 'cout' ? CC.champ() : CC.tri.champ;
     const nombre = ['appels', 'ctxMax', 'cout', 'jetons'].includes(champ);
-    const cmp = (a, b) => nombre ? Number(a[champ] ?? 0) - Number(b[champ] ?? 0) : String(a[champ] ?? '').localeCompare(String(b[champ] ?? ''), CC.langue);
+    const cmp = (a, b) => nombre ? Number(a[champ] ?? 0) - Number(b[champ] ?? 0) : String(a[champ] ?? '').localeCompare(String(b[champ] ?? ''), CC.locale());
     top.sort((a, b) => cmp(a, b) * CC.tri.sens);
     for (const r of top) {
       const tr_ = document.createElement('tr'); tr_.dataset.key = r.session;
