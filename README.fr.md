@@ -77,7 +77,7 @@ dans le PATH ; le code, `config.local.json` et `data/` restent dans le clone.
 
 ```
 conso-tokens update     # agreger puis exporter (exporter n'est pas lancé si agreger échoue)
-conso-tokens aggregate  # mêmes options que node agreger.mjs (--logs, --output, …)
+conso-tokens aggregate  # mêmes options que node agreger.mjs (--logs, --output, --quota-log, …)
 conso-tokens export
 conso-tokens prices     # node maj-tarifs.mjs
 conso-tokens page       # chemin de la page du tableau de bord et du dossier export/
@@ -91,7 +91,8 @@ Les anciens noms français marchent toujours : `maj`, `agreger`, `exporter`, `ta
 rien ne change : tout reste dans le clone. Installé en paquet, `config.local.json`, `data/` et le `tarifs.json` mis à
 jour vont dans `~/.conso-tokens/`, pour qu'une mise à jour du paquet n'y touche jamais. La variable d'environnement
 `CONSO_TOKENS_DIR` remplace ce dossier dans les deux cas. Si le dossier contient à la fois `data/` et `donnees/` sans
-`dataDir`, le script s'arrête avant d'écrire quoi que ce soit : n'en garder qu'un.
+`dataDir` (ni `dossierDonnees`), les commandes de données (`update`, `aggregate`, `export`) s'arrêtent avant d'écrire
+quoi que ce soit : n'en garder qu'un.
 
 **Passer d'un clone au paquet** : **avant** le premier `conso-tokens update`, copier le `config.local.json` du clone dans
 `~/.conso-tokens/`. Si ses données étaient dans le dossier `data/` (ou `donnees/`) du clone, ou à un `dataDir` relatif,
@@ -155,7 +156,7 @@ Une valeur invalide arrête le script avec un message `config.local.json : reset
 Journaux d'un autre PC : `node agreger.mjs --logs <chemin vers son .claude/projects>` (répétable ; `--journaux` marche toujours).
 
 **Relevés à la main** (facultatif) : sans sonar, vous pouvez noter vous-même les pourcentages d'usage dans
-`readings.json` (ancien nom `releves.json`, toujours lu), dans le dossier des données : une liste de relevés en UTC (`hebdo` = % hebdo, `cinqH` = % sur 5 h, chacun
+`readings.json` (ancien nom `releves.json`, toujours lu ; garder un seul des deux noms, sinon le script s'arrête), dans le dossier des données : une liste de relevés en UTC (`hebdo` = % hebdo, `cinqH` = % sur 5 h, chacun
 avec l'heure de remise à zéro affichée par l'appli) :
 
 ```json

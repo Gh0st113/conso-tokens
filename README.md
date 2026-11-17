@@ -78,7 +78,7 @@ clone, `npm link` (run once in the clone) puts `conso-tokens` in your PATH inste
 
 ```
 conso-tokens update     # aggregate then export (export is skipped if aggregate fails)
-conso-tokens aggregate  # same options as node agreger.mjs (--logs, --output, …)
+conso-tokens aggregate  # same options as node agreger.mjs (--logs, --output, --quota-log, …)
 conso-tokens export
 conso-tokens prices     # node maj-tarifs.mjs
 conso-tokens page       # path of the dashboard page and of the export/ folder
@@ -92,7 +92,7 @@ The old French names still work: `maj`, `agreger`, `exporter`, `tarifs`, `aide`,
 changes: everything stays in the clone. Installed as a package, `config.local.json`, `data/` and an updated
 `tarifs.json` go to `~/.conso-tokens/` instead, so that an update of the package never touches them. The environment
 variable `CONSO_TOKENS_DIR` replaces that folder in both cases. If the folder holds both `data/` and `donnees/` and no
-`dataDir` is set, the script stops before writing anything: keep one of the two.
+`dataDir` (or `dossierDonnees`) is set, the data commands (`update`, `aggregate`, `export`) stop before writing anything: keep one of the two.
 
 **Moving from a clone to the package**: **before** the first `conso-tokens update`, copy the clone's `config.local.json`
 into `~/.conso-tokens/`. If its data were in the clone's `data/` (or `donnees/`) folder, or at a relative `dataDir`,
@@ -154,7 +154,7 @@ An invalid value stops the script with a `config.local.json : resets…` message
 Logs from another PC: `node agreger.mjs --logs <path to its .claude/projects>` (repeatable; `--journaux` still works).
 
 **Manual readings** (optional): without sonar, you can add usage percentages yourself in `readings.json` (old name
-`releves.json`, still read) in the data folder, a list of readings in UTC (`hebdo` = weekly %, `cinqH` = 5-hour %, each with the reset time the app shows):
+`releves.json`, still read; keep only one of the two names, or the script stops) in the data folder, a list of readings in UTC (`hebdo` = weekly %, `cinqH` = 5-hour %, each with the reset time the app shows):
 
 ```json
 [{ "ts": "2026-01-07T18:30:00Z", "hebdo": 42, "hebdoReset": "2026-01-11T10:00:00Z", "cinqH": 15, "cinqHReset": "2026-01-07T21:00:00Z" }]

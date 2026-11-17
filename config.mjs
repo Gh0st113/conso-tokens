@@ -36,7 +36,10 @@ const chemin = (k, p) => {
 // Sans chemin explicite (dataDir ou dossierDonnees) : data/, ou donnees/ s'il est seul à exister (choisirDossierDonnees).
 const DOSSIERS_DONNEES = ['data', 'donnees'];
 export const DONNEES = c.dossierDonnees === undefined
-  ? join(BASE, choisirDossierDonnees({ base: BASE, existe: p => statSync(p, { throwIfNoEntry: false })?.isDirectory() ?? false, joindre: join }))
+  ? join(BASE, (() => {
+    try { return choisirDossierDonnees({ base: BASE, existe: p => statSync(p, { throwIfNoEntry: false })?.isDirectory() ?? false, joindre: join }); }
+    catch (e) { throw new Error(`conso-tokens : ${e.message}`); }
+  })())
   : chemin('dossierDonnees', c.dossierDonnees);
 // Garde-fou, dans tous les modes : dans le dossier du code, les données ne vont QUE dans data/ ou donnees/ (ignorés par git) ;
 // ailleurs, elles pourraient être commitées et publiées, ou écrasées par une mise à jour du paquet → refus
