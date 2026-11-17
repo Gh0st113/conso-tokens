@@ -13,6 +13,7 @@ const html = readFileSync(new URL('./page/index.html', import.meta.url), 'utf8')
 const bloc = (id) => html.match(new RegExp(`<script id="${id}">([\\s\\S]*?)</script>`))[1];
 const ctx = {};
 vm.createContext(ctx);
+vm.runInContext('globalThis.window = globalThis;', ctx); // la page parle à window (LANGUES, tr… sont exposés dessus)
 vm.runInContext(bloc('libelles'), ctx);
 vm.runInContext(bloc('dico'), ctx);
 const L = ctx.libelles;
@@ -228,5 +229,29 @@ test('data-t : texte seul (aucun enfant, donc aucun data-draw ou data-source eff
   const corps = html.replace(/<style[\s\S]*?<\/style>/, '').replace(/<script[\s\S]*?<\/script>/g, '');
   for (const m of corps.matchAll(/<(\w+)[^>]*\sdata-t="[^"]*"[^>]*>([\s\S]*?)<\/\1>/g)) {
     assert.doesNotMatch(m[2], /</, `data-t sur un élément qui contient un enfant : ${m[2].slice(0, 60)}`);
+  }
+});
+
+// Plateforme (artefact Dashboard) : elle perd les barres obliques inverses des scripts (un \' devient une chaîne non
+// fermée, une regex est altérée en silence). Aucune dans un <script> : apostrophe typographique, [0-9], pas de regex.
+const scripts = [...html.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)].map(m => ({ attrs: m[1].trim(), corps: m[2] }));
+test('scripts : aucune barre oblique inverse dans un <script> de la page', () => {
+  const barre = '\\';
+  for (const [i, s] of scripts.entries()) {
+    const lignes = s.corps.split('\n').filter(l => l.includes(barre)).map(l => l.trim().slice(0, 80));
+    assert.deepEqual(lignes, [], `script n° ${i + 1} (${s.attrs || 'sans id'})`);
+  }
+});
+
+// Plateforme : chaque <script> a sa propre portée. Un const de #dico n'est pas visible d'un script suivant : ce qui
+// est partagé passe par window. On exécute libelles et dico, chacun dans sa fonction, puis on vérifie window.
+test('scripts : chaque script dans sa propre portée ; LANGUES, LANGUE_PAR_DEFAUT, DICO, tr et libelles sur window', () => {
+  const w = vm.createContext({});
+  vm.runInContext('globalThis.window = globalThis;', w);
+  for (const s of scripts.filter(s => s.attrs === 'id="libelles"' || s.attrs === 'id="dico"')) {
+    vm.runInContext(`(function () {\n${s.corps}\n})();`, w);
+  }
+  for (const nom of ['LANGUES', 'LANGUE_PAR_DEFAUT', 'DICO', 'tr', 'libelles']) {
+    assert.notEqual(vm.runInContext(`typeof window.${nom}`, w), 'undefined', `window.${nom} absent`);
   }
 });

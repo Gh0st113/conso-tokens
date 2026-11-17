@@ -302,7 +302,7 @@
   // locale : Intl ; decimal : séparateur ; monnaie et heureUTC : formats écrits à la main ; heureInfo : infobulles.
   const LANGUES = {
     fr: { locale: 'fr-FR', decimal: ',', sep: ' : ',monnaie: n => `${n} $`, heureInfo: s => s.replace(':', ' h '), heureUTC: (h, m) => m === '00' ? `${+h} h UTC` : `${+h} h ${m} UTC` },
-    en: { locale: 'en-US', decimal: '.', sep: ': ',monnaie: n => '$' + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','), heureInfo: s => s, heureUTC: (h, m) => `${h}:${m} UTC` },
+    en: { locale: 'en-US', decimal: '.', sep: ': ',monnaie: n => '$' + Number(n).toLocaleString('en-US'), heureInfo: s => s, heureUTC: (h, m) => `${h}:${m} UTC` },
   };
   // Langue prise quand le navigateur n'est dans aucune entrée de LANGUES
   const LANGUE_PAR_DEFAUT = 'en';
@@ -345,7 +345,7 @@
     'plafond.h2': { en: 'Weekly cap, week by week' },
     'plafond.jet0': { en: '' },
     'plafond.jet0.jet': { en: 'Tokens view: bar and dot in output tokens (replies and reasoning); the table keeps both units.' },
-    'plafond.p1': { en: ' Bar: what Claude Code and, on Windows, local Cowork (logs up to the end of October 2026 only) used during the week. Solid dot: cumulative cost at the moment of the message "You\'ve hit your weekly limit". Hollow dot: projection from the last reading of the week\'s % (cost ÷ %). Points spotted as used outside this PC (same rule as for the slopes) are removed from the % before the calculation: the tooltip gives the number. No dot when the cap is too uncertain (see below the table). Unspotted usage outside the logs, for example before the first reading of the week, still makes the cap look lower than it is. A week without a dot has not reached 100 % or has no reading.' },
+    'plafond.p1': { en: ' Bar: what Claude Code and, on Windows, local Cowork (logs up to the end of October 2026 only) used during the week. Solid dot: cumulative cost at the moment of the message "You’ve hit your weekly limit". Hollow dot: projection from the last reading of the week’s % (cost ÷ %). Points spotted as used outside this PC (same rule as for the slopes) are removed from the % before the calculation: the tooltip gives the number. No dot when the cap is too uncertain (see below the table). Unspotted usage outside the logs, for example before the first reading of the week, still makes the cap look lower than it is. A week without a dot has not reached 100 % or has no reading.' },
     'leg.conso': { en: 'used (Claude Code and local Cowork)' },
     'leg.atteint': { en: 'cap reached' },
     'leg.projete': { en: 'projected cap' },
@@ -357,14 +357,14 @@
     'lbl.horsPC': { en: 'Off PC (spotted)' },
     'th.plafond.usd': { en: 'Cap in $' },
     'th.plafond.jet': { en: 'Cap in output tokens' },
-    'note.a': { en: '"Off PC (spotted)": share of the weekly % taken somewhere other than this PC, for example Cowork when it runs on Anthropic\'s side without leaving a log here, claude.ai or the phone. It is a deduction, not a measure: no counter of remote Cowork can be read here. Rule: between two readings more than an hour apart, a rise of at least 1 point with less than $0.50 spent on this PC per point of rise is counted as off PC (rise − local cost ÷ $2.44, so at least 0.8 point counted as off PC per point of rise). The % being rounded down to the whole number, each period is worth ±1 point: when such periods are spotted, the status gives the cap as a ' },
+    'note.a': { en: '"Off PC (spotted)": share of the weekly % taken somewhere other than this PC, for example Cowork when it runs on Anthropic’s side without leaving a log here, claude.ai or the phone. It is a deduction, not a measure: no counter of remote Cowork can be read here. Rule: between two readings more than an hour apart, a rise of at least 1 point with less than $0.50 spent on this PC per point of rise is counted as off PC (rise − local cost ÷ $2.44, so at least 0.8 point counted as off PC per point of rise). The % being rounded down to the whole number, each period is worth ±1 point: when such periods are spotted, the status gives the cap as a ' },
     'note.fourchette': { en: 'range' },
     'note.b': { en: ' (share paid on this PC ± 1 point per period). If the range exceeds 25 % of the cap, there is no cap ("uncertain cap"); likewise if the share paid on this PC is under 10 %. What the rule does not see: usage outside this PC at the same time as Claude Code (it makes the point look cheaper) and usage before the first reading.' },
-    'note.c': { en: 'Remaining biases: claude.ai, the phone and other PCs are not in these logs; the "$ API-equivalent" is not necessarily Anthropic\'s weighting.' },
+    'note.c': { en: 'Remaining biases: claude.ai, the phone and other PCs are not in these logs; the "$ API-equivalent" is not necessarily Anthropic’s weighting.' },
     'plafond5h.h2': { en: 'Cap of the 5-hour windows' },
     'plafond5h.jet0': { en: '' },
     'plafond5h.jet0.jet': { en: 'Tokens view: output tokens (replies and reasoning) at the same moment; the tooltip keeps the dollars.' },
-    'plafond5h.p': { en: ' Cost accumulated in the window at the moment of the message "You\'ve hit your session limit" (solid dot), or projected from a reading of the % (hollow dot). Same biases as above.' },
+    'plafond5h.p': { en: ' Cost accumulated in the window at the moment of the message "You’ve hit your session limit" (solid dot), or projected from a reading of the % (hollow dot). Same biases as above.' },
     'tiles.aria': { en: 'Key figures' },
     'tile.cout': { en: 'API-equivalent, since the start of the data' }, 'tile.cout.jet': { en: 'Tokens, since the start of the data' },
     'tile.cout.sub': { en: 'what the same usage would cost paid at the API' }, 'tile.cout.sub.jet': { en: 'cache included, read again at each message' },
@@ -409,10 +409,10 @@
     'th.modele': { en: 'Main model' }, 'th.appels': { en: 'Calls' }, 'th.ctxmax': { en: 'Max context' },
     'th.cout': { en: 'Cost' }, 'th.cout.jet': { en: 'Tokens' },
     'methode.h2': { en: 'How these figures are made' },
-    'meth.1': { en: 'Source: the Claude Code session logs (Claude Code\'s projects folder) and, on Windows, Cowork (local Claude Desktop sessions, written until the end of October 2026, read for history) on this PC; Cowork sessions from a Mac or Linux are not read. Only the token counters and the limit readings are read, never the content of the exchanges.' },
+    'meth.1': { en: 'Source: the Claude Code session logs (Claude Code’s projects folder) and, on Windows, Cowork (local Claude Desktop sessions, written until the end of October 2026, read for history) on this PC; Cowork sessions from a Mac or Linux are not read. Only the token counters and the limit readings are read, never the content of the exchanges.' },
     'meth.2': { en: 'A reply often takes several lines of the log, and a resumed session copies its history: each reply is counted only once, by its identifier.' },
     'meth.3': { en: 'Out of scope: claude.ai conversations and the mobile app (stored at Anthropic), sessions from other PCs (addable with --journaux).' },
-    'meth.4': { en: 'A day without a bar has no reply in this PC\'s logs. An orange band, if there is one, marks a period known to be missing from the logs.' },
+    'meth.4': { en: 'A day without a bar has no reply in this PC’s logs. An orange band, if there is one, marks a period known to be missing from the logs.' },
     'meth.5': { en: 'Claude Code deletes by default the sessions unchanged for 30 days (setting cleanupPeriodDays). An archive of the counters keeps each reply already counted, even if its log disappears.' },
     'meth.6': { en: '"API-equivalent": public prices per million tokens, 1-hour cache write counted at twice the input price. The plan is not billed this way: it is an order of magnitude for comparing weeks, not the percentage shown by /usage.' },
     'meth.7': { en: '"Tokens" view (button at the top): sum of fresh input, cache write and read, and output. The plan follows a weighted cost, closer to the dollars view: the tokens view mainly shows the weight of re-read context. The choice is kept in this browser only.' },
@@ -466,6 +466,7 @@
   // tr() ne reçoit que des clés écrites en dur : libelles.test.mjs relit ces appels et vérifie chaque entrée.
   // Une langue sans cette clé retombe sur le français ; libelles.test.mjs signale toute clé manquante.
   const tr = cle => DICO[cle][libelles.langue] ?? DICO[cle].fr;
+Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr });
 </script>
 
 <script>
@@ -493,7 +494,7 @@
   // Clé inconnue = modèle hors de GROUPES d'exporter.mjs : « m_opus_4-6 » s'affiche « Opus 4.6 », sans toucher à la page.
   CC.ORDRE = [['opus55', 'Opus 5.5'], ['opus48', 'Opus 4.8'], ['sonnet', 'Sonnet'], ['haiku', 'Haiku'], ['fable', 'Fable']];
   CC.nomSerie = c => (CC.ORDRE.find(s => s[0] === c) ?? [])[1]
-    ?? c.replace(/^m_/, '').replace(/(\d)-(\d)/g, '$1.$2').replace(/_/g, ' ').replace(/^./, x => x.toUpperCase());
+    ?? c.replace(/^m_/, '').replace(/([0-9])-([0-9])/g, '$1.$2').replace(/_/g, ' ').replace(/^./, x => x.toUpperCase());
   // Rend [clé, nom, n° de couleur]. La couleur suit la clé (rang dans l'ordre complet, séries vides comprises) : elle ne
   // change ni avec l'unité ni quand une autre série apparaît. Masquage selon l'unité affichée (relecture DeepSeek, 13/11).
   CC.series = rows => {
