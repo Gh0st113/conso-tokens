@@ -104,9 +104,15 @@ Claude Code has since deleted: a new archive cannot get them back. The first run
 **Windows**: if PowerShell refuses to run scripts (execution policy), it also refuses the `conso-tokens.ps1` launcher
 that npm creates: type `conso-tokens.cmd` instead (and `npm.cmd link`).
 
-`node --test` runs the price-parser tests, then checks your own exported data: those data tests are skipped until
+`node --test` runs the tests of the calculations and of the page's wording (on small hand-written examples) and
+of the price parser, then checks your own exported data: those data tests are skipped until
 the two commands above have run, and each one that needs more history than you have (several weeks, a few slopes) is
 skipped too. A failing data test means your export looks inconsistent: read its message.
+
+Optional cross-check: `node comparer-ccusage.mjs` (after `agreger.mjs`) runs [ccusage](https://github.com/ryoppippi/ccusage)
+(pinned version, downloaded by `npx` the first time, so it needs the network) on the same logs and prints `CCUSAGE : OK`
+or each day whose token counts differ. It writes nothing. ccusage counting less on old days is expected (deleted logs
+kept in the archive, `--journaux`, Cowork local); ccusage counting more means answers this dashboard does not count.
 
 Optional settings: copy `config.exemple.json` to `config.local.json` (ignored by git):
 

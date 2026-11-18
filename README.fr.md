@@ -107,10 +107,17 @@ le signale.
 **Windows** : si PowerShell refuse d'exécuter des scripts (stratégie d'exécution), il refuse aussi le lanceur
 `conso-tokens.ps1` créé par npm : taper `conso-tokens.cmd` à la place (et `npm.cmd link`).
 
-`node --test` lance les tests du lecteur de tarifs, puis vérifie vos propres données exportées : ces tests sont sautés
+`node --test` lance les tests des calculs et des phrases de la page (sur de petits exemples écrits à la main) et
+du lecteur de tarifs, puis vérifie vos propres données exportées : ces tests sont sautés
 tant que les deux commandes ci-dessus n'ont pas tourné, et chacun de ceux qui demandent plus d'historique que vous n'en
 avez (plusieurs semaines, quelques pentes) l'est aussi. Un test de données en échec signale un export incohérent : lire
 son message.
+
+Contrôle croisé facultatif : `node comparer-ccusage.mjs` (après `agreger.mjs`) lance [ccusage](https://github.com/ryoppippi/ccusage)
+(version figée, téléchargée par `npx` la première fois : il faut le réseau) sur les mêmes journaux et affiche
+`CCUSAGE : OK` ou chaque jour dont les jetons diffèrent. Il n'écrit rien. ccusage qui compte moins sur des jours anciens
+est attendu (journaux effacés gardés dans l'archive, `--journaux`, Cowork local) ; ccusage qui compte plus signale des
+réponses que ce tableau de bord ne compte pas.
 
 Réglages facultatifs : copier `config.exemple.json` en `config.local.json` (ignoré par git) :
 
