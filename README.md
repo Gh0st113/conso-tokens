@@ -113,7 +113,7 @@ skipped too. A failing data test means your export looks inconsistent: read its 
 Optional cross-check, from a clone only (not in the npm package): `node comparer-ccusage.mjs` (after `agreger.mjs`) runs [ccusage](https://github.com/ryoppippi/ccusage)
 (pinned version, downloaded by `npx` the first time, so it needs the network) on the same logs and prints `CCUSAGE : OK`
 or each day whose token counts differ. It writes nothing. ccusage counting less on old days is expected (deleted logs
-kept in the archive, `--logs`, Cowork local), and so is a little less cache write on advisor answers (the pinned
+kept in the archive, `--logs`, Cowork local), and so is a little less cache write on answers that used an advisor (the pinned
 version predates ccusage's fix); ccusage counting more means answers this dashboard does not count.
 
 Optional settings: copy `config.exemple.json` to `config.local.json` (ignored by git):
