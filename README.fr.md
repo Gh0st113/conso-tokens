@@ -28,6 +28,7 @@ estimer le plafond hebdo. Sans sonar, seuls les relevés écrits dans les journa
   (atteint, projeté ou trop incertain), avec l'usage fait hors de ce PC (claude.ai, téléphone, Cowork distant) repéré et
   retiré quand le pourcentage monte sans dépense ici.
 - Taille du contexte à chaque appel (part des appels au-delà de 150k jetons).
+- Jetons du conseiller (advisor : Fable, Mythos…) comptés sous son propre modèle, à côté du modèle principal de la réponse.
 - Contrôles de cohérence après chaque export : une ligne, `CONTRÔLES : OK`, ou la liste précise de ce qui cloche.
 
 ![Plafond hebdo semaine par semaine, avec le tableau des plafonds atteints et projetés](docs/apercu-plafond-fr.png)
@@ -116,7 +117,8 @@ son message.
 Contrôle croisé facultatif, depuis un clone seulement (absent du paquet npm) : `node comparer-ccusage.mjs` (après `agreger.mjs`) lance [ccusage](https://github.com/ryoppippi/ccusage)
 (version figée, téléchargée par `npx` la première fois : il faut le réseau) sur les mêmes journaux et affiche
 `CCUSAGE : OK` ou chaque jour dont les jetons diffèrent. Il n'écrit rien. ccusage qui compte moins sur des jours anciens
-est attendu (journaux effacés gardés dans l'archive, `--logs`, Cowork local) ; ccusage qui compte plus signale des
+est attendu (journaux effacés gardés dans l'archive, `--logs`, Cowork local), comme un peu moins d'écriture cache sur
+les réponses avec conseiller (la version figée précède la correction de ccusage) ; ccusage qui compte plus signale des
 réponses que ce tableau de bord ne compte pas.
 
 Réglages facultatifs : copier `config.exemple.json` en `config.local.json` (ignoré par git) :
@@ -248,6 +250,9 @@ Sous macOS / Linux : `HOME=../demo-home node agreger.mjs && HOME=../demo-home no
   plafond hebdo est donné en fourchette, sinon en estimation unique ; aucun plafond quand la part payée sur ce PC est sous
   10 % ou que la fourchette dépasse 25 % du plafond.
 - Limites connues de la détection de reset : les relevés sous 10 % sont ignorés, donc une baisse qui laisse le % sous 10 jusqu'à la fin de la semaine n'est pas signalée ; une ligne de relevé aberrante isolée reste dans les pentes ; un relevé isolé anormalement **haut** (ex. 40, 100, 30, 28 %) peut donner un « reset probable » à tort (c'est un « à vérifier », jamais une correction). Un reset déclaré à l'instant exact de la remise à zéro du cycle est ignoré (il ne coupe rien).
+- Les jetons du conseiller sont comptés depuis la 0.3.1. Les réponses dont Claude Code avait déjà effacé les journaux
+  restent dans l'archive telles qu'elles étaient comptées (sans conseiller, détail du cache de la 1re étape seulement) :
+  impossible à rattraper.
 - Les changements de forfait (`plans`) sont datés à la semaine, pas à l'heure : la semaine entière sort des comparaisons et son plafond n'est qu'indicatif. Un changement non déclaré n'est pas détecté : les forfaits se mêlent, comme avant.
 
 ## Licence

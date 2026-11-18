@@ -28,6 +28,7 @@ weekly cap. Without sonar, only the readings written into the Claude Code logs a
   (reached, projected, or too uncertain), with usage made outside this PC (claude.ai, phone, remote Cowork) spotted and
   removed when the percentage rises while nothing is spent here.
 - Context size per call (share of calls above 150k tokens).
+- Advisor tokens (Fable, Mythos…) counted under the advisor's own model, next to the answer's main model.
 - Consistency checks run after every export: one line, `CONTRÔLES : OK`, or a precise list of what is wrong.
 
 ![Weekly cap, week by week, with the table of reached and projected caps](docs/apercu-plafond-en.png)
@@ -112,7 +113,8 @@ skipped too. A failing data test means your export looks inconsistent: read its 
 Optional cross-check, from a clone only (not in the npm package): `node comparer-ccusage.mjs` (after `agreger.mjs`) runs [ccusage](https://github.com/ryoppippi/ccusage)
 (pinned version, downloaded by `npx` the first time, so it needs the network) on the same logs and prints `CCUSAGE : OK`
 or each day whose token counts differ. It writes nothing. ccusage counting less on old days is expected (deleted logs
-kept in the archive, `--logs`, Cowork local); ccusage counting more means answers this dashboard does not count.
+kept in the archive, `--logs`, Cowork local), and so is a little less cache write on answers that used an advisor (the pinned
+version predates ccusage's fix); ccusage counting more means answers this dashboard does not count.
 
 Optional settings: copy `config.exemple.json` to `config.local.json` (ignored by git):
 
@@ -239,6 +241,8 @@ On macOS / Linux: `HOME=../demo-home node agreger.mjs && HOME=../demo-home node 
   weekly cap is given as a range, otherwise as a single estimate; no cap at all when the share paid on this PC is under
   10 % or the range is wider than 25 % of the cap.
 - Known limits of the reset detection: readings under 10 % are ignored, so a drop that leaves the % under 10 until the end of the week is not reported; a single odd reading stays in the slopes; a single abnormally **high** reading (e.g. 40, 100, 30, 28 %) can wrongly give a "probable reset" (a "to check" line, never a correction). A reset declared at the exact instant of the cycle's own reset is ignored (it cuts nothing).
+- Advisor tokens are counted since 0.3.1. Answers whose logs Claude Code had already deleted stay in the archive as
+  they were counted before (no advisor, cache write split of the first step only): that cannot be recovered.
 - Plan changes (`plans`) are dated to the week, not to the hour: the whole week is left out of the comparisons and its cap is only indicative. An undeclared plan change is not detected: the plans are mixed, as before.
 
 ## License
