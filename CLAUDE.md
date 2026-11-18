@@ -19,7 +19,7 @@ node --test                      # all tests (lib/*.test.mjs and the root ones)
 node --test lib/semaine.test.mjs # one file
 node --test --test-name-pattern "lireResets" lib/reglages.test.mjs   # one test
 node maj-tarifs.mjs              # rewrite tarifs.json from the official Pricing page (refuses on any doubt)
-node comparer-ccusage.mjs        # optional: per-day tokens vs pinned ccusage (npx, network); writes nothing
+node comparer-ccusage.mjs        # optional, clone only (not in `files`): per-day tokens vs pinned ccusage (npx, network)
 ```
 
 `agreger.mjs` options: `--logs <projects dir>` (repeatable, logs from another PC), `--output <file>`,
