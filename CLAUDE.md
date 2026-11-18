@@ -49,7 +49,8 @@ Simulated data, in a copy of the repo without `config.local.json`:
    change anything in the repo.
 3. **`page/index.html`** is the page of a **claude.ai Dashboard artifact**, not a standalone page. It uses the platform's
    `dash.data(name)` / `dash.draw` / `dash.onData`, and opening it in a browser shows nothing. Each table in `export/` is
-   one dataset with the same name. Its `<script id="libelles">` block turns the codes into French sentences.
+   one dataset with the same name. Its `<script id="libelles">` block turns the codes into sentences in French or
+   English (FR / EN buttons; to add a language, see "Adding a language" in `README.md`).
 
 ## Module boundaries
 
@@ -81,6 +82,13 @@ run a process. A new module must also be added to `files` in `package.json`, or 
   agreger/exporter) and `aVerifier` (implausible but possibly true). It owns `ETATS_HEBDO` (the list of weekly states,
   same list as `ETATS` in the page) and `forfaitDe` (same rule as in the page).
 - `depot.mjs`: the `DÉPÔT` lines (`etatDepot`, runs `git status`).
+- `page/index.html` is bilingual (FR / EN): `#dico` holds `LANGUES` and the screen texts (`DICO`, `tr`), `#libelles` the
+  sentences of the codes (`PHRASES`). The artifact platform has two traps a local browser does not show, both checked
+  by `libelles.test.mjs`:
+  - no backslash anywhere in a `<script>`: the platform drops them (`\'` breaks the whole page, `\d` silently becomes
+    `d`). Use a typographic apostrophe and `[0-9]`.
+  - each `<script>` has its own scope: what two scripts share must go on `window` (`LANGUES`, `LANGUE_PAR_DEFAUT`,
+    `DICO`, `tr`, `jourSemaine` at the end of `#dico`, `libelles` in `#libelles`).
 
 ## Tests
 
@@ -100,8 +108,8 @@ run a process. A new module must also be added to `files` in `package.json`, or 
   `lib/tables.mjs`; unknown models already get an automatic series key that the page displays.
 - New or renamed table: update `lib/tables.mjs`, the page, `lib/controles.mjs` if it is checked, and the table count/list
   in **both** `README.md` and `README.fr.md`. The two READMEs are kept in sync.
-- New weekly state or field: `lib/hebdo.mjs`, `ETATS_HEBDO` in `lib/controles.mjs`, `ETATS` and its sentence in the
-  page's `#libelles` block, and a case in `libelles.test.mjs`.
+- New weekly state or field: `lib/hebdo.mjs`, `ETATS_HEBDO` in `lib/controles.mjs`, `ETATS` and its sentence in each
+  language in the page's `#libelles` block, and a case in `libelles.test.mjs`.
 - New `config.local.json` key: add the validator in `lib/reglages.mjs`, read it in `lib/config.mjs`, add an example to
   `config.exemple.json` and a row to both READMEs.
 - New module in `lib/`: add it to `files` in `package.json`.
