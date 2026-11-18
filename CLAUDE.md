@@ -110,7 +110,8 @@ run a process. A new module must also be added to `files` in `package.json`, or 
 ## Cross-file changes
 
 - New model or price: run `node maj-tarifs.mjs`. To give the model its own chart series, add it to `GROUPES` in
-  `lib/tables.mjs`; unknown models already get an automatic series key that the page displays.
+  `lib/tables.mjs`; unknown models already get an automatic series key that the page displays. Fable and Mythos stay
+  out of `GROUPES` on purpose: one series per version.
 - New or renamed table: update `lib/tables.mjs`, the page, `lib/controles.mjs` if it is checked, and the table count/list
   in **both** `README.md` and `README.fr.md`. The two READMEs are kept in sync.
 - New weekly state or field: `lib/hebdo.mjs`, `ETATS_HEBDO` in `lib/controles.mjs`, `ETATS` and its sentence in each
