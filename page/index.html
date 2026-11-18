@@ -274,6 +274,7 @@
       formats: undefined, // { decimal, monnaie } de la langue : réglé par la page (table LANGUES)
       CODES: Object.keys(PHRASES), // les codes de langue que ce bloc sait écrire (comparés à LANGUES par un test)
       PHRASES,
+      vide, // champ d'export vide, même arrivé en texte (« null », « »)
       TRANCHES: Object.keys(PHRASES.fr.tranches),
       GROS: ['150-250k', '250k+'], // au-delà de 150k de contexte
       type: v => libDe('types', v),
@@ -518,6 +519,9 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
   CC.champ = () => CC.enJetons() ? 'jetons' : 'cout';             // champ à tracer
   CC.fmt = v => CC.enJetons() ? CC.compact(v) : CC.usd(v);        // format de la valeur tracée
   CC.serie = c => CC.enJetons() ? 'j' + c : c;                    // opus55 → jopus55 en jetons
+  // Points hors PC repérés (#32) : horsEstime et pctFin peuvent arriver en texte (« null ») dans un dataset
+  CC.horsPC = r => libelles.vide(r.horsEstime) || libelles.vide(r.pctFin) ? ''
+    : `≈ ${CC.dec(r.horsEstime)} ${tr('tip.pts')} ${tr('tip.sur')} ${r.pctFin} %`;
   // Drawings qui dépendent de l'unité ou de la langue : gardés pour être redessinés au changement
   // Un même nom peut avoir plusieurs éléments (ex. cycleJour dans le titre et dans la légende) : une liste par nom
   CC.vues = new Map();
@@ -863,7 +867,7 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
       .on('pointermove', (ev, r) => {
         const debutFen = CC.resetDu(r.debut), finFen = new Date(debutFen.getTime() + 7 * 864e5);
         tip.show(`${tr('mot.du')} ${CC.jourLong(CC.jourParis(debutFen))} ${CC.heureParis(debutFen)} ${tr('mot.au')} ${CC.jourLong(CC.jourParis(finFen))} ${CC.heureParis(finFen)} ${tr('paris')}`,
-          [[null, tr('tip.total'), CC.fmt(r.cout)], ...SERIES.map(([c, n, ci]) => [CC.couleur(ci), n, CC.fmt(Number(r[CC.serie(c)]) || 0)]),
+          [[null, tr('tip.total'), CC.fmt(r.cout)], ...SERIES.filter(([c]) => Number(r[CC.serie(c)]) > 0).map(([c, n, ci]) => [CC.couleur(ci), n, CC.fmt(Number(r[CC.serie(c)]))]),
            ...(CC.enJetons() ? [[null, tr('tip.cout'), CC.usd(r.usd)]] : []), [null, tr('tip.reponses'), CC.int(r.appels)], ...(r.manque ? [[null, null, `${tr('tip.incomplete')}${LANGUES[CC.langue].sep}${r.manque}`]] : [])],
           defil.x(x(r.debut) + x.bandwidth() / 2), defil.y(y(r.cout)));
       })
@@ -1046,7 +1050,7 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
       .on('pointermove', (ev, r) => {
         tip.show(`${tr('tip.semaine')} ${jourSemaine(r.semaine, CC.langue)}`,
           [[null, tr('tip.100'), libelles.statutHebdo(r)], ...(r.forfait ? [[null, tr('tip.forfait'), r.forfait]] : []), [null, j ? tr('tip.consomme.sortie') : tr('tip.consomme'), CC.fmt(r.consomme)], ...(j ? [[null, tr('tip.consomme.usd'), CC.usd(r.usd)]] : []),
-           ...(r.horsEstime == null ? [] : [[null, tr('tip.horsPC'), `≈ ${CC.dec(r.horsEstime)} ${tr('tip.pts')} ${tr('tip.sur')} ${r.pctFin} %`]]),
+           ...(CC.horsPC(r) ? [[null, tr('tip.horsPC'), CC.horsPC(r)]] : []),
            [null, (r.changement ? tr('tip.plafond.indicatif') : tr('tip.plafond')) + (j ? tr('tip.sortie') : ''), r.plafond == null ? `${tr('tip.au.moins')} ${CC.fmt(r.consomme)}` : CC.fmt(r.plafond)]],
           defil.x(cx(r)), defil.y(y(Math.max(r.consomme, r.plafond ?? 0))));
       })
@@ -1060,7 +1064,7 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     for (const r of g.data) {
       const tr_ = document.createElement('tr'); tr_.dataset.key = r.semaine;
       const cel = [[r.semaine], [libelles.statutHebdo(r)], [CC.usd(Number(r.consomme)), 'cc-num'],
-        [r.horsEstime == null ? '' : `≈ ${CC.dec(r.horsEstime)} ${tr('tip.pts')} ${tr('tip.sur')} ${r.pctFin} %`, 'cc-num'],
+        [CC.horsPC(r), 'cc-num'],
         [r.plafond == null ? '' : CC.usd(Number(r.plafond)), 'cc-num'], [r.sortie == null ? '' : CC.compact(Number(r.sortie)), 'cc-num cc-hide-narrow']];
       for (const [v, c] of cel) { const td = document.createElement('td'); td.textContent = v; if (c) td.className = c; tr_.append(td); }
       tb.append(tr_);

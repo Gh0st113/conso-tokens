@@ -275,3 +275,49 @@ test('infobulle semaine : « Semaine du » / « Week of » (le jour vient du cyc
   assert.equal(DICO['tip.semaine'].fr, 'Semaine du');
   assert.equal(DICO['tip.semaine'].en, 'Week of');
 });
+
+// #32 : horsEstime / pctFin relus en texte (« null ») ne doivent plus donner « ≈ null pts sur null % »
+test('vide : null, « », « null » ; 0 et « 0 » ne sont pas vides', () => {
+  for (const v of [null, undefined, '', 'null']) assert.equal(L.vide(v), true, String(v));
+  for (const v of [0, '0', 4, '10.9']) assert.equal(L.vide(v), false, String(v));
+});
+
+test('CC.horsPC (#32) : vide en texte ou en null → rien ; sinon « ≈ N pts sur P % »', () => {
+  // Le bloc CC n'est pas exécutable seul (dash, d3) : on n'en extrait que CC.dec et CC.horsPC
+  const extrait = (debut, fin) => { const i = html.indexOf(debut); return html.slice(i, html.indexOf(fin, i) + fin.length); };
+  const c = { libelles: L, tr: ctx.tr, LANGUES, CC: { langue: 'fr' } };
+  vm.createContext(c);
+  vm.runInContext(extrait('CC.dec = ', ';'), c);
+  vm.runInContext(extrait('CC.horsPC = ', '%`;'), c);
+  const hors = c.CC.horsPC;
+  assert.equal(hors(enTexte(h({}))), '');
+  assert.equal(hors(h({})), '');
+  assert.equal(hors(enTexte(h({ horsEstime: 10.9, pctFin: 100 }))), '≈ 10,9 pts sur 100 %');
+  assert.equal(hors(h({ horsEstime: 4, pctFin: 98 })), '≈ 4 pts sur 98 %');
+  // Un seul des deux champs vide (en texte ou non) : rien non plus
+  assert.equal(hors(enTexte(h({ horsEstime: 4 }))), '');
+  assert.equal(hors({ ...h({ pctFin: 100 }), horsEstime: 'null' }), '');
+  assert.equal(hors({ ...h({ horsEstime: 4 }), pctFin: '' }), '');
+  c.CC.langue = 'en';
+  regler('en');
+  assert.equal(hors(h({ horsEstime: 10.9, pctFin: 100 })), '≈ 10.9 pts of 100 %');
+  regler('fr');
+  assert.ok(!html.includes('r.horsEstime == null'), 'plus de test « == null » sur horsEstime dans la page');
+});
+
+// #18 : l'infobulle par semaine ne liste que les modèles utilisés cette semaine-là (plus de « Fable : 0 $ »)
+test('infobulle semaine (#18) : séries filtrées sur la valeur de la semaine survolée', () => {
+  // Le filtre est extrait de la page et exécuté sur une semaine où Fable et Opus 4.8 valent 0
+  const debut = '...SERIES.filter(', fin = ').map(([c, n, ci]) => [CC.couleur(ci), n, CC.fmt(Number(r[CC.serie(c)]))])';
+  const i = html.indexOf(debut), j = html.indexOf(fin, i);
+  assert.ok(i > 0 && j > i, 'filtre de l’infobulle par semaine introuvable');
+  const c = { CC: { jetons: false } };
+  vm.createContext(c);
+  vm.runInContext(`CC.serie = c => CC.jetons ? 'j' + c : c;`, c);
+  const filtre = vm.runInContext(`(SERIES, r) => SERIES.filter(${html.slice(i + debut.length, j)}).map(s => s[0])`, c);
+  const SERIES = [['opus55'], ['opus48'], ['sonnet'], ['fable']];
+  const r = { opus55: '12.5', opus48: 0, sonnet: 3, fable: '0', jopus55: 900, jopus48: 0, jsonnet: 0, jfable: 40 };
+  assert.deepEqual(filtre(SERIES, r), ['opus55', 'sonnet']);
+  c.CC.jetons = true;
+  assert.deepEqual(filtre(SERIES, r), ['opus55', 'fable']);
+});
