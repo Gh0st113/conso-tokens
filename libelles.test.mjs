@@ -321,3 +321,21 @@ test('infobulle semaine (#18) : séries filtrées sur la valeur de la semaine su
   c.CC.jetons = true;
   assert.deepEqual(filtre(SERIES, r), ['opus55', 'fable']);
 });
+
+// #33 : les titres et descriptions des calculs (dash.calc) sont lus par la plateforme, pas par le bouton FR / EN :
+// une seule langue, l'anglais (celle du dépôt)
+test('calculs (#33) : titres et descriptions de dash.calc en anglais', () => {
+  const calculs = html.split("dash.calc('").slice(1).map(s => {
+    const champ = nom => { const i = s.indexOf(nom + ": '") + nom.length + 3; return s.slice(i, s.indexOf("',", i)); };
+    return [s.slice(0, s.indexOf("'")), champ('title'), champ('description')];
+  });
+  assert.deepEqual(calculs.map(c => c[0]), ['totaux', 'semCourante', 'partOpus', 'grosContexte', 'ctxPeriodes']);
+  // Chaînes exactes : un titre changé doit l’être ici aussi (et rester fidèle à ce que calcule fn)
+  assert.deepEqual(calculs.map(c => c.slice(1)), [
+    ['Totals since the start', 'Cost, tokens and replies summed over all weeks.'],
+    ['Current and previous week', 'Cost and tokens of the last plan week and of the week before.'],
+    ['Opus share of the cost', 'Opus models divided by the total, in cost and in tokens.'],
+    ['Calls above 150k', 'Share of calls whose context exceeds 150,000 tokens.'],
+    ['Calls above 150k by period', 'Same share as the top tile, over the last 7 and 30 days of data and across all data.'],
+  ]);
+});

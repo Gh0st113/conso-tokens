@@ -736,12 +736,12 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
 
 <script>
   dash.calc('totaux', {
-    title: 'Totaux depuis le début', description: 'Somme du coût et des réponses sur toutes les semaines.',
+    title: 'Totals since the start', description: 'Cost, tokens and replies summed over all weeks.',
     inputs: ['semaines'],
     fn: (semaines) => [{ cout: semaines.reduce((s, r) => s + Number(r.cout), 0), jetons: semaines.reduce((s, r) => s + Number(r.jetons), 0), appels: semaines.reduce((s, r) => s + Number(r.appels), 0) }],
   });
   dash.calc('semCourante', {
-    title: 'Semaine en cours et précédente', description: 'Dernière semaine de forfait et coût de la semaine d’avant.',
+    title: 'Current and previous week', description: 'Cost and tokens of the last plan week and of the week before.',
     inputs: ['semaines'],
     fn: (semaines) => {
       const n = semaines.length;
@@ -750,7 +750,7 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     },
   });
   dash.calc('partOpus', {
-    title: 'Part d’Opus dans le coût', description: 'Coût des modèles Opus divisé par le coût total.',
+    title: 'Opus share of the cost', description: 'Opus models divided by the total, in cost and in tokens.',
     inputs: ['modeles'],
     fn: (modeles) => {
       const tot = modeles.reduce((s, r) => s + Number(r.cout), 0);
@@ -761,7 +761,7 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     },
   });
   dash.calc('grosContexte', {
-    title: 'Appels au-delà de 150k', description: 'Part des appels dont le contexte dépasse 150 000 jetons.',
+    title: 'Calls above 150k', description: 'Share of calls whose context exceeds 150,000 tokens.',
     inputs: ['contexte'],
     fn: (contexte) => {
       const tot = contexte.reduce((s, r) => s + Number(r.appels), 0);
@@ -770,7 +770,7 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     },
   });
   dash.calc('ctxPeriodes', {
-    title: 'Appels au-delà de 150k par période', description: 'Même part que la case du haut, sur les 7 et 30 derniers jours de données et sur tout.',
+    title: 'Calls above 150k by period', description: 'Same share as the top tile, over the last 7 and 30 days of data and across all data.',
     inputs: ['contexte'],
     fn: (contexte) => {
       const dernier = contexte.reduce((m, r) => String(r.jour) > m ? String(r.jour) : m, '');
