@@ -73,6 +73,11 @@ run a process. A new module must also be added to `files` in `package.json`, or 
 - `lecture.mjs` is everything `agreger.mjs` reads: logs (`lireJournaux`, the only code that opens them, so the "never
   conversation content" rule lives there), archive (`lireArchive` / `ecrireArchive`), the readings file
   (`choisirFichierReleves`, `lireRelevesManuels`), the sonar log.
+  `appelsDeLaLigne` (pure) turns one log line into answers: the main model's (top-level `usage`), then one per advisor
+  step (`usage.iterations` of type `advisor_message`, own model, key `<id>:advisor:<n>`, as ccusage does); `message`
+  steps are already in the top-level counters. At equal output, a known answer takes the counters of the line read
+  but keeps its time, folder, session and sub-agent flag (a resumed session copies the original's messages); an
+  advisor step follows its main answer.
 - `agregats.mjs` is pure: answers, limits and readings → the fields of `donnees.json` (`agreger`). It works on copies.
 - `hebdo.mjs` is pure: off-PC detection, slopes and the weekly-cap row of each week (`analyserHebdo`): an `etat` code
   plus fields (`pct`, `fourchette…`, `coupee…`, `indicatif…`, `resetNote`), the same columns in every row. It never
