@@ -350,7 +350,11 @@ test('reconstructions : chaque cause de lib/agregats.mjs a son libellé dans cha
     for (const f of FILS) assert.notEqual(L.fil(f), f, `${code} fil ${f}`);
   }
   regler('fr');
-  assert.equal(L.cause('compactage'), 'après un compactage');
+  assert.equal(L.cause('compactage'), 'après un compactage (résumé écrit)');
+  assert.equal(L.cause('outils'), 'consignes ou outils changés');
+  // Pertes affichées sans le compactage, compté à part (24/11)
+  assert.match(html, /filter[(]c => c !== 'compactage'[)]/);
+  assert.deepEqual([DICO['rec.perdus'].fr, DICO['rec.compact'].en], ['perdus', 'of compactions (unavoidable)']);
 });
 
 test('reconstructions : « 1 time » au singulier en anglais, « fois » invariable en français', () => {

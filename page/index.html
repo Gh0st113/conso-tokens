@@ -163,7 +163,7 @@
     </section>
     <section class="cc-card" id="reconstructions">
       <div class="cc-titre"><h2 data-t="rec.h2">Reconstructions du cache</h2><span class="cc-ctrl"><span class="cc-seg" role="group" data-t-aria="periode.aria" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false" data-t="btn.7j">7 j</button><button type="button" data-periode="30" aria-pressed="true" data-t="btn.30j">30 j</button><button type="button" data-periode="tout" aria-pressed="false" data-t="btn.tout">tout</button></span><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true" data-t="btn.dollars">dollars</button><button type="button" data-unite="jetons" aria-pressed="false" data-t="btn.jetons">jetons</button></span></span></div>
-      <p class="cc-muted"><span data-t="rec.p1">Réponses qui ont perdu leur cache et réécrit tout leur contexte, par cause, </span><span data-per="7" hidden data-t="per.7">sur les 7 derniers jours de données</span><span data-per="30" data-t="per.30">sur les 30 derniers jours de données</span><span data-per="tout" hidden data-t="per.tout">depuis le début des données</span><span data-t="rec.p2">. Conversation principale et sous-agents séparés : chacun a son propre cache, dont la durée (souvent 1 h pour la première, 5 min pour les seconds) est lue dans les journaux ou forcée par la clé cache. Compactages relevés depuis le 24/11/2026 et dans les journaux encore présents.</span></p>
+      <p class="cc-muted"><span data-t="rec.p1">Réponses qui ont dû réécrire en cache la plus grande part de leur contexte (moins de la moitié relue), par cause, </span><span data-per="7" hidden data-t="per.7">sur les 7 derniers jours de données</span><span data-per="30" data-t="per.30">sur les 30 derniers jours de données</span><span data-per="tout" hidden data-t="per.tout">depuis le début des données</span><span data-t="rec.p2">. Conversation principale et sous-agents séparés : chacun a son propre cache, dont la durée (souvent 1 h pour la première, 5 min pour les seconds) est lue dans les journaux ou forcée par la clé cache. Après un compactage, c’est le résumé qui est écrit : un coût normal, compté à part des pertes. « Consignes ou outils changés » : la forme de la requête a changé, le plus souvent parce que des outils ont été chargés en cours de session (relevé depuis le 20/10/2026). Compactages relevés depuis le 24/11/2026 et dans les journaux encore présents. Sous ~100k de contexte, relire le seul socle (consignes et outils) suffit à dépasser la moitié : une perte n’y est pas vue.</span></p>
       <p><span data-t="ctx.sur">Sur cette période : </span><b data-draw="recPart" data-source="reconstructions">—</b></p>
       <div class="cc-chart cc-short dash-skeleton" data-draw="chReconstr" data-source="reconstructions"></div>
     </section>
@@ -211,7 +211,7 @@
       fr: {
         types: { cacheRead: 'Lecture du cache', cacheWrite: 'Écriture en cache', output: 'Sortie (réponses + réflexion)', input: 'Entrée neuve' },
         tranches: { '0-50k': 'moins de 50k', '50-100k': '50k à 100k', '100-150k': '100k à 150k', '150-250k': '150k à 250k', '250k+': 'plus de 250k' },
-        causes: { compactage: 'après un compactage', pause: 'après une pause (cache expiré)', modele: 'changement de modèle', autre: 'autre cause' },
+        causes: { compactage: 'après un compactage (résumé écrit)', pause: 'après une pause (cache expiré)', modele: 'changement de modèle', outils: 'consignes ou outils changés', autre: 'autre cause' },
         fils: { principal: 'conversation principale', sousAgent: 'sous-agents' },
         dont: h => `, dont ${h} pts hors de ce PC`,
         fourchette: (min, max, incertaine) => ` ; plafond ${incertaine ? 'incertain : ' : ''}entre ${min} et ${max ?? '?'}`,
@@ -232,7 +232,7 @@
       en: {
         types: { cacheRead: 'Cache read', cacheWrite: 'Cache write', output: 'Output (replies + reasoning)', input: 'Fresh input' },
         tranches: { '0-50k': 'under 50k', '50-100k': '50k to 100k', '100-150k': '100k to 150k', '150-250k': '150k to 250k', '250k+': 'over 250k' },
-        causes: { compactage: 'after a compaction', pause: 'after a pause (cache expired)', modele: 'model change', autre: 'other cause' },
+        causes: { compactage: 'after a compaction (summary written)', pause: 'after a pause (cache expired)', modele: 'model change', outils: 'instructions or tools changed', autre: 'other cause' },
         fils: { principal: 'main conversation', sousAgent: 'subagents' },
         dont: h => `, of which ${h} pts off this PC`,
         fourchette: (min, max, incertaine) => `; cap ${incertaine ? 'uncertain: ' : ''}between ${min} and ${max ?? '?'}`,
@@ -415,8 +415,8 @@
     'projets.fin': { en: ' (days in Paris time).' },
     'modeles.h2': { en: 'By model' },
     'rec.h2': { en: 'Cache rebuilds' },
-    'rec.p1': { en: 'Replies that lost their cache and wrote their whole context again, by cause, ' },
-    'rec.p2': { en: '. Main conversation and subagents kept apart: each has its own cache, whose lifetime (often 1 h for the first, 5 min for the second) is read from the logs or forced by the cache key. Compactions recorded since 11/24/2026 and in the logs still present.' },
+    'rec.p1': { en: 'Replies that had to write most of their context to the cache again (less than half read back), by cause, ' },
+    'rec.p2': { en: '. Main conversation and subagents kept apart: each has its own cache, whose lifetime (often 1 h for the first, 5 min for the second) is read from the logs or forced by the cache key. After a compaction, what gets written is the summary: a normal cost, counted apart from the losses. “Instructions or tools changed”: the shape of the request changed, most often because tools were loaded during the session (recorded since 10/20/2026). Compactions recorded since 11/24/2026 and in the logs still present. Under ~100k of context, reading back the base alone (instructions and tools) is already more than half: a loss there goes unseen.' },
     'sess.h2': { en: 'The 30 costliest sessions' },
     'sess.7': { en: 'Sessions started in the last 7 days of data.' },
     'sess.30': { en: 'Sessions started in the last 30 days of data.' },
@@ -449,6 +449,8 @@
     'mot.jetons': { fr: 'jetons', en: 'tokens' },
     'mot.cout': { fr: 'coût', en: 'cost' },
     'rec.part': { fr: 'de l’écriture en cache', en: 'of cache writes' },
+    'rec.perdus': { fr: 'perdus', en: 'lost' },
+    'rec.compact': { fr: 'de compactages (inévitables)', en: 'of compactions (unavoidable)' },
     'rec.fois': { fr: 'fois', en: 'times' },
     'rec.fois1': { fr: 'fois', en: 'time' }, // singulier : « 1 time » en anglais
     'tip.total': { fr: 'Total', en: 'Total' },
@@ -1018,7 +1020,8 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     }
     return somme;
   };
-  CC.recCauses = fil => libelles.CAUSES.filter(c => fil === 'principal' || c !== 'compactage');
+  // Toutes les causes pour les deux fils : un sous-agent compacte aussi (constaté le 24/11)
+  CC.recCauses = () => libelles.CAUSES;
   CC.draw('chReconstr', el => {
     const somme = CC.recSomme();
     if (!somme) { el.replaceChildren(); return; }
@@ -1034,9 +1037,14 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     el.dataset.where = 'periode=' + CC.periode;
     if (!somme) { el.textContent = '—'; return; }
     const champ = CC.champ();
+    // Pertes = toutes les causes sauf le compactage, dont l'écriture (le résumé) serait payée de toute façon : à part
     el.textContent = libelles.FILS.map(fil => {
-      const s = somme.get(fil), rec = CC.recCauses(fil).reduce((n, c) => n + s.get(c)[champ], 0), tot = s.get('total')[champ];
-      return `${libelles.fil(fil)}${LANGUES[CC.langue].sep}${tot ? `${CC.fmt(rec)} (${CC.pct(rec / tot)} ${tr('rec.part')})` : '—'}`;
+      const s = somme.get(fil), tot = s.get('total')[champ];
+      const perdu = CC.recCauses(fil).filter(c => c !== 'compactage').reduce((n, c) => n + s.get(c)[champ], 0);
+      const compact = s.get('compactage')[champ];
+      if (!tot) return `${libelles.fil(fil)}${LANGUES[CC.langue].sep}—`;
+      return `${libelles.fil(fil)}${LANGUES[CC.langue].sep}${CC.fmt(perdu)} ${tr('rec.perdus')} (${CC.pct(perdu / tot)} ${tr('rec.part')})`
+        + (compact ? ` + ${CC.fmt(compact)} ${tr('rec.compact')}` : '');
     }).join(' · ');
   });
 
