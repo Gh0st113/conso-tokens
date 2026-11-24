@@ -1,6 +1,6 @@
 {
   "name": "conso-tokens",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Local dashboard of Claude Code usage: API-price cost of the logs, per week, day, folder, model and session, plus the weekly plan cap.",
   "keywords": ["claude-code", "usage", "tokens", "cost", "dashboard"],
   "license": "MIT",
