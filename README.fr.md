@@ -65,7 +65,7 @@ Depuis un clone :
 git clone https://github.com/Gh0st113/conso-tokens
 cd conso-tokens
 node agreger.mjs        # lit les journaux → data/donnees.json (et une archive des compteurs)
-node exporter.mjs       # → data/export/*.json (13 tables) + la ligne CONTRÔLES
+node exporter.mjs       # → data/export/*.json (14 tables) + la ligne CONTRÔLES
 node --test             # tests
 ```
 
@@ -132,6 +132,7 @@ Réglages facultatifs : copier `config.exemple.json` en `config.local.json` (ign
 | `resets` | resets de limite utilisés, deux formes (voir ci-dessous) : `{ "AAAA-MM-JJ": "quand" }` (semaine entière) ou une liste `[{ "when": "AAAA-MM-JJTHH:MMZ", "type": "weekly", "note": "…" }]` (heure exacte, découpage) |
 | `gaps` (`trous`) | périodes dont vous savez que les journaux manquent : `[["premier jour", "dernier jour", "raison"]]` |
 | `plans` (`forfaits`) | changements de forfait déclarés à la main : `{ "AAAA-MM-JJ": "forfait" }`, appliqués à toute la semaine qui contient la date (voir ci-dessous) |
+| `cache` | reconstructions du cache, pour la conversation principale (`main`) et les sous-agents (`subagents`) : `{ "main": { "ttl": "auto", "minWrite": 20000 }, "subagents": { "ttl": "auto", "minWrite": 10000 } }` (les défauts). `ttl` : `auto` lit la durée du cache dans les journaux, appel par appel (5 min l'emporte si un appel écrit les deux), `5m` ou `1h` la force ; `minWrite` : jetons écrits en cache à partir desquels un cache perdu compte comme reconstruction. Une reconstruction est une réponse qui relit moins de la moitié du contexte de la réponse précédente de son fil |
 
 Chaque réglage s'écrit sous son nom anglais **ou** son ancien nom français, pas les deux : les donner tous les deux arrête
 le script avec un message qui les nomme. Dans `weeklyReset`, `day` et `hourUTC` (ou `jour` et `heureUTC`) peuvent se
@@ -191,14 +192,14 @@ bibliothèque de graphiques et le chargeur de données fournis par claude.ai, do
 navigateur n'affiche rien**.
 
 1. Dans l'appli Claude, ouvrir l'onglet **Code** dans ce dossier.
-2. Demander : *« Crée un artefact Dashboard privé à partir de `page/index.html`, avec comme données les 13 fichiers de
+2. Demander : *« Crée un artefact Dashboard privé à partir de `page/index.html`, avec comme données les 14 fichiers de
    `data/export/`, chacun nommé comme son fichier »* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`,
-   `contexte`, `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `forfaits`).
-3. Après chaque nouvel export : *« Recharge les 13 données de mon tableau depuis `data/export/` »*.
+   `contexte`, `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `reconstructions`, `forfaits`).
+3. Après chaque nouvel export : *« Recharge les 14 données de mon tableau depuis `data/export/` »*.
 
 **Passage à la 0.3.0 ou plus** : les exports portent désormais des codes et des nombres au lieu de phrases (c'est la
 page qui écrit les phrases). Republier la page avec le nouveau `page/index.html`, puis relancer un export et recharger
-les 13 données. La page neuve lit encore les anciens exports, mais une ancienne page ne lit pas les nouveaux : mettre
+les 14 données. La page neuve lit encore les anciens exports, mais une ancienne page ne lit pas les nouveaux : mettre
 la page à jour d'abord.
 
 Avec la commande `conso-tokens`, `conso-tokens page` affiche où sont la page et le dossier `export/`.

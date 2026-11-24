@@ -64,7 +64,7 @@ From a clone:
 git clone https://github.com/Gh0st113/conso-tokens
 cd conso-tokens
 node agreger.mjs        # reads the logs → data/donnees.json (and a counter archive)
-node exporter.mjs       # → data/export/*.json (13 tables) + the CONTRÔLES line
+node exporter.mjs       # → data/export/*.json (14 tables) + the CONTRÔLES line
 node --test             # tests
 ```
 
@@ -127,6 +127,7 @@ Optional settings: copy `config.exemple.json` to `config.local.json` (ignored by
 | `resets` | limit resets you used, two forms (see below): `{ "YYYY-MM-DD": "when" }` (whole week) or a list `[{ "when": "YYYY-MM-DDTHH:MMZ", "type": "weekly", "note": "…" }]` (exact time, week cut) |
 | `gaps` (`trous`) | periods whose logs you know are missing: `[["first day", "last day", "reason"]]` |
 | `plans` (`forfaits`) | plan changes you declare by hand: `{ "YYYY-MM-DD": "plan" }`, applied to the whole week containing the date (see below) |
+| `cache` | cache rebuilds, for the main conversation (`main`) and subagents (`subagents`): `{ "main": { "ttl": "auto", "minWrite": 20000 }, "subagents": { "ttl": "auto", "minWrite": 10000 } }` (the defaults). `ttl`: `auto` reads the cache lifetime from the logs, call by call (5 min wins when a call writes both), `5m` or `1h` forces it; `minWrite`: tokens written to the cache from which a lost cache counts as a rebuild. A rebuild is a reply that reads back less than half of the previous reply's context in its thread |
 
 Each setting can be written under its English name or its old French name, not both: giving both stops the script with
 a message naming them. Inside `weeklyReset`, `day` and `hourUTC` (or `jour` and `heureUTC`) can be mixed, but not both
@@ -184,13 +185,13 @@ want a long history.
 chart library and data loader that claude.ai provides, so **opening it directly in a browser shows nothing**.
 
 1. In the Claude desktop app, open the **Code** tab in this folder.
-2. Ask: *"Create a private Dashboard artifact from `page/index.html`, with the 13 files of `data/export/` as its
+2. Ask: *"Create a private Dashboard artifact from `page/index.html`, with the 14 files of `data/export/` as its
    datasets, each named after its file"* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`, `contexte`,
-   `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `forfaits`).
-3. After each new export: *"Reload the 13 datasets of my dashboard from `data/export/`"*.
+   `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `reconstructions`, `forfaits`).
+3. After each new export: *"Reload the 14 datasets of my dashboard from `data/export/`"*.
 
 **Upgrading to 0.3.0 or later**: the exports now hold codes and numbers instead of French sentences (the page writes
-the sentences). Republish the page from the new `page/index.html`, then run a new export and reload the 13 datasets.
+the sentences). Republish the page from the new `page/index.html`, then run a new export and reload the 14 datasets.
 The new page still reads old exports, but an old page cannot read the new ones: update the page first.
 
 With the `conso-tokens` command, `conso-tokens page` prints where the page and the `export/` folder are.

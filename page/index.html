@@ -161,6 +161,12 @@
       <p class="cc-muted"><span data-jet="Jetons consommés" data-t="mesure.usd">Équivalent API en dollars</span>, <span data-per="7" hidden data-t="per.7">sur les 7 derniers jours de données</span><span data-per="30" data-t="per.30">sur les 30 derniers jours de données</span><span data-per="tout" hidden data-t="per.tout">depuis le début des données</span>.</p>
       <div class="cc-chart cc-short dash-skeleton" data-draw="chModeles" data-source="modeles"></div>
     </section>
+    <section class="cc-card" id="reconstructions">
+      <div class="cc-titre"><h2 data-t="rec.h2">Reconstructions du cache</h2><span class="cc-ctrl"><span class="cc-seg" role="group" data-t-aria="periode.aria" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false" data-t="btn.7j">7 j</button><button type="button" data-periode="30" aria-pressed="true" data-t="btn.30j">30 j</button><button type="button" data-periode="tout" aria-pressed="false" data-t="btn.tout">tout</button></span><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true" data-t="btn.dollars">dollars</button><button type="button" data-unite="jetons" aria-pressed="false" data-t="btn.jetons">jetons</button></span></span></div>
+      <p class="cc-muted"><span data-t="rec.p1">Réponses qui ont perdu leur cache et réécrit tout leur contexte, par cause, </span><span data-per="7" hidden data-t="per.7">sur les 7 derniers jours de données</span><span data-per="30" data-t="per.30">sur les 30 derniers jours de données</span><span data-per="tout" hidden data-t="per.tout">depuis le début des données</span><span data-t="rec.p2">. Conversation principale et sous-agents séparés : chacun a son propre cache, dont la durée (souvent 1 h pour la première, 5 min pour les seconds) est lue dans les journaux ou forcée par la clé cache. Compactages relevés depuis le 24/11/2026 et dans les journaux encore présents.</span></p>
+      <p><span data-t="ctx.sur">Sur cette période : </span><b data-draw="recPart" data-source="reconstructions">—</b></p>
+      <div class="cc-chart cc-short dash-skeleton" data-draw="chReconstr" data-source="reconstructions"></div>
+    </section>
   </div>
 
   <section class="cc-card" id="sessions">
@@ -205,6 +211,8 @@
       fr: {
         types: { cacheRead: 'Lecture du cache', cacheWrite: 'Écriture en cache', output: 'Sortie (réponses + réflexion)', input: 'Entrée neuve' },
         tranches: { '0-50k': 'moins de 50k', '50-100k': '50k à 100k', '100-150k': '100k à 150k', '150-250k': '150k à 250k', '250k+': 'plus de 250k' },
+        causes: { compactage: 'après un compactage', pause: 'après une pause (cache expiré)', modele: 'changement de modèle', autre: 'autre cause' },
+        fils: { principal: 'conversation principale', sousAgent: 'sous-agents' },
         dont: h => `, dont ${h} pts hors de ce PC`,
         fourchette: (min, max, incertaine) => ` ; plafond ${incertaine ? 'incertain : ' : ''}entre ${min} et ${max ?? '?'}`,
         atteint: n => `atteint${n}`,
@@ -224,6 +232,8 @@
       en: {
         types: { cacheRead: 'Cache read', cacheWrite: 'Cache write', output: 'Output (replies + reasoning)', input: 'Fresh input' },
         tranches: { '0-50k': 'under 50k', '50-100k': '50k to 100k', '100-150k': '100k to 150k', '150-250k': '150k to 250k', '250k+': 'over 250k' },
+        causes: { compactage: 'after a compaction', pause: 'after a pause (cache expired)', modele: 'model change', autre: 'other cause' },
+        fils: { principal: 'main conversation', sousAgent: 'subagents' },
         dont: h => `, of which ${h} pts off this PC`,
         fourchette: (min, max, incertaine) => `; cap ${incertaine ? 'uncertain: ' : ''}between ${min} and ${max ?? '?'}`,
         atteint: n => `reached${n}`,
@@ -280,6 +290,10 @@
       type: v => libDe('types', v),
       tranche: v => libDe('tranches', v),
       codeTranche: v => codeDe('tranches', v),
+      CAUSES: Object.keys(PHRASES.fr.causes), // même liste que CAUSES de lib/agregats.mjs (vérifié par un test)
+      cause: v => libDe('causes', v),
+      FILS: Object.keys(PHRASES.fr.fils), // même liste que FILS de lib/agregats.mjs (vérifié par un test)
+      fil: v => libDe('fils', v),
       // Ligne du comparatif hebdo
       statutHebdo: r => {
         if (r.etat === undefined) return r.statut ?? '';
@@ -400,6 +414,9 @@
     'mesure.usd': { en: 'API-equivalent in dollars' }, 'mesure.usd.jet': { en: 'Tokens used' },
     'projets.fin': { en: ' (days in Paris time).' },
     'modeles.h2': { en: 'By model' },
+    'rec.h2': { en: 'Cache rebuilds' },
+    'rec.p1': { en: 'Replies that lost their cache and wrote their whole context again, by cause, ' },
+    'rec.p2': { en: '. Main conversation and subagents kept apart: each has its own cache, whose lifetime (often 1 h for the first, 5 min for the second) is read from the logs or forced by the cache key. Compactions recorded since 11/24/2026 and in the logs still present.' },
     'sess.h2': { en: 'The 30 costliest sessions' },
     'sess.7': { en: 'Sessions started in the last 7 days of data.' },
     'sess.30': { en: 'Sessions started in the last 30 days of data.' },
@@ -431,6 +448,8 @@
     'bar.incomplete': { fr: 'incomplète', en: 'incomplete' },
     'mot.jetons': { fr: 'jetons', en: 'tokens' },
     'mot.cout': { fr: 'coût', en: 'cost' },
+    'rec.part': { fr: 'de l’écriture en cache', en: 'of cache writes' },
+    'rec.fois': { fr: 'fois', en: 'times' },
     'tip.total': { fr: 'Total', en: 'Total' },
     'tip.cout': { fr: 'Coût', en: 'Cost' },
     'tip.reponses': { fr: 'Réponses', en: 'Replies' },
@@ -600,7 +619,7 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     document.querySelectorAll('[data-periode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.periode === p)));
     document.querySelectorAll('[data-per]').forEach(el => { el.hidden = el.dataset.per !== p; });
     // Redessin par la plateforme (dash.draw(nom) relance le drawing), pas par un appel direct
-    for (const nom of ['chProjets', 'chModeles', 'chContexte', 'ctxPart', 'ctxObj', 'tabSessions']) if (CC.vues.has(nom)) dash.draw(nom);
+    for (const nom of ['chProjets', 'chModeles', 'chContexte', 'ctxPart', 'ctxObj', 'chReconstr', 'recPart', 'tabSessions']) if (CC.vues.has(nom)) dash.draw(nom);
   };
   document.querySelectorAll('[data-periode]').forEach(b => b.addEventListener('click', () => CC.choisirPeriode(b.dataset.periode)));
   CC.choisirPeriode(CC.periode);
@@ -983,6 +1002,41 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
       t.cout += Number(r.cout); t.jetons += Number(r.jetons); somme.set(r.modele, t);
     }
     CC.hbars(el, parUnite([...somme.values()]), 'modele', 'v', CC.fmt, dash.colors[0]);
+  });
+
+  // Reconstructions du cache : par fil (conversation principale, sous-agents), une barre par cause sur la période ;
+  // la ligne « total » de chaque fil sert au dénominateur. Un sous-agent ne compacte pas : pas de barre compactage.
+  // Ligne sans fil (export d'avant la révision du 24/11) : conversation principale.
+  CC.recSomme = () => {
+    const g = dash.data('reconstructions');
+    if (g.status !== 'ok') return null;
+    const somme = new Map(libelles.FILS.map(f => [f, new Map(['total', ...libelles.CAUSES].map(c => [c, { cout: 0, jetons: 0, nombre: 0 }]))]));
+    for (const r of CC.dansPeriode(g.data)) {
+      const t = somme.get(libelles.vide(r.fil) ? 'principal' : r.fil)?.get(r.cause);
+      if (t) { t.cout += Number(r.cout); t.jetons += Number(r.jetons); t.nombre += Number(r.nombre); }
+    }
+    return somme;
+  };
+  CC.recCauses = fil => libelles.CAUSES.filter(c => fil === 'principal' || c !== 'compactage');
+  CC.draw('chReconstr', el => {
+    const somme = CC.recSomme();
+    if (!somme) { el.replaceChildren(); return; }
+    const rows = libelles.FILS.flatMap(fil => CC.recCauses(fil).map(c => ({
+      fil, cause: `${libelles.fil(fil)} · ${libelles.cause(c)} (${CC.int(somme.get(fil).get(c).nombre)} ${tr('rec.fois')})`,
+      v: somme.get(fil).get(c)[CC.champ()],
+    })));
+    CC.hbars(el, rows, 'cause', 'v', CC.fmt, dash.colors[0]);
+    d3.select(el).selectAll('svg g:nth-of-type(3) rect').attr('fill', d => d.fil === 'sousAgent' ? dash.colors[4] : dash.colors[0]);
+  });
+  CC.draw('recPart', el => {
+    const somme = CC.recSomme();
+    el.dataset.where = 'periode=' + CC.periode;
+    if (!somme) { el.textContent = '—'; return; }
+    const champ = CC.champ();
+    el.textContent = libelles.FILS.map(fil => {
+      const s = somme.get(fil), rec = CC.recCauses(fil).reduce((n, c) => n + s.get(c)[champ], 0), tot = s.get('total')[champ];
+      return `${libelles.fil(fil)}${LANGUES[CC.langue].sep}${tot ? `${CC.fmt(rec)} (${CC.pct(rec / tot)} ${tr('rec.part')})` : '—'}`;
+    }).join(' · ');
   });
 
   // Plafond hebdo : barre du consommé, point du plafond (plein = atteint, creux = projeté)
