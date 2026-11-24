@@ -78,7 +78,8 @@ async function main(argv) {
   const sonar = lireSonar(journalQuota);
   const releves = [...lireRelevesManuels(fichierReleves), ...relevesDeLAppli(archive.releves), ...sonar];
   const { sansTarif, ...calcul } = agreger({
-    appels: archive.appels.values(), limites: archive.limites.values(), releves, tarifs, paliers,
+    appels: archive.appels.values(), limites: archive.limites.values(), compactages: archive.compactages.values(),
+    releves, tarifs, paliers,
     cycle: REMISE_A_ZERO, resets: RESETS, resetsPrecis: RESETS_PRECIS,
   });
   writeFileSync(sortie, JSON.stringify({

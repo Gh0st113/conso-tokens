@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import { ETATS_HEBDO } from './lib/controles.mjs';
+import { CAUSES } from './lib/agregats.mjs';
 
 const html = readFileSync(new URL('./page/index.html', import.meta.url), 'utf8');
 const bloc = (id) => html.match(new RegExp(`<script id="${id}">([\\s\\S]*?)</script>`))[1];
@@ -338,4 +339,14 @@ test('calculs (#33) : titres et descriptions de dash.calc en anglais', () => {
     ['Calls above 150k', 'Share of calls whose context exceeds 150,000 tokens.'],
     ['Calls above 150k by period', 'Same share as the top tile, over the last 7 and 30 days of data and across all data.'],
   ]);
+});
+
+test('reconstructions : chaque cause de lib/agregats.mjs a son libellé dans chaque langue', () => {
+  assert.deepEqual([...L.CAUSES], CAUSES);
+  for (const code of Object.keys(LANGUES)) {
+    regler(code);
+    for (const c of CAUSES) assert.notEqual(L.cause(c), c, `${code} cause ${c}`);
+  }
+  regler('fr');
+  assert.equal(L.cause('compactage'), 'après un compactage');
 });

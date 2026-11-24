@@ -14,7 +14,7 @@ package (the `conso-tokens` command is `cli.mjs`: `update`, `aggregate`, `export
 
 ```
 node agreger.mjs                 # logs → <data>/donnees.json (+ archive-appels.json)
-node exporter.mjs                # donnees.json → <data>/export/*.json (13 tables + _tables.json), then CONTRÔLES / DÉPÔT lines
+node exporter.mjs                # donnees.json → <data>/export/*.json (14 tables + _tables.json), then CONTRÔLES / DÉPÔT lines
 node --test                      # all tests (lib/*.test.mjs and the root ones)
 node --test lib/semaine.test.mjs # one file
 node --test --test-name-pattern "lireResets" lib/reglages.test.mjs   # one test
@@ -82,7 +82,7 @@ run a process. A new module must also be added to `files` in `package.json`, or 
 - `hebdo.mjs` is pure: off-PC detection, slopes and the weekly-cap row of each week (`analyserHebdo`): an `etat` code
   plus fields (`pct`, `fourchette…`, `coupee…`, `indicatif…`, `resetNote`), the same columns in every row. It never
   modifies `donnees`.
-- `tables.mjs` is pure: `donnees.json` → the 13 tables (`construireTables`), with `GROUPES` and `formatAncien`.
+- `tables.mjs` is pure: `donnees.json` → the 14 tables (`construireTables`), with `GROUPES` and `formatAncien`.
 - `controles.mjs` is pure (no disk access, `maintenant` passed in). There are two levels: `anomalie` (a certain bug in
   agreger/exporter) and `aVerifier` (implausible but possibly true). It owns `ETATS_HEBDO` (the list of weekly states,
   same list as `ETATS` in the page) and `forfaitDe` (same rule as in the page).

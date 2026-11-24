@@ -65,7 +65,7 @@ Depuis un clone :
 git clone https://github.com/Gh0st113/conso-tokens
 cd conso-tokens
 node agreger.mjs        # lit les journaux → data/donnees.json (et une archive des compteurs)
-node exporter.mjs       # → data/export/*.json (13 tables) + la ligne CONTRÔLES
+node exporter.mjs       # → data/export/*.json (14 tables) + la ligne CONTRÔLES
 node --test             # tests
 ```
 
@@ -191,14 +191,14 @@ bibliothèque de graphiques et le chargeur de données fournis par claude.ai, do
 navigateur n'affiche rien**.
 
 1. Dans l'appli Claude, ouvrir l'onglet **Code** dans ce dossier.
-2. Demander : *« Crée un artefact Dashboard privé à partir de `page/index.html`, avec comme données les 13 fichiers de
+2. Demander : *« Crée un artefact Dashboard privé à partir de `page/index.html`, avec comme données les 14 fichiers de
    `data/export/`, chacun nommé comme son fichier »* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`,
-   `contexte`, `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `forfaits`).
-3. Après chaque nouvel export : *« Recharge les 13 données de mon tableau depuis `data/export/` »*.
+   `contexte`, `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `reconstructions`, `forfaits`).
+3. Après chaque nouvel export : *« Recharge les 14 données de mon tableau depuis `data/export/` »*.
 
 **Passage à la 0.3.0 ou plus** : les exports portent désormais des codes et des nombres au lieu de phrases (c'est la
 page qui écrit les phrases). Republier la page avec le nouveau `page/index.html`, puis relancer un export et recharger
-les 13 données. La page neuve lit encore les anciens exports, mais une ancienne page ne lit pas les nouveaux : mettre
+les 14 données. La page neuve lit encore les anciens exports, mais une ancienne page ne lit pas les nouveaux : mettre
 la page à jour d'abord.
 
 Avec la commande `conso-tokens`, `conso-tokens page` affiche où sont la page et le dossier `export/`.
