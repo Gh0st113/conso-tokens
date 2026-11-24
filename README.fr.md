@@ -132,6 +132,7 @@ Réglages facultatifs : copier `config.exemple.json` en `config.local.json` (ign
 | `resets` | resets de limite utilisés, deux formes (voir ci-dessous) : `{ "AAAA-MM-JJ": "quand" }` (semaine entière) ou une liste `[{ "when": "AAAA-MM-JJTHH:MMZ", "type": "weekly", "note": "…" }]` (heure exacte, découpage) |
 | `gaps` (`trous`) | périodes dont vous savez que les journaux manquent : `[["premier jour", "dernier jour", "raison"]]` |
 | `plans` (`forfaits`) | changements de forfait déclarés à la main : `{ "AAAA-MM-JJ": "forfait" }`, appliqués à toute la semaine qui contient la date (voir ci-dessous) |
+| `cache` | reconstructions du cache, pour la conversation principale (`main`) et les sous-agents (`subagents`) : `{ "main": { "ttl": "auto", "minWrite": 20000 }, "subagents": { "ttl": "auto", "minWrite": 10000 } }` (les défauts). `ttl` : `auto` lit la durée du cache dans les journaux, appel par appel (5 min l'emporte si un appel écrit les deux), `5m` ou `1h` la force ; `minWrite` : jetons écrits en cache à partir desquels un cache perdu compte comme reconstruction. Une reconstruction est une réponse qui relit moins de la moitié du contexte de la réponse précédente de son fil |
 
 Chaque réglage s'écrit sous son nom anglais **ou** son ancien nom français, pas les deux : les donner tous les deux arrête
 le script avec un message qui les nomme. Dans `weeklyReset`, `day` et `hourUTC` (ou `jour` et `heureUTC`) peuvent se

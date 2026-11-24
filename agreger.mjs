@@ -11,7 +11,7 @@ import { existsSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import {
-  DONNEES, BASE, MODE, TARIFS_ECRITS, TARIFS_LIVRES, REMISE_A_ZERO, RESETS, RESETS_PRECIS, nomProjet,
+  DONNEES, BASE, MODE, TARIFS_ECRITS, TARIFS_LIVRES, REMISE_A_ZERO, RESETS, RESETS_PRECIS, CACHE, nomProjet,
 } from './lib/config.mjs';
 import { chargerTarifs } from './lib/tarifs.mjs';
 import {
@@ -80,7 +80,7 @@ async function main(argv) {
   const { sansTarif, ...calcul } = agreger({
     appels: archive.appels.values(), limites: archive.limites.values(), compactages: archive.compactages.values(),
     releves, tarifs, paliers,
-    cycle: REMISE_A_ZERO, resets: RESETS, resetsPrecis: RESETS_PRECIS,
+    cycle: REMISE_A_ZERO, resets: RESETS, resetsPrecis: RESETS_PRECIS, cache: CACHE,
   });
   writeFileSync(sortie, JSON.stringify({
     genereLe: new Date().toISOString(), lignesUsage: lignes, illisibles, reponsesUniques: archive.appels.size,
