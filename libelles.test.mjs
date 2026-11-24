@@ -352,3 +352,8 @@ test('reconstructions : chaque cause de lib/agregats.mjs a son libellé dans cha
   regler('fr');
   assert.equal(L.cause('compactage'), 'après un compactage');
 });
+
+test('reconstructions : « 1 time » au singulier en anglais, « fois » invariable en français', () => {
+  assert.deepEqual([DICO['rec.fois1'].en, DICO['rec.fois'].en, DICO['rec.fois1'].fr, DICO['rec.fois'].fr], ['time', 'times', 'fois', 'fois']);
+  assert.match(html, /nombre === 1 [?] tr[(].rec.fois1.[)] : tr[(].rec.fois.[)]/);
+});

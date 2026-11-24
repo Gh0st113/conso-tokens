@@ -450,6 +450,7 @@
     'mot.cout': { fr: 'coût', en: 'cost' },
     'rec.part': { fr: 'de l’écriture en cache', en: 'of cache writes' },
     'rec.fois': { fr: 'fois', en: 'times' },
+    'rec.fois1': { fr: 'fois', en: 'time' }, // singulier : « 1 time » en anglais
     'tip.total': { fr: 'Total', en: 'Total' },
     'tip.cout': { fr: 'Coût', en: 'Cost' },
     'tip.reponses': { fr: 'Réponses', en: 'Replies' },
@@ -1022,7 +1023,7 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     const somme = CC.recSomme();
     if (!somme) { el.replaceChildren(); return; }
     const rows = libelles.FILS.flatMap(fil => CC.recCauses(fil).map(c => ({
-      fil, cause: `${libelles.fil(fil)} · ${libelles.cause(c)} (${CC.int(somme.get(fil).get(c).nombre)} ${tr('rec.fois')})`,
+      fil, cause: `${libelles.fil(fil)} · ${libelles.cause(c)} (${CC.int(somme.get(fil).get(c).nombre)} ${somme.get(fil).get(c).nombre === 1 ? tr('rec.fois1') : tr('rec.fois')})`,
       v: somme.get(fil).get(c)[CC.champ()],
     })));
     CC.hbars(el, rows, 'cause', 'v', CC.fmt, dash.colors[0]);
