@@ -79,7 +79,7 @@ async function main(argv) {
   const releves = [...lireRelevesManuels(fichierReleves), ...relevesDeLAppli(archive.releves), ...sonar];
   const { sansTarif, ...calcul } = agreger({
     appels: archive.appels.values(), limites: archive.limites.values(), compactages: archive.compactages.values(),
-    releves, tarifs, paliers,
+    formes: archive.formes.values(), releves, tarifs, paliers,
     cycle: REMISE_A_ZERO, resets: RESETS, resetsPrecis: RESETS_PRECIS, cache: CACHE,
   });
   writeFileSync(sortie, JSON.stringify({
