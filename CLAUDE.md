@@ -95,6 +95,17 @@ run a process. A new module must also be added to `files` in `package.json`, or 
   - each `<script>` has its own scope: what two scripts share must go on `window` (`LANGUES`, `LANGUE_PAR_DEFAUT`,
     `DICO`, `tr`, `jourSemaine` at the end of `#dico`, `libelles` in `#libelles`).
 
+## Code style
+
+- Comments say **why**, not what: the reason for a rule, a trap, a source; the code already says what it does.
+- **120 characters per line at most**, comments included (counted in characters, not bytes). A string literal that
+  cannot be split without changing it may stay longer. Some files not yet realigned still have longer lines: shorten
+  them when you touch them.
+- **One level of ternary** at most: beyond that, an `if`, a small function or a lookup table.
+- **Readable names**, in French like the rest of the code (`debutSemaine`, not `ds`); short names only for a loop index
+  or a one-line callback.
+- **One module, one role**: see "Module boundaries" above; a new role gets its own module in `lib/`.
+
 ## Tests
 
 - `agregats`, `hebdo` and `tables` tests are pure: small hand-written answers or readings, with expected values worked
