@@ -200,6 +200,10 @@ navigateur n'affiche rien**.
    `data/export/`, chacun nommé comme son fichier »* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`,
    `contexte`, `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `reconstructions`, `forfaits`).
 3. Après chaque nouvel export : *« Recharge les 14 données de mon tableau depuis `data/export/` »*.
+4. Après une mise à jour de `page/index.html` : *« Republie `page/index.html` sur mon tableau et vérifie-le »*. Ouvrir
+   le tableau quand c'est demandé et afficher une fois chaque vue (FR, EN, dollars, jetons) : claude.ai vérifie la
+   page pendant qu'elle est ouverte (textes, libellés, valeurs affichées), et Claude lit le résultat (`passed`, ou la
+   liste des défauts).
 
 **Passage à la 0.3.0 ou plus** : les exports portent désormais des codes et des nombres au lieu de phrases (c'est la
 page qui écrit les phrases). Republier la page avec le nouveau `page/index.html`, puis relancer un export et recharger

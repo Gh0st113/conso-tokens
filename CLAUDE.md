@@ -45,8 +45,13 @@ Simulated data, in a copy of the repo without `config.local.json`:
 2. **`exporter.mjs`** turns `donnees.json` into the dashboard tables: off-PC usage detection (`HORS`), slopes, weekly caps,
    reset segments, plan-change weeks. Tables hold **codes and numbers, never sentences** (e.g. `etat: 'projete'`,
    `type: 'cacheRead'`). It uses one `maintenant` for the whole run. At the end it prints `rapport(controler(...))`
-   (`CONTRÔLES : OK` or a list) and, in a clone, a `DÉPÔT` line if the git working tree changed: a data update must not
-   change anything in the repo.
+   (`CONTRÔLES : OK` or a list) and, in a clone, a `DÉPÔT` line if the git working tree changed (no such line: nothing
+   changed): a data update must not change anything in the repo.
+   Reloading the dashboard after an export (the user keeps a step-by-step procedure for it outside this repo: ask for
+   it before improvising): each `export/<name>.json` is uploaded as an asset of the artifact (one file per call), then
+   one batch `update` of the documents `datasets/<name>` (with `if_version`) sets `source: { kind: "file", url:
+   "/_blob/…" }` and `updated.at`; `update`, never `set` (it would drop the title and description). Assets uploaded
+   but not pointed to are harmless.
 3. **`page/index.html`** is the page of a **claude.ai Dashboard artifact**, not a standalone page. It uses the platform's
    `dash.data(name)` / `dash.draw` / `dash.onData`, and opening it in a browser shows nothing. Each table in `export/` is
    one dataset with the same name. Its `<script id="libelles">` block turns the codes into sentences in French or
@@ -87,13 +92,46 @@ run a process. A new module must also be added to `files` in `package.json`, or 
   agreger/exporter) and `aVerifier` (implausible but possibly true). It owns `ETATS_HEBDO` (the list of weekly states,
   same list as `ETATS` in the page) and `forfaitDe` (same rule as in the page).
 - `depot.mjs`: the `DÉPÔT` lines (`etatDepot`, runs `git status`).
-- `page/index.html` is bilingual (FR / EN): `#dico` holds `LANGUES` and the screen texts (`DICO`, `tr`), `#libelles` the
-  sentences of the codes (`PHRASES`). The artifact platform has two traps a local browser does not show, both checked
-  by `libelles.test.mjs`:
+- `page/index.html` is bilingual (FR / EN): each fixed text of the HTML carries every language
+  (`<span lang="fr">…</span><span lang="en">…</span>`, dollars / tokens variants in class `cc-usd` / `cc-jet`), and the
+  page only switches classes on `.cc` (`cc-lang-xx`, `cc-jetons`) that the CSS reads. `#dico` holds `LANGUES` and the
+  texts written by the JS (`DICO`, `tr`, plus the `aria-label`s), `#libelles` the sentences of the codes (`PHRASES`).
+  The artifact platform has three traps a local browser does not show, all checked by `libelles.test.mjs` or by the
+  platform's own check (see "Publishing the page" below):
   - no backslash anywhere in a `<script>`: the platform drops them (`\'` breaks the whole page, `\d` silently becomes
     `d`). Use a typographic apostrophe and `[0-9]`.
   - each `<script>` has its own scope: what two scripts share must go on `window` (`LANGUES`, `LANGUE_PAR_DEFAUT`,
     `DICO`, `tr`, `jourSemaine` at the end of `#dico`, `libelles` in `#libelles`).
+  - "one writer" (`<meta name="dash-one-writer">`): outside a drawing (`dash.draw(name, fn)`, run by the platform on
+    each `data-draw="name"` element), a script may only add listeners and change `class`, `style`, `hidden`, `aria-*`
+    and form states; any text, element or `data-*` written there is a `stray_write`. A drawing writes in its own
+    element, which the HTML stores empty or `—` (else `not_empty`); to redraw, call `dash.draw(name)` (`CC.redessiner`),
+    never `fn(el)`. A mark (`data-source` + `data-field`, `data-where`) must name the field whose value is shown: when
+    the unit switches, the drawing updates its own `data-field`; a static column gets one `<th>` per unit
+    (`cc-usd` / `cc-jet`).
+
+### Publishing the page
+
+The page is not a file of the artifact: it is the database document `files/index.html` (`{ "text": "<the page>" }`).
+"Republish" means writing that document with `ArtifactData`, never an `Artifact` publish (which would make a new
+page). The artifacts are private and their URLs are not in this public repo: ask the user for the real one and the
+test one (or read them from your memory of this project). After a change to `page/index.html`, once `node --test`
+passes (in a worktree, `data/` is empty: the tests on real data are skipped, run them in the main clone):
+
+1. Try it first on the test artifact (a second private Dashboard, same 14 datasets from the simulated data of the
+   README), never first on the user's real one.
+2. Read the document (`ArtifactData` `get`, collection `files`, doc `index.html`) to get its `version`; note the time.
+3. Write `{ "text": <page/index.html read as is, CRLF kept> }` to a JSON file in a working folder (scratchpad or
+   `.superpowers/`, never the repo root), e.g. `node -e` with `readFileSync` + `JSON.stringify` + `writeFileSync`, then
+   `ArtifactData` `set` with `file_path` = that file and `if_version` = the version read.
+4. The platform checks the page only while it is open in a browser: ask the user to open it and to show the four views
+   once (FR, EN, dollars, tokens): each view has its own texts and marks.
+5. Read the collection `data/users/me` (documents `check` and `runs`). `check` is `{ at, status: "passed" }`, or
+   `status: "failed"` with `page: [{ kind, what, where, count }]` (`stray_write`, `not_empty`, `labels_cut`…); `runs`,
+   when present, lists the datasets and, under `marks` / `flagged`, the marks whose shown value differs from the data.
+   An `at` older than your write, or no `check` yet, is the previous page: ask the user to reload, then read again.
+6. `failed` or marks flagged: fix `page/index.html`, `node --test`, back to step 2 on the test artifact.
+7. `passed` on the test artifact: commit, PR; merge only when the user says so; then steps 2 to 5 on the real artifact.
 
 ## Code style
 

@@ -192,6 +192,9 @@ chart library and data loader that claude.ai provides, so **opening it directly 
    datasets, each named after its file"* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`, `contexte`,
    `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `reconstructions`, `forfaits`).
 3. After each new export: *"Reload the 14 datasets of my dashboard from `data/export/`"*.
+4. After an update of `page/index.html`: *"Republish `page/index.html` on my dashboard and check it"*. Open the
+   dashboard when asked and show each view once (FR, EN, dollars, tokens): claude.ai checks the page while it is open
+   (texts, labels, values shown), and Claude reads the result (`passed`, or the list of faults).
 
 **Upgrading to 0.3.0 or later**: the exports now hold codes and numbers instead of French sentences (the page writes
 the sentences). Republish the page from the new `page/index.html`, then run a new export and reload the 14 datasets.
