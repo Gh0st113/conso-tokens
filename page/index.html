@@ -16,6 +16,7 @@
   .cc-chart.cc-short { min-height: 160px; }
   .cc-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm) var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
   .cc-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .cc-legend [hidden] { display: none; }
   .cc-legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
   .cc-legend .cc-hollow { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--color-fg); background: transparent; box-sizing: border-box; }
   .cc-legend .cc-hollow.cc-dash { border-style: dotted; }
@@ -49,7 +50,11 @@
   .cc-seg button { font: inherit; font-size: var(--cds-font-size-caption); padding: 4px 12px; border: 0; background: var(--color-panel); color: var(--color-fg-muted); cursor: pointer; }
   .cc-seg button + button { border-left: 1px solid var(--color-border-line); }
   .cc-seg button[aria-pressed=true] { background: var(--color-fg); color: var(--color-panel); }
-  .cc-unite > [data-jet] { flex: 1 1 100%; max-width: 75ch; }
+  .cc-unite > .cc-jet { flex: 1 1 100%; max-width: 75ch; }
+  /* Textes fixes : toutes les langues sont dans le HTML, seule celle de la page s'affiche (classes sur .cc, #34) ;
+     une langue ajoutée à LANGUES ajoute ici son « .cc:not(.cc-lang-xx) [lang="xx"] » */
+  .cc:not(.cc-lang-fr) [lang="fr"], .cc:not(.cc-lang-en) [lang="en"],
+  .cc:not(.cc-jetons) .cc-jet, .cc.cc-jetons .cc-usd { display: none; }
   .cc-titre { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--cds-gap-sm); }
   .cc-ctrl { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); }
   .cc-pastille { font-size: var(--cds-font-size-caption); padding: 1px 8px; border-radius: var(--cds-radius); border: 1px solid currentColor; white-space: nowrap; }
@@ -61,123 +66,123 @@
   .cc th[aria-sort=descending]::after { content: " ▼"; font-size: 0.75em; }
 </style>
 
-<div class="cc">
+<div class="cc cc-lang-fr">
   <header style="display:grid;gap:var(--cds-gap-sm)">
-    <h1 id="titre" data-t="titre">Conso Claude Code</h1>
-    <p class="cc-lead"><span data-t="lead.a">Semaine de forfait en cours (depuis le </span><b data-draw="semDebut" data-source="semCourante" data-field="debut">—</b>, <span data-draw="heureReset" data-source="reglages">—</span><span data-t="lead.c">) : </span><b data-draw="semCout" data-source="semCourante" data-field="cout">—</b> <span data-jet="jetons" data-t="lead.d">en équivalent API</span><span data-t="lead.e">, contre </span><b data-draw="semPrec" data-source="semCourante" data-field="prec">—</b><span data-t="lead.f"> sur toute la semaine précédente.</span></p>
+    <h1 id="titre"><span lang="fr">Conso Claude Code</span><span lang="en">Claude Code usage</span></h1>
+    <p class="cc-lead"><span><span lang="fr">Semaine de forfait en cours (depuis le </span><span lang="en">Plan week in progress (since </span></span><b data-draw="semDebut" data-source="semCourante" data-field="debut">—</b>, <span data-draw="heureReset" data-source="reglages">—</span><span><span lang="fr">) : </span><span lang="en">): </span></span><b data-draw="semCout" data-source="semCourante" data-field="cout">—</b> <span><span class="cc-usd" lang="fr">en équivalent API</span><span class="cc-jet" lang="fr">jetons</span><span class="cc-usd" lang="en">in API-equivalent</span><span class="cc-jet" lang="en">tokens</span></span><span><span lang="fr">, contre </span><span lang="en">, against </span></span><b data-draw="semPrec" data-source="semCourante" data-field="prec">—</b><span><span lang="fr"> sur toute la semaine précédente.</span><span lang="en"> for the whole previous week.</span></span></p>
     <div class="cc-unite">
-      <span class="cc-muted" data-t="langue.label">Langue</span>
-      <span class="cc-seg" id="langues" role="group" data-t-aria="langue.aria" aria-label="Langue d'affichage"></span>
+      <span class="cc-muted"><span lang="fr">Langue</span><span lang="en">Language</span></span>
+      <span class="cc-seg" id="langues" data-draw="langues" role="group" data-t-aria="langue.aria" aria-label="Langue d'affichage"></span>
     </div>
     <div class="cc-unite">
-      <span class="cc-muted" data-t="unite.label">Afficher en</span>
-      <span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true" data-t="btn.dollars">dollars</button><button type="button" data-unite="jetons" aria-pressed="false" data-t="btn.jetons">jetons</button></span>
-      <span class="cc-muted" data-jet="Jetons = entrée + écriture et lecture du cache + sortie ; la relecture du cache en fait plus de 90 %, la courbe suit donc surtout la longueur des sessions. Les deux plafonds passent en jetons de sortie (les jetons totaux n'ont pas de sens pour un plafond) ; les pentes restent en dollars." data-t="jet.explic"></span>
+      <span class="cc-muted"><span lang="fr">Afficher en</span><span lang="en">Show in</span></span>
+      <span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true"><span lang="fr">dollars</span><span lang="en">dollars</span></button><button type="button" data-unite="jetons" aria-pressed="false"><span lang="fr">jetons</span><span lang="en">tokens</span></button></span>
+      <span class="cc-jet cc-muted"><span lang="fr">Jetons = entrée + écriture et lecture du cache + sortie ; la relecture du cache en fait plus de 90 %, la courbe suit donc surtout la longueur des sessions. Les deux plafonds passent en jetons de sortie (les jetons totaux n'ont pas de sens pour un plafond) ; les pentes restent en dollars.</span><span lang="en">Tokens = input + cache write and read + output; cache reads make up over 90 %, so the curve mostly follows session length. The two caps are shown in output tokens (total tokens mean nothing for a cap); the slopes stay in dollars.</span></span>
     </div>
   </header>
 
   <section class="cc-reset" id="reset" data-t-aria="reset.aria" aria-label="Remise à zéro du forfait">
-    <h2><span data-t="reset.h2a">Le forfait repart à zéro chaque </span><span data-draw="cycleJour" data-source="reglages">—</span><span data-t="reset.h2b"> à </span><span data-draw="heureReset" data-source="reglages">—</span></h2>
-    <p><span data-t="reset.p1">Le cycle dure exactement 7 × 24 h et ne suit pas le changement d'heure de Paris. Prochaine remise à zéro : </span><b data-draw="prochain" data-source="reglages">—</b>.<span data-draw="cycleRepli" data-source="reglages"></span></p>
-    <p class="cc-muted" data-repli hidden data-t="repli">Cycle par défaut affiché (dimanche 10 h UTC) : réglages non reçus (table « reglages » absente ou en erreur).</p>
-    <p class="cc-muted"><span data-t="reset.p3">Heure lue dans l'appli (/usage) ; réglable dans </span><code>config.local.json</code><span data-t="reset.p4"> (clé </span><code>remiseAZero</code><span data-t="reset.p5">, README). Chaque barre du graphe hebdomadaire couvre une fenêtre de forfait, d'une remise à zéro à la suivante. Sur le graphe par jour, les traits pointillés marquent ces remises à zéro. Ces fenêtres ne comptent que ce PC (Claude Code et, sous Windows, Cowork local, journaux jusqu'à fin octobre 2026), alors que le forfait compte aussi claude.ai, le téléphone et Cowork distant.</span></p>
+    <h2><span><span lang="fr">Le forfait repart à zéro chaque </span><span lang="en">The plan resets every </span></span><span data-draw="cycleJour" data-source="reglages">—</span><span><span lang="fr"> à </span><span lang="en"> at </span></span><span data-draw="heureReset" data-source="reglages">—</span></h2>
+    <p><span><span lang="fr">Le cycle dure exactement 7 × 24 h et ne suit pas le changement d'heure de Paris. Prochaine remise à zéro : </span><span lang="en">The cycle lasts exactly 7 × 24 h and ignores Paris daylight saving time. Next reset: </span></span><b data-draw="prochain" data-source="reglages">—</b>.<span data-draw="cycleRepli" data-source="reglages"></span></p>
+    <p class="cc-muted" data-repli hidden><span lang="fr">Cycle par défaut affiché (dimanche 10 h UTC) : réglages non reçus (table « reglages » absente ou en erreur).</span><span lang="en">Default cycle shown (Sunday 10:00 UTC): settings not received (table "reglages" missing or in error).</span></p>
+    <p class="cc-muted"><span><span lang="fr">Heure lue dans l'appli (/usage) ; réglable dans </span><span lang="en">Time read in the app (/usage); adjustable in </span></span><code>config.local.json</code><span><span lang="fr"> (clé </span><span lang="en"> (key </span></span><code>remiseAZero</code><span><span lang="fr">, README). Chaque barre du graphe hebdomadaire couvre une fenêtre de forfait, d'une remise à zéro à la suivante. Sur le graphe par jour, les traits pointillés marquent ces remises à zéro. Ces fenêtres ne comptent que ce PC (Claude Code et, sous Windows, Cowork local, journaux jusqu'à fin octobre 2026), alors que le forfait compte aussi claude.ai, le téléphone et Cowork distant.</span><span lang="en">, README). Each weekly bar covers one plan window, from one reset to the next. On the daily chart, dotted lines mark these resets. These windows count only this PC (Claude Code and, on Windows, local Cowork, logs up to the end of October 2026), whereas the plan also counts claude.ai, the phone and remote Cowork.</span></span></p>
   </section>
 
   <section class="cc-card" id="pentes">
-    <div class="cc-titre"><h2 data-t="pentes.h2">Le plafond hebdo baisse-t-il ?</h2><span class="cc-muted" data-t="pentes.tag">en dollars seulement</span></div>
-    <p data-t="pentes.p1">Prix de 100 % hebdo mesuré entre deux relevés du % de la même semaine : coût consommé entre les deux ÷ écart de %. C'est la mesure la plus fiable, car ce qui a été consommé hors de ces journaux avant le premier relevé (claude.ai, téléphone, autre PC) ne compte pas.</p>
-    <p class="cc-muted" data-t="pentes.p2">Les relevés viennent de l'appli elle-même (événements de limite enregistrés dans les journaux Claude Code et, jusqu'à fin octobre 2026, Cowork local) et des relevés ajoutés à la main. Point plein : intervalle de 12 h ou moins, le plus fiable. Point creux : intervalle plus long, où un usage non mesuré pendant l'intervalle peut fausser le chiffre. Quand le % monte d'au moins 1 point en plus d'une heure presque sans dépense sur ce PC (Cowork distant, claude.ai, téléphone), aucune pente n'enjambe cette période. Point en pointillé : plus d'une heure sans relevé alors que ce PC consommait plus de 5 $ (relevé arrêté, ex. sonar fermé) ; un usage hors PC pendant ce silence passerait inaperçu, le chiffre est alors au mieux une borne basse, à prendre avec prudence.</p>
-    <div class="cc-legend"><span><i class="cc-sw" data-i="0"></i><span data-t="leg.12h">intervalle de 12 h ou moins</span></span><span><i class="cc-hollow"></i><span data-t="leg.long">intervalle plus long</span></span><span><i class="cc-hollow cc-dash"></i><span data-t="leg.manquants">relevés manquants</span></span></div>
+    <div class="cc-titre"><h2><span lang="fr">Le plafond hebdo baisse-t-il ?</span><span lang="en">Is the weekly cap going down?</span></h2><span class="cc-muted"><span lang="fr">en dollars seulement</span><span lang="en">in dollars only</span></span></div>
+    <p><span lang="fr">Prix de 100 % hebdo mesuré entre deux relevés du % de la même semaine : coût consommé entre les deux ÷ écart de %. C'est la mesure la plus fiable, car ce qui a été consommé hors de ces journaux avant le premier relevé (claude.ai, téléphone, autre PC) ne compte pas.</span><span lang="en">Price of 100 % weekly, measured between two readings of the % for the same week: cost used between the two ÷ change in %. It is the most reliable measure, because what was used outside these logs before the first reading (claude.ai, phone, other PC) is not counted.</span></p>
+    <p class="cc-muted"><span lang="fr">Les relevés viennent de l'appli elle-même (événements de limite enregistrés dans les journaux Claude Code et, jusqu'à fin octobre 2026, Cowork local) et des relevés ajoutés à la main. Point plein : intervalle de 12 h ou moins, le plus fiable. Point creux : intervalle plus long, où un usage non mesuré pendant l'intervalle peut fausser le chiffre. Quand le % monte d'au moins 1 point en plus d'une heure presque sans dépense sur ce PC (Cowork distant, claude.ai, téléphone), aucune pente n'enjambe cette période. Point en pointillé : plus d'une heure sans relevé alors que ce PC consommait plus de 5 $ (relevé arrêté, ex. sonar fermé) ; un usage hors PC pendant ce silence passerait inaperçu, le chiffre est alors au mieux une borne basse, à prendre avec prudence.</span><span lang="en">The readings come from the app itself (limit events recorded in the Claude Code logs and, until the end of October 2026, local Cowork) and from readings added by hand. Solid dot: interval of 12 h or less, the most reliable. Hollow dot: longer interval, where usage not measured during the interval can skew the figure. When the % rises by at least 1 point over more than an hour with almost no spending on this PC (remote Cowork, claude.ai, phone), no slope spans that period. Dotted hollow dot: more than an hour without a reading while this PC was spending more than $5 (reading stopped, e.g. sonar closed); usage outside this PC during that silence would go unnoticed, so the figure is at best a lower bound, to be taken with caution.</span></p>
+    <div class="cc-legend"><span><i class="cc-sw" data-i="0"></i><span><span lang="fr">intervalle de 12 h ou moins</span><span lang="en">interval of 12 h or less</span></span></span><span><i class="cc-hollow"></i><span><span lang="fr">intervalle plus long</span><span lang="en">longer interval</span></span></span><span><i class="cc-hollow cc-dash"></i><span><span lang="fr">relevés manquants</span><span lang="en">missing readings</span></span></span></div>
     <div class="cc-chart cc-short dash-skeleton" data-draw="chPentes" data-source="pentes"></div>
   </section>
 
   <section class="cc-card" id="plafond">
-    <div class="cc-titre"><h2 data-t="plafond.h2">Plafond hebdo, semaine par semaine</h2><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true" data-t="btn.dollars">dollars</button><button type="button" data-unite="jetons" aria-pressed="false" data-t="btn.jetons">jetons</button></span></div>
-    <p class="cc-muted"><span data-jet="En vue jetons : barre et point en jetons de sortie (réponses et réflexion), le tableau garde les deux unités." data-t="plafond.jet0"></span><span data-t="plafond.p1"> Barre : ce que Claude Code et, sous Windows, Cowork local (journaux jusqu'à fin octobre 2026 seulement) ont consommé dans la semaine. Point plein : coût cumulé au moment du message « You've hit your weekly limit ». Point creux : projection depuis le dernier relevé du % de la semaine (coût ÷ %). Les points repérés comme consommés hors de ce PC (même règle que pour les pentes) sont retirés du % avant le calcul : l'infobulle en donne le nombre. Pas de point quand le plafond est trop incertain (voir sous le tableau). Un usage hors journaux non repéré, par exemple avant le premier relevé de la semaine, fait encore paraître le plafond plus bas que la réalité. Une semaine sans point n'a pas atteint 100 % ou n'a pas de relevé.</span></p>
+    <div class="cc-titre"><h2><span lang="fr">Plafond hebdo, semaine par semaine</span><span lang="en">Weekly cap, week by week</span></h2><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true"><span lang="fr">dollars</span><span lang="en">dollars</span></button><button type="button" data-unite="jetons" aria-pressed="false"><span lang="fr">jetons</span><span lang="en">tokens</span></button></span></div>
+    <p class="cc-muted"><span class="cc-jet"><span lang="fr">En vue jetons : barre et point en jetons de sortie (réponses et réflexion), le tableau garde les deux unités.</span><span lang="en">Tokens view: bar and dot in output tokens (replies and reasoning); the table keeps both units.</span></span><span><span lang="fr"> Barre : ce que Claude Code et, sous Windows, Cowork local (journaux jusqu'à fin octobre 2026 seulement) ont consommé dans la semaine. Point plein : coût cumulé au moment du message « You've hit your weekly limit ». Point creux : projection depuis le dernier relevé du % de la semaine (coût ÷ %). Les points repérés comme consommés hors de ce PC (même règle que pour les pentes) sont retirés du % avant le calcul : l'infobulle en donne le nombre. Pas de point quand le plafond est trop incertain (voir sous le tableau). Un usage hors journaux non repéré, par exemple avant le premier relevé de la semaine, fait encore paraître le plafond plus bas que la réalité. Une semaine sans point n'a pas atteint 100 % ou n'a pas de relevé.</span><span lang="en"> Bar: what Claude Code and, on Windows, local Cowork (logs up to the end of October 2026 only) used during the week. Solid dot: cumulative cost at the moment of the message "You’ve hit your weekly limit". Hollow dot: projection from the last reading of the week’s % (cost ÷ %). Points spotted as used outside this PC (same rule as for the slopes) are removed from the % before the calculation: the tooltip gives the number. No dot when the cap is too uncertain (see below the table). Unspotted usage outside the logs, for example before the first reading of the week, still makes the cap look lower than it is. A week without a dot has not reached 100 % or has no reading.</span></span></p>
     <div class="cc-legend">
-      <span><i class="cc-sw" data-i="4"></i><span data-t="leg.conso">consommé (Claude Code et Cowork local)</span></span><span><i class="cc-sw" data-i="0"></i><span data-t="leg.atteint">plafond atteint</span></span><span><i class="cc-hollow"></i><span data-t="leg.projete">plafond projeté</span></span><span data-forfait-legende style="display:none"><i class="cc-rule"></i><span data-t="leg.changement">changement de forfait</span></span><span data-forfait-legende style="display:none"><i class="cc-hollow cc-dash"></i><span data-t="leg.indicatif">plafond indicatif (deux forfaits)</span></span>
+      <span><i class="cc-sw" data-i="4"></i><span><span lang="fr">consommé (Claude Code et Cowork local)</span><span lang="en">used (Claude Code and local Cowork)</span></span></span><span><i class="cc-sw" data-i="0"></i><span><span lang="fr">plafond atteint</span><span lang="en">cap reached</span></span></span><span><i class="cc-hollow"></i><span><span lang="fr">plafond projeté</span><span lang="en">projected cap</span></span></span><span data-forfait-legende style="display:none"><i class="cc-rule"></i><span><span lang="fr">changement de forfait</span><span lang="en">plan change</span></span></span><span data-forfait-legende style="display:none"><i class="cc-hollow cc-dash"></i><span><span lang="fr">plafond indicatif (deux forfaits)</span><span lang="en">indicative cap (two plans)</span></span></span>
     </div>
     <div class="cc-chart dash-skeleton" data-draw="chPlafond" data-source="plafondsHebdo"></div>
     <div class="cc-table-box">
       <table data-source="plafondsHebdo" data-row-key="semaine">
         <thead><tr>
-          <th data-field="semaine" data-t="th.semaine">Semaine dès le</th><th data-field="etat" data-t="lbl.100">100 % hebdo</th><th data-field="consomme" class="cc-num" data-t="lbl.consomme">Consommé</th>
-          <th data-field="horsEstime" class="cc-num" data-t="lbl.horsPC">Hors PC (repéré)</th><th data-field="plafond" class="cc-num" data-t="th.plafond.usd">Plafond en $</th><th data-field="sortie" class="cc-num cc-hide-narrow" data-t="th.plafond.jet">Plafond en jetons de sortie</th>
+          <th data-field="semaine"><span lang="fr">Semaine dès le</span><span lang="en">Week from</span></th><th data-field="etat"><span lang="fr">100 % hebdo</span><span lang="en">100 % weekly</span></th><th data-field="consomme" class="cc-num"><span lang="fr">Consommé</span><span lang="en">Used</span></th>
+          <th data-field="horsEstime" class="cc-num"><span lang="fr">Hors PC (repéré)</span><span lang="en">Off PC (spotted)</span></th><th data-field="plafond" class="cc-num"><span lang="fr">Plafond en $</span><span lang="en">Cap in $</span></th><th data-field="sortie" class="cc-num cc-hide-narrow"><span lang="fr">Plafond en jetons de sortie</span><span lang="en">Cap in output tokens</span></th>
         </tr></thead>
         <tbody data-draw="tabPlafond" data-source="plafondsHebdo"></tbody>
       </table>
     </div>
-    <p class="cc-muted"><span data-t="note.a">« Hors PC (repéré) » : part du % hebdo prise ailleurs que sur ce PC, par exemple Cowork quand il tourne côté Anthropic sans laisser de journal ici, claude.ai ou le téléphone. C'est une déduction, pas une mesure : aucun compteur du Cowork distant n'est lisible ici. Règle : entre deux relevés espacés de plus d'une heure, une hausse d'au moins 1 point avec moins de 0,50 $ dépensés sur ce PC par point de hausse est comptée hors PC (hausse − coût local ÷ 2,44 $, soit au moins 0,8 point compté hors PC par point de hausse). Le % étant arrondi à l'entier inférieur, chaque période vaut ±1 point : quand de telles périodes sont repérées, le statut donne le plafond en </span><strong data-t="note.fourchette">fourchette</strong><span data-t="note.b"> (part payée sur ce PC ± 1 point par période). Si la fourchette dépasse 25 % du plafond, il n'y a pas de plafond (« plafond incertain ») ; de même si la part payée sur ce PC est sous 10 %. Ce que la règle ne voit pas : l'usage hors PC fait en même temps que Claude Code (il fait paraître le point moins cher) et celui d'avant le premier relevé.</span></p>
-    <p class="cc-muted" data-t="note.c">Biais restants : claude.ai, le téléphone et les autres PC ne sont pas dans ces journaux ; le « $ équivalent API » n'est pas forcément la pondération d'Anthropic.</p>
+    <p class="cc-muted"><span><span lang="fr">« Hors PC (repéré) » : part du % hebdo prise ailleurs que sur ce PC, par exemple Cowork quand il tourne côté Anthropic sans laisser de journal ici, claude.ai ou le téléphone. C'est une déduction, pas une mesure : aucun compteur du Cowork distant n'est lisible ici. Règle : entre deux relevés espacés de plus d'une heure, une hausse d'au moins 1 point avec moins de 0,50 $ dépensés sur ce PC par point de hausse est comptée hors PC (hausse − coût local ÷ 2,44 $, soit au moins 0,8 point compté hors PC par point de hausse). Le % étant arrondi à l'entier inférieur, chaque période vaut ±1 point : quand de telles périodes sont repérées, le statut donne le plafond en </span><span lang="en">"Off PC (spotted)": share of the weekly % taken somewhere other than this PC, for example Cowork when it runs on Anthropic’s side without leaving a log here, claude.ai or the phone. It is a deduction, not a measure: no counter of remote Cowork can be read here. Rule: between two readings more than an hour apart, a rise of at least 1 point with less than $0.50 spent on this PC per point of rise is counted as off PC (rise − local cost ÷ $2.44, so at least 0.8 point counted as off PC per point of rise). The % being rounded down to the whole number, each period is worth ±1 point: when such periods are spotted, the status gives the cap as a </span></span><strong><span lang="fr">fourchette</span><span lang="en">range</span></strong><span><span lang="fr"> (part payée sur ce PC ± 1 point par période). Si la fourchette dépasse 25 % du plafond, il n'y a pas de plafond (« plafond incertain ») ; de même si la part payée sur ce PC est sous 10 %. Ce que la règle ne voit pas : l'usage hors PC fait en même temps que Claude Code (il fait paraître le point moins cher) et celui d'avant le premier relevé.</span><span lang="en"> (share paid on this PC ± 1 point per period). If the range exceeds 25 % of the cap, there is no cap ("uncertain cap"); likewise if the share paid on this PC is under 10 %. What the rule does not see: usage outside this PC at the same time as Claude Code (it makes the point look cheaper) and usage before the first reading.</span></span></p>
+    <p class="cc-muted"><span lang="fr">Biais restants : claude.ai, le téléphone et les autres PC ne sont pas dans ces journaux ; le « $ équivalent API » n'est pas forcément la pondération d'Anthropic.</span><span lang="en">Remaining biases: claude.ai, the phone and other PCs are not in these logs; the "$ API-equivalent" is not necessarily Anthropic’s weighting.</span></p>
   </section>
 
   <section class="cc-card" id="plafond5h">
-    <div class="cc-titre"><h2 data-t="plafond5h.h2">Plafond des fenêtres de 5 h</h2><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true" data-t="btn.dollars">dollars</button><button type="button" data-unite="jetons" aria-pressed="false" data-t="btn.jetons">jetons</button></span></div>
-    <p class="cc-muted"><span data-jet="En vue jetons : jetons de sortie (réponses et réflexion) au même moment ; l'infobulle garde les dollars." data-t="plafond5h.jet0"></span><span data-t="plafond5h.p"> Coût cumulé dans la fenêtre au moment du message « You've hit your session limit » (point plein), ou projeté depuis un relevé du % (point creux). Mêmes biais que ci-dessus.</span></p>
+    <div class="cc-titre"><h2><span lang="fr">Plafond des fenêtres de 5 h</span><span lang="en">Cap of the 5-hour windows</span></h2><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true"><span lang="fr">dollars</span><span lang="en">dollars</span></button><button type="button" data-unite="jetons" aria-pressed="false"><span lang="fr">jetons</span><span lang="en">tokens</span></button></span></div>
+    <p class="cc-muted"><span class="cc-jet"><span lang="fr">En vue jetons : jetons de sortie (réponses et réflexion) au même moment ; l'infobulle garde les dollars.</span><span lang="en">Tokens view: output tokens (replies and reasoning) at the same moment; the tooltip keeps the dollars.</span></span><span><span lang="fr"> Coût cumulé dans la fenêtre au moment du message « You've hit your session limit » (point plein), ou projeté depuis un relevé du % (point creux). Mêmes biais que ci-dessus.</span><span lang="en"> Cost accumulated in the window at the moment of the message "You’ve hit your session limit" (solid dot), or projected from a reading of the % (hollow dot). Same biases as above.</span></span></p>
     <div class="cc-chart cc-short dash-skeleton" data-draw="chPlafond5h" data-source="plafonds5h"></div>
   </section>
 
   <section class="cc-tiles" data-t-aria="tiles.aria" aria-label="Chiffres clés">
-    <div class="cc-tile"><span class="cc-muted" data-jet="Jetons, depuis le début des données" data-t="tile.cout">Équivalent API, depuis le début des données</span><span class="cc-big" data-draw="tCout" data-source="totaux" data-field="cout">—</span><span class="cc-muted" data-jet="cache compris, relu à chaque message" data-t="tile.cout.sub">ce que coûterait la même conso payée à l'API</span></div>
-    <div class="cc-tile"><span class="cc-muted" data-t="tile.appels">Réponses de Claude, depuis le début des données</span><span class="cc-big" data-draw="tAppels" data-source="totaux" data-field="appels">—</span><span class="cc-muted" data-t="tile.appels.sub">appels au modèle, sous-agents compris</span></div>
-    <div class="cc-tile"><span class="cc-muted" data-jet="Part d'Opus dans les jetons, depuis le début des données" data-t="tile.opus">Part d'Opus dans le coût, depuis le début des données</span><span class="cc-big" data-draw="tOpus" data-source="partOpus" data-field="part">—</span><span class="cc-muted" data-t="tile.opus.sub">tous les modèles Opus</span></div>
-    <div class="cc-tile"><span class="cc-muted" data-t="tile.gros">Appels avec plus de 150k de contexte, depuis le début des données</span><span class="cc-big" data-draw="tGros" data-source="grosContexte" data-field="part">—</span><span class="cc-muted" data-t="tile.gros.sub">repère : moins de 50 %</span></div>
+    <div class="cc-tile"><span class="cc-muted"><span class="cc-usd" lang="fr">Équivalent API, depuis le début des données</span><span class="cc-jet" lang="fr">Jetons, depuis le début des données</span><span class="cc-usd" lang="en">API-equivalent, since the start of the data</span><span class="cc-jet" lang="en">Tokens, since the start of the data</span></span><span class="cc-big" data-draw="tCout" data-source="totaux" data-field="cout">—</span><span class="cc-muted"><span class="cc-usd" lang="fr">ce que coûterait la même conso payée à l'API</span><span class="cc-jet" lang="fr">cache compris, relu à chaque message</span><span class="cc-usd" lang="en">what the same usage would cost paid at the API</span><span class="cc-jet" lang="en">cache included, read again at each message</span></span></div>
+    <div class="cc-tile"><span class="cc-muted"><span lang="fr">Réponses de Claude, depuis le début des données</span><span lang="en">Claude replies, since the start of the data</span></span><span class="cc-big" data-draw="tAppels" data-source="totaux" data-field="appels">—</span><span class="cc-muted"><span lang="fr">appels au modèle, sous-agents compris</span><span lang="en">model calls, subagents included</span></span></div>
+    <div class="cc-tile"><span class="cc-muted"><span class="cc-usd" lang="fr">Part d'Opus dans le coût, depuis le début des données</span><span class="cc-jet" lang="fr">Part d'Opus dans les jetons, depuis le début des données</span><span class="cc-usd" lang="en">Share of Opus in the cost, since the start of the data</span><span class="cc-jet" lang="en">Share of Opus in the tokens, since the start of the data</span></span><span class="cc-big" data-draw="tOpus" data-source="partOpus" data-field="part">—</span><span class="cc-muted"><span lang="fr">tous les modèles Opus</span><span lang="en">all Opus models</span></span></div>
+    <div class="cc-tile"><span class="cc-muted"><span lang="fr">Appels avec plus de 150k de contexte, depuis le début des données</span><span lang="en">Calls with more than 150k of context, since the start of the data</span></span><span class="cc-big" data-draw="tGros" data-source="grosContexte" data-field="part">—</span><span class="cc-muted"><span lang="fr">repère : moins de 50 %</span><span lang="en">benchmark: under 50 %</span></span></div>
   </section>
 
   <section class="cc-card" id="semaines">
-    <div class="cc-titre"><h2 data-jet="Jetons par semaine de forfait" data-t="semaines.h2">Coût par semaine de forfait</h2><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true" data-t="btn.dollars">dollars</button><button type="button" data-unite="jetons" aria-pressed="false" data-t="btn.jetons">jetons</button></span></div>
-    <p class="cc-muted" data-jet="Jetons consommés, par modèle. La dernière barre, plus claire, est la semaine en cours." data-t="semaines.p">Équivalent API en dollars, par modèle. La dernière barre, plus claire, est la semaine en cours.</p>
-    <div class="cc-legend" id="legSemaines"></div>
+    <div class="cc-titre"><h2><span class="cc-usd" lang="fr">Coût par semaine de forfait</span><span class="cc-jet" lang="fr">Jetons par semaine de forfait</span><span class="cc-usd" lang="en">Cost per plan week</span><span class="cc-jet" lang="en">Tokens per plan week</span></h2><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true"><span lang="fr">dollars</span><span lang="en">dollars</span></button><button type="button" data-unite="jetons" aria-pressed="false"><span lang="fr">jetons</span><span lang="en">tokens</span></button></span></div>
+    <p class="cc-muted"><span class="cc-usd" lang="fr">Équivalent API en dollars, par modèle. La dernière barre, plus claire, est la semaine en cours.</span><span class="cc-jet" lang="fr">Jetons consommés, par modèle. La dernière barre, plus claire, est la semaine en cours.</span><span class="cc-usd" lang="en">API-equivalent in dollars, per model. The last bar, lighter, is the week in progress.</span><span class="cc-jet" lang="en">Tokens used, per model. The last bar, lighter, is the week in progress.</span></p>
+    <div class="cc-legend" id="legSemaines" data-draw="legSemaines" data-source="semaines"></div>
     <div class="cc-chart dash-skeleton" data-draw="chSemaines" data-source="semaines"></div>
   </section>
 
   <section class="cc-card" id="jours">
-    <div class="cc-titre"><h2 data-jet="Jetons par jour" data-t="jours.h2">Coût par jour</h2><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true" data-t="btn.dollars">dollars</button><button type="button" data-unite="jetons" aria-pressed="false" data-t="btn.jetons">jetons</button></span></div>
-    <p class="cc-muted" data-jet="Jetons consommés, jour calendaire à l'heure de Paris." data-t="jours.p">Équivalent API en dollars, jour calendaire à l'heure de Paris.</p>
-    <div class="cc-legend" id="legJours"><span><i class="cc-rule"></i><span data-t="jours.leg">remise à zéro du forfait (</span><span data-draw="cycleJour" data-source="reglages">—</span> <span data-draw="heureReset" data-source="reglages">—</span>)</span></div>
+    <div class="cc-titre"><h2><span class="cc-usd" lang="fr">Coût par jour</span><span class="cc-jet" lang="fr">Jetons par jour</span><span class="cc-usd" lang="en">Cost per day</span><span class="cc-jet" lang="en">Tokens per day</span></h2><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true"><span lang="fr">dollars</span><span lang="en">dollars</span></button><button type="button" data-unite="jetons" aria-pressed="false"><span lang="fr">jetons</span><span lang="en">tokens</span></button></span></div>
+    <p class="cc-muted"><span class="cc-usd" lang="fr">Équivalent API en dollars, jour calendaire à l'heure de Paris.</span><span class="cc-jet" lang="fr">Jetons consommés, jour calendaire à l'heure de Paris.</span><span class="cc-usd" lang="en">API-equivalent in dollars, calendar day in Paris time.</span><span class="cc-jet" lang="en">Tokens used, calendar day in Paris time.</span></p>
+    <div class="cc-legend" id="legJours"><span><i class="cc-rule"></i><span><span lang="fr">remise à zéro du forfait (</span><span lang="en">plan reset (</span></span><span data-draw="cycleJour" data-source="reglages">—</span> <span data-draw="heureReset" data-source="reglages">—</span>)</span><span class="cc-reset-precis" hidden><i class="cc-rule-plein"></i><span><span lang="fr">reset hebdo déclaré</span><span lang="en">declared weekly reset</span></span></span></div>
     <div class="cc-chart dash-skeleton" data-draw="chJours" data-source="jours"></div>
   </section>
 
   <div class="cc-grid">
     <section class="cc-card" id="types">
-      <div class="cc-titre"><h2 data-t="types.h2">Où partent les jetons</h2><span class="cc-seg" role="group" data-t-aria="periode.aria" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false" data-t="btn.7j">7 j</button><button type="button" data-periode="30" aria-pressed="true" data-t="btn.30j">30 j</button><button type="button" data-periode="tout" aria-pressed="false" data-t="btn.tout">tout</button></span></div>
-      <p class="cc-muted" data-t="types.p">La relecture du cache fait presque tout le volume, mais pèse beaucoup moins dans le coût : chaque message renvoie tout le contexte, relu à prix réduit.</p>
-      <div class="cc-legend"><span><i class="cc-sw" data-i="4"></i><span data-t="leg.partJetons">part des jetons</span></span><span><i class="cc-sw" data-i="0"></i><span data-t="leg.partCout">part du coût</span></span></div>
+      <div class="cc-titre"><h2><span lang="fr">Où partent les jetons</span><span lang="en">Where the tokens go</span></h2><span class="cc-seg" role="group" data-t-aria="periode.aria" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false"><span lang="fr">7 j</span><span lang="en">7 d</span></button><button type="button" data-periode="30" aria-pressed="true"><span lang="fr">30 j</span><span lang="en">30 d</span></button><button type="button" data-periode="tout" aria-pressed="false"><span lang="fr">tout</span><span lang="en">all</span></button></span></div>
+      <p class="cc-muted"><span lang="fr">La relecture du cache fait presque tout le volume, mais pèse beaucoup moins dans le coût : chaque message renvoie tout le contexte, relu à prix réduit.</span><span lang="en">Cache reads make up almost all the volume, but weigh much less in the cost: each message sends back the whole context, read again at a reduced price.</span></p>
+      <div class="cc-legend"><span><i class="cc-sw" data-i="4"></i><span><span lang="fr">part des jetons</span><span lang="en">share of tokens</span></span></span><span><i class="cc-sw" data-i="0"></i><span><span lang="fr">part du coût</span><span lang="en">share of cost</span></span></span></div>
       <div class="cc-split dash-skeleton" data-draw="chTypes" data-source="types"></div>
     </section>
     <section class="cc-card" id="contexte">
-      <div class="cc-titre"><h2 data-t="ctx.h2">Taille du contexte à chaque appel</h2><span class="cc-seg" role="group" data-t-aria="periode.aria" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false" data-t="btn.7j">7 j</button><button type="button" data-periode="30" aria-pressed="true" data-t="btn.30j">30 j</button><button type="button" data-periode="tout" aria-pressed="false" data-t="btn.tout">tout</button></span></div>
-      <p class="cc-muted"><span data-t="ctx.p1">Nombre d'appels selon le contexte envoyé (cache compris), </span><span data-per="7" hidden data-t="per.7">sur les 7 derniers jours de données</span><span data-per="30" data-t="per.30">sur les 30 derniers jours de données</span><span data-per="tout" hidden data-t="per.tout">depuis le début des données</span><span data-t="ctx.p2">. Au-delà de 150k, chaque message coûte cher.</span></p>
-      <p><span data-t="ctx.sur">Sur cette période : </span><b data-draw="ctxPart" data-source="ctxPeriodes" data-field="part">—</b><span data-t="ctx.des"> des appels au-delà de 150k </span><span class="cc-pastille cc-ok" data-obj="ok" hidden data-t="pastille.ok">objectif atteint (moins de 50 %)</span><span class="cc-pastille cc-ko" data-obj="ko" hidden data-t="pastille.ko">objectif (moins de 50 %) pas atteint</span><span data-draw="ctxObj" data-source="ctxPeriodes"></span></p>
+      <div class="cc-titre"><h2><span lang="fr">Taille du contexte à chaque appel</span><span lang="en">Context size per call</span></h2><span class="cc-seg" role="group" data-t-aria="periode.aria" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false"><span lang="fr">7 j</span><span lang="en">7 d</span></button><button type="button" data-periode="30" aria-pressed="true"><span lang="fr">30 j</span><span lang="en">30 d</span></button><button type="button" data-periode="tout" aria-pressed="false"><span lang="fr">tout</span><span lang="en">all</span></button></span></div>
+      <p class="cc-muted"><span><span lang="fr">Nombre d'appels selon le contexte envoyé (cache compris), </span><span lang="en">Number of calls by context sent (cache included), </span></span><span data-per="7" hidden><span lang="fr">sur les 7 derniers jours de données</span><span lang="en">over the last 7 days of data</span></span><span data-per="30"><span lang="fr">sur les 30 derniers jours de données</span><span lang="en">over the last 30 days of data</span></span><span data-per="tout" hidden><span lang="fr">depuis le début des données</span><span lang="en">since the start of the data</span></span><span><span lang="fr">. Au-delà de 150k, chaque message coûte cher.</span><span lang="en">. Above 150k, each message is costly.</span></span></p>
+      <p><span><span lang="fr">Sur cette période : </span><span lang="en">Over this period: </span></span><b data-draw="ctxPart" data-source="ctxPeriodes" data-field="part">—</b><span><span lang="fr"> des appels au-delà de 150k </span><span lang="en"> of calls above 150k </span></span><span class="cc-pastille cc-ok" data-obj="ok" hidden><span lang="fr">objectif atteint (moins de 50 %)</span><span lang="en">goal reached (under 50 %)</span></span><span class="cc-pastille cc-ko" data-obj="ko" hidden><span lang="fr">objectif (moins de 50 %) pas atteint</span><span lang="en">goal (under 50 %) not reached</span></span><span data-draw="ctxObj" data-source="ctxPeriodes"></span></p>
       <div class="cc-chart cc-short dash-skeleton" data-draw="chContexte" data-source="contexte"></div>
     </section>
     <section class="cc-card" id="projets">
-      <div class="cc-titre"><h2 data-t="projets.h2">Par dossier de travail</h2><span class="cc-ctrl"><span class="cc-seg" role="group" data-t-aria="periode.aria" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false" data-t="btn.7j">7 j</button><button type="button" data-periode="30" aria-pressed="true" data-t="btn.30j">30 j</button><button type="button" data-periode="tout" aria-pressed="false" data-t="btn.tout">tout</button></span><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true" data-t="btn.dollars">dollars</button><button type="button" data-unite="jetons" aria-pressed="false" data-t="btn.jetons">jetons</button></span></span></div>
-      <p class="cc-muted"><span data-jet="Jetons consommés" data-t="mesure.usd">Équivalent API en dollars</span>, <span data-per="7" hidden data-t="per.7">sur les 7 derniers jours de données</span><span data-per="30" data-t="per.30">sur les 30 derniers jours de données</span><span data-per="tout" hidden data-t="per.tout">depuis le début des données</span><span data-t="projets.fin"> (jours en heure de Paris).</span></p>
+      <div class="cc-titre"><h2><span lang="fr">Par dossier de travail</span><span lang="en">By work folder</span></h2><span class="cc-ctrl"><span class="cc-seg" role="group" data-t-aria="periode.aria" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false"><span lang="fr">7 j</span><span lang="en">7 d</span></button><button type="button" data-periode="30" aria-pressed="true"><span lang="fr">30 j</span><span lang="en">30 d</span></button><button type="button" data-periode="tout" aria-pressed="false"><span lang="fr">tout</span><span lang="en">all</span></button></span><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true"><span lang="fr">dollars</span><span lang="en">dollars</span></button><button type="button" data-unite="jetons" aria-pressed="false"><span lang="fr">jetons</span><span lang="en">tokens</span></button></span></span></div>
+      <p class="cc-muted"><span><span class="cc-usd" lang="fr">Équivalent API en dollars</span><span class="cc-jet" lang="fr">Jetons consommés</span><span class="cc-usd" lang="en">API-equivalent in dollars</span><span class="cc-jet" lang="en">Tokens used</span></span>, <span data-per="7" hidden><span lang="fr">sur les 7 derniers jours de données</span><span lang="en">over the last 7 days of data</span></span><span data-per="30"><span lang="fr">sur les 30 derniers jours de données</span><span lang="en">over the last 30 days of data</span></span><span data-per="tout" hidden><span lang="fr">depuis le début des données</span><span lang="en">since the start of the data</span></span><span><span lang="fr"> (jours en heure de Paris).</span><span lang="en"> (days in Paris time).</span></span></p>
       <div class="cc-chart cc-short dash-skeleton" data-draw="chProjets" data-source="projets"></div>
     </section>
     <section class="cc-card" id="modeles">
-      <div class="cc-titre"><h2 data-t="modeles.h2">Par modèle</h2><span class="cc-ctrl"><span class="cc-seg" role="group" data-t-aria="periode.aria" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false" data-t="btn.7j">7 j</button><button type="button" data-periode="30" aria-pressed="true" data-t="btn.30j">30 j</button><button type="button" data-periode="tout" aria-pressed="false" data-t="btn.tout">tout</button></span><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true" data-t="btn.dollars">dollars</button><button type="button" data-unite="jetons" aria-pressed="false" data-t="btn.jetons">jetons</button></span></span></div>
-      <p class="cc-muted"><span data-jet="Jetons consommés" data-t="mesure.usd">Équivalent API en dollars</span>, <span data-per="7" hidden data-t="per.7">sur les 7 derniers jours de données</span><span data-per="30" data-t="per.30">sur les 30 derniers jours de données</span><span data-per="tout" hidden data-t="per.tout">depuis le début des données</span>.</p>
+      <div class="cc-titre"><h2><span lang="fr">Par modèle</span><span lang="en">By model</span></h2><span class="cc-ctrl"><span class="cc-seg" role="group" data-t-aria="periode.aria" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false"><span lang="fr">7 j</span><span lang="en">7 d</span></button><button type="button" data-periode="30" aria-pressed="true"><span lang="fr">30 j</span><span lang="en">30 d</span></button><button type="button" data-periode="tout" aria-pressed="false"><span lang="fr">tout</span><span lang="en">all</span></button></span><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true"><span lang="fr">dollars</span><span lang="en">dollars</span></button><button type="button" data-unite="jetons" aria-pressed="false"><span lang="fr">jetons</span><span lang="en">tokens</span></button></span></span></div>
+      <p class="cc-muted"><span><span class="cc-usd" lang="fr">Équivalent API en dollars</span><span class="cc-jet" lang="fr">Jetons consommés</span><span class="cc-usd" lang="en">API-equivalent in dollars</span><span class="cc-jet" lang="en">Tokens used</span></span>, <span data-per="7" hidden><span lang="fr">sur les 7 derniers jours de données</span><span lang="en">over the last 7 days of data</span></span><span data-per="30"><span lang="fr">sur les 30 derniers jours de données</span><span lang="en">over the last 30 days of data</span></span><span data-per="tout" hidden><span lang="fr">depuis le début des données</span><span lang="en">since the start of the data</span></span>.</p>
       <div class="cc-chart cc-short dash-skeleton" data-draw="chModeles" data-source="modeles"></div>
     </section>
     <section class="cc-card" id="reconstructions">
-      <div class="cc-titre"><h2 data-t="rec.h2">Reconstructions du cache</h2><span class="cc-ctrl"><span class="cc-seg" role="group" data-t-aria="periode.aria" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false" data-t="btn.7j">7 j</button><button type="button" data-periode="30" aria-pressed="true" data-t="btn.30j">30 j</button><button type="button" data-periode="tout" aria-pressed="false" data-t="btn.tout">tout</button></span><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true" data-t="btn.dollars">dollars</button><button type="button" data-unite="jetons" aria-pressed="false" data-t="btn.jetons">jetons</button></span></span></div>
-      <p class="cc-muted"><span data-t="rec.p1">Réponses qui ont dû réécrire en cache la plus grande part de leur contexte (moins de la moitié relue), par cause, </span><span data-per="7" hidden data-t="per.7">sur les 7 derniers jours de données</span><span data-per="30" data-t="per.30">sur les 30 derniers jours de données</span><span data-per="tout" hidden data-t="per.tout">depuis le début des données</span><span data-t="rec.p2">. Conversation principale et sous-agents séparés : chacun a son propre cache, dont la durée (souvent 1 h pour la première, 5 min pour les seconds) est lue dans les journaux ou forcée par la clé cache. Après un compactage, c’est le résumé qui est écrit : un coût normal, compté à part des pertes. « Consignes ou outils changés » : la forme de la requête a changé, le plus souvent parce que des outils ont été chargés en cours de session (relevé depuis le 20/10/2026). Compactages relevés depuis le 24/11/2026 et dans les journaux encore présents. Sous ~100k de contexte, relire le seul socle (consignes et outils) suffit à dépasser la moitié : une perte n’y est pas vue.</span></p>
-      <p><span data-t="ctx.sur">Sur cette période : </span><b data-draw="recPart" data-source="reconstructions">—</b></p>
+      <div class="cc-titre"><h2><span lang="fr">Reconstructions du cache</span><span lang="en">Cache rebuilds</span></h2><span class="cc-ctrl"><span class="cc-seg" role="group" data-t-aria="periode.aria" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false"><span lang="fr">7 j</span><span lang="en">7 d</span></button><button type="button" data-periode="30" aria-pressed="true"><span lang="fr">30 j</span><span lang="en">30 d</span></button><button type="button" data-periode="tout" aria-pressed="false"><span lang="fr">tout</span><span lang="en">all</span></button></span><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true"><span lang="fr">dollars</span><span lang="en">dollars</span></button><button type="button" data-unite="jetons" aria-pressed="false"><span lang="fr">jetons</span><span lang="en">tokens</span></button></span></span></div>
+      <p class="cc-muted"><span><span lang="fr">Réponses qui ont dû réécrire en cache la plus grande part de leur contexte (moins de la moitié relue), par cause, </span><span lang="en">Replies that had to write most of their context to the cache again (less than half read back), by cause, </span></span><span data-per="7" hidden><span lang="fr">sur les 7 derniers jours de données</span><span lang="en">over the last 7 days of data</span></span><span data-per="30"><span lang="fr">sur les 30 derniers jours de données</span><span lang="en">over the last 30 days of data</span></span><span data-per="tout" hidden><span lang="fr">depuis le début des données</span><span lang="en">since the start of the data</span></span><span><span lang="fr">. Conversation principale et sous-agents séparés : chacun a son propre cache, dont la durée (souvent 1 h pour la première, 5 min pour les seconds) est lue dans les journaux ou forcée par la clé cache. Après un compactage, c’est le résumé qui est écrit : un coût normal, compté à part des pertes. « Consignes ou outils changés » : la forme de la requête a changé, le plus souvent parce que des outils ont été chargés en cours de session (relevé depuis le 20/10/2026). Compactages relevés depuis le 24/11/2026 et dans les journaux encore présents. Sous ~100k de contexte, relire le seul socle (consignes et outils) suffit à dépasser la moitié : une perte n’y est pas vue.</span><span lang="en">. Main conversation and subagents kept apart: each has its own cache, whose lifetime (often 1 h for the first, 5 min for the second) is read from the logs or forced by the cache key. After a compaction, what gets written is the summary: a normal cost, counted apart from the losses. “Instructions or tools changed”: the shape of the request changed, most often because tools were loaded during the session (recorded since 10/20/2026). Compactions recorded since 11/24/2026 and in the logs still present. Under ~100k of context, reading back the base alone (instructions and tools) is already more than half: a loss there goes unseen.</span></span></p>
+      <p><span><span lang="fr">Sur cette période : </span><span lang="en">Over this period: </span></span><b data-draw="recPart" data-source="reconstructions">—</b></p>
       <div class="cc-chart cc-short dash-skeleton" data-draw="chReconstr" data-source="reconstructions"></div>
     </section>
   </div>
 
   <section class="cc-card" id="sessions">
-    <div class="cc-titre"><h2 data-t="sess.h2">Les 30 sessions les plus coûteuses</h2><span class="cc-ctrl"><span class="cc-seg" role="group" data-t-aria="periode.aria" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false" data-t="btn.7j">7 j</button><button type="button" data-periode="30" aria-pressed="true" data-t="btn.30j">30 j</button><button type="button" data-periode="tout" aria-pressed="false" data-t="btn.tout">tout</button></span><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true" data-t="btn.dollars">dollars</button><button type="button" data-unite="jetons" aria-pressed="false" data-t="btn.jetons">jetons</button></span></span></div>
-    <p class="cc-muted"><span data-per="7" hidden data-t="sess.7">Sessions commencées dans les 7 derniers jours de données.</span><span data-per="30" data-t="sess.30">Sessions commencées dans les 30 derniers jours de données.</span><span data-per="tout" hidden data-t="sess.tout">Toutes les sessions depuis le début des données.</span> <span data-t="sess.desc">Identifiant court de la session, dossier, début (heure UTC), contexte maximal atteint dans la conversation principale. Cliquer un en-tête pour trier, un 2e clic inverse l'ordre.</span> <span data-jet="Les 30 retenues restent les plus chères en dollars ; la dernière colonne donne leurs jetons, sous-agents compris." data-t="sess.jetnote"></span></p>
+    <div class="cc-titre"><h2><span lang="fr">Les 30 sessions les plus coûteuses</span><span lang="en">The 30 costliest sessions</span></h2><span class="cc-ctrl"><span class="cc-seg" role="group" data-t-aria="periode.aria" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false"><span lang="fr">7 j</span><span lang="en">7 d</span></button><button type="button" data-periode="30" aria-pressed="true"><span lang="fr">30 j</span><span lang="en">30 d</span></button><button type="button" data-periode="tout" aria-pressed="false"><span lang="fr">tout</span><span lang="en">all</span></button></span><span class="cc-seg" role="group" data-t-aria="unite.aria" aria-label="Unité d'affichage"><button type="button" data-unite="usd" aria-pressed="true"><span lang="fr">dollars</span><span lang="en">dollars</span></button><button type="button" data-unite="jetons" aria-pressed="false"><span lang="fr">jetons</span><span lang="en">tokens</span></button></span></span></div>
+    <p class="cc-muted"><span data-per="7" hidden><span lang="fr">Sessions commencées dans les 7 derniers jours de données.</span><span lang="en">Sessions started in the last 7 days of data.</span></span><span data-per="30"><span lang="fr">Sessions commencées dans les 30 derniers jours de données.</span><span lang="en">Sessions started in the last 30 days of data.</span></span><span data-per="tout" hidden><span lang="fr">Toutes les sessions depuis le début des données.</span><span lang="en">All sessions since the start of the data.</span></span> <span><span lang="fr">Identifiant court de la session, dossier, début (heure UTC), contexte maximal atteint dans la conversation principale. Cliquer un en-tête pour trier, un 2e clic inverse l'ordre.</span><span lang="en">Short session ID, folder, start (UTC time), highest context reached in the main conversation. Click a header to sort; a second click reverses the order.</span></span> <span class="cc-jet"><span lang="fr">Les 30 retenues restent les plus chères en dollars ; la dernière colonne donne leurs jetons, sous-agents compris.</span><span lang="en">The 30 kept are still the costliest in dollars; the last column gives their tokens, subagents included.</span></span></p>
     <div class="cc-table-box">
       <table data-source="sessions" data-row-key="session">
         <thead><tr>
-          <th data-field="session" data-tri="asc" tabindex="0" aria-sort="none" data-t="th.session">Session</th><th data-field="projet" data-tri="asc" tabindex="0" aria-sort="none" data-t="th.dossier">Dossier</th><th data-field="debut" data-tri="desc" tabindex="0" aria-sort="none" class="cc-hide-narrow" data-t="th.debut">Début</th>
-          <th data-field="modele" data-tri="asc" tabindex="0" aria-sort="none" class="cc-hide-narrow" data-t="th.modele">Modèle principal</th><th data-field="appels" data-tri="desc" tabindex="0" aria-sort="none" class="cc-num" data-t="th.appels">Appels</th>
-          <th data-field="ctxMax" data-tri="desc" tabindex="0" aria-sort="none" class="cc-num" data-t="th.ctxmax">Contexte max</th><th data-field="cout" data-tri="desc" tabindex="0" aria-sort="descending" class="cc-num" data-jet="Jetons" data-t="th.cout">Coût</th>
+          <th data-field="session" data-tri="asc" tabindex="0" aria-sort="none"><span lang="fr">Session</span><span lang="en">Session</span></th><th data-field="projet" data-tri="asc" tabindex="0" aria-sort="none"><span lang="fr">Dossier</span><span lang="en">Folder</span></th><th data-field="debut" data-tri="desc" tabindex="0" aria-sort="none" class="cc-hide-narrow"><span lang="fr">Début</span><span lang="en">Start</span></th>
+          <th data-field="modele" data-tri="asc" tabindex="0" aria-sort="none" class="cc-hide-narrow"><span lang="fr">Modèle principal</span><span lang="en">Main model</span></th><th data-field="appels" data-tri="desc" tabindex="0" aria-sort="none" class="cc-num"><span lang="fr">Appels</span><span lang="en">Calls</span></th>
+          <th data-field="ctxMax" data-tri="desc" tabindex="0" aria-sort="none" class="cc-num"><span lang="fr">Contexte max</span><span lang="en">Max context</span></th><th data-field="cout" data-tri="desc" tabindex="0" aria-sort="descending" class="cc-num cc-usd"><span lang="fr">Coût</span><span lang="en">Cost</span></th><th data-field="jetons" data-tri="desc" tabindex="0" aria-sort="descending" class="cc-num cc-jet"><span lang="fr">Jetons</span><span lang="en">Tokens</span></th>
         </tr></thead>
         <tbody data-draw="tabSessions" data-source="sessions"></tbody>
       </table>
@@ -185,16 +190,16 @@
   </section>
 
   <section class="cc-card" id="methode">
-    <h2 data-t="methode.h2">Comment ces chiffres sont faits</h2>
+    <h2><span lang="fr">Comment ces chiffres sont faits</span><span lang="en">How these figures are made</span></h2>
     <ul class="cc-muted">
-      <li data-t="meth.1">Source : les journaux des sessions Claude Code (dossier projects de Claude Code) et, sous Windows, Cowork (sessions locales de Claude Desktop, écrites jusqu'à fin octobre 2026, lues pour l'historique) de ce PC ; les sessions Cowork d'un Mac ou de Linux ne sont pas lues. Seuls les compteurs de jetons et les relevés de limite sont lus, jamais le contenu des échanges.</li>
-      <li data-t="meth.2">Une réponse occupe souvent plusieurs lignes du journal, et une session reprise recopie l'historique : chaque réponse n'est comptée qu'une fois, par son identifiant.</li>
-      <li data-t="meth.3">Hors périmètre : discussions claude.ai et application mobile (stockées chez Anthropic), sessions d'autres PC (ajoutables avec --journaux).</li>
-      <li data-t="meth.4">Un jour sans barre n'a aucune réponse dans les journaux de ce PC. Une bande orange, s'il y en a, marque une période dont on sait que les journaux manquent.</li>
-      <li data-t="meth.5">Claude Code efface par défaut les sessions non modifiées depuis 30 jours (réglage cleanupPeriodDays). Une archive des compteurs garde chaque réponse déjà comptée, même si son journal disparaît.</li>
-      <li data-t="meth.6">« Équivalent API » : tarifs publics par million de jetons, écriture en cache 1 h comptée deux fois le prix d'entrée. Le forfait ne se facture pas ainsi : c'est un ordre de grandeur pour comparer les semaines, pas le pourcentage affiché par /usage.</li>
-      <li data-t="meth.7">Vue « jetons » (bouton en haut) : somme de l'entrée neuve, de l'écriture et de la lecture du cache et de la sortie. Le forfait suit plutôt un coût pondéré, proche de la vue en dollars : la vue en jetons montre surtout le poids du contexte relu. Le choix est gardé dans ce navigateur seulement.</li>
-      <li data-t="meth.8">Mise à jour : relancer node agreger.mjs puis node exporter.mjs, puis recharger les fichiers du dossier export (voir le README du dépôt conso-tokens).</li>
+      <li><span lang="fr">Source : les journaux des sessions Claude Code (dossier projects de Claude Code) et, sous Windows, Cowork (sessions locales de Claude Desktop, écrites jusqu'à fin octobre 2026, lues pour l'historique) de ce PC ; les sessions Cowork d'un Mac ou de Linux ne sont pas lues. Seuls les compteurs de jetons et les relevés de limite sont lus, jamais le contenu des échanges.</span><span lang="en">Source: the Claude Code session logs (Claude Code’s projects folder) and, on Windows, Cowork (local Claude Desktop sessions, written until the end of October 2026, read for history) on this PC; Cowork sessions from a Mac or Linux are not read. Only the token counters and the limit readings are read, never the content of the exchanges.</span></li>
+      <li><span lang="fr">Une réponse occupe souvent plusieurs lignes du journal, et une session reprise recopie l'historique : chaque réponse n'est comptée qu'une fois, par son identifiant.</span><span lang="en">A reply often takes several lines of the log, and a resumed session copies its history: each reply is counted only once, by its identifier.</span></li>
+      <li><span lang="fr">Hors périmètre : discussions claude.ai et application mobile (stockées chez Anthropic), sessions d'autres PC (ajoutables avec --journaux).</span><span lang="en">Out of scope: claude.ai conversations and the mobile app (stored at Anthropic), sessions from other PCs (addable with --journaux).</span></li>
+      <li><span lang="fr">Un jour sans barre n'a aucune réponse dans les journaux de ce PC. Une bande orange, s'il y en a, marque une période dont on sait que les journaux manquent.</span><span lang="en">A day without a bar has no reply in this PC’s logs. An orange band, if there is one, marks a period known to be missing from the logs.</span></li>
+      <li><span lang="fr">Claude Code efface par défaut les sessions non modifiées depuis 30 jours (réglage cleanupPeriodDays). Une archive des compteurs garde chaque réponse déjà comptée, même si son journal disparaît.</span><span lang="en">Claude Code deletes by default the sessions unchanged for 30 days (setting cleanupPeriodDays). An archive of the counters keeps each reply already counted, even if its log disappears.</span></li>
+      <li><span lang="fr">« Équivalent API » : tarifs publics par million de jetons, écriture en cache 1 h comptée deux fois le prix d'entrée. Le forfait ne se facture pas ainsi : c'est un ordre de grandeur pour comparer les semaines, pas le pourcentage affiché par /usage.</span><span lang="en">"API-equivalent": public prices per million tokens, 1-hour cache write counted at twice the input price. The plan is not billed this way: it is an order of magnitude for comparing weeks, not the percentage shown by /usage.</span></li>
+      <li><span lang="fr">Vue « jetons » (bouton en haut) : somme de l'entrée neuve, de l'écriture et de la lecture du cache et de la sortie. Le forfait suit plutôt un coût pondéré, proche de la vue en dollars : la vue en jetons montre surtout le poids du contexte relu. Le choix est gardé dans ce navigateur seulement.</span><span lang="en">"Tokens" view (button at the top): sum of fresh input, cache write and read, and output. The plan follows a weighted cost, closer to the dollars view: the tokens view mainly shows the weight of re-read context. The choice is kept in this browser only.</span></li>
+      <li><span lang="fr">Mise à jour : relancer node agreger.mjs puis node exporter.mjs, puis recharger les fichiers du dossier export (voir le README du dépôt conso-tokens).</span><span lang="en">Update: rerun node agreger.mjs then node exporter.mjs, then reload the files in the export folder (see the conso-tokens repository README).</span></li>
     </ul>
   </section>
 </div>
@@ -313,8 +318,8 @@
 </script>
 
 <script id="dico">
-  // Langues de la page : une entrée par code. Le français est la langue de référence (textes du HTML) ;
-  // chaque autre langue reçoit une clé dans chaque entrée de DICO et des phrases dans #libelles (PHRASES).
+  // Langues de la page : une entrée par code. Le français est la langue de référence ; chaque autre langue reçoit
+  // une clé dans chaque entrée de DICO, des phrases dans #libelles (PHRASES) et son <span lang> dans chaque texte fixe.
   // locale : Intl ; decimal : séparateur ; monnaie et heureUTC : formats écrits à la main ; heureInfo : infobulles.
   const LANGUES = {
     fr: { locale: 'fr-FR', decimal: ',', sep: ' : ',monnaie: n => Number(n).toLocaleString('fr-FR') + ' $', heureInfo: s => s.replace(':', ' h '), heureUTC: (h, m) => m === '00' ? `${+h} h UTC` : `${+h} h ${m} UTC` },
@@ -323,119 +328,15 @@
   // Langue prise quand le navigateur n'est dans aucune entrée de LANGUES
   const LANGUE_PAR_DEFAUT = 'en';
   // Dictionnaire de la page (lot 2b de #17, 17/11). Une entrée par clé :
-  // - texte du HTML (data-t, data-t-aria) : { en } seulement, le français est celui du HTML (une seconde source FR diverge) ;
-  // - variante jetons d'un élément data-jet : clé « cle.jet » → { en } ;
+  // - aria-label du HTML (data-t-aria) : { en } seulement, le français est celui du HTML (une seconde source FR diverge) ;
   // - texte du JS, lu par la fonction tr : { fr, en }, le fr recopié à l'identique de la chaîne d'origine.
+  // Les textes fixes du HTML n'y sont plus : chacun porte toutes ses langues (<span lang>, #34).
   const DICO = {
-    'titre': { en: 'Claude Code usage' },
-    'lead.a': { en: 'Plan week in progress (since ' },
-    'lead.c': { en: '): ' },
-    'lead.d': { en: 'in API-equivalent' }, 'lead.d.jet': { en: 'tokens' },
-    'lead.e': { en: ', against ' },
-    'lead.f': { en: ' for the whole previous week.' },
-    'langue.label': { en: 'Language' },
     'langue.aria': { en: 'Display language' },
-    'unite.label': { en: 'Show in' },
     'unite.aria': { en: 'Display unit' },
-    'btn.dollars': { en: 'dollars' },
-    'btn.jetons': { en: 'tokens' },
-    'btn.7j': { en: '7 d' }, 'btn.30j': { en: '30 d' }, 'btn.tout': { en: 'all' },
     'periode.aria': { en: 'Period' },
-    'jet.explic': { en: '' },
-    'jet.explic.jet': { en: 'Tokens = input + cache write and read + output; cache reads make up over 90 %, so the curve mostly follows session length. The two caps are shown in output tokens (total tokens mean nothing for a cap); the slopes stay in dollars.' },
     'reset.aria': { en: 'Weekly reset of the plan' },
-    'reset.h2a': { en: 'The plan resets every ' },
-    'reset.h2b': { en: ' at ' },
-    'reset.p1': { en: 'The cycle lasts exactly 7 × 24 h and ignores Paris daylight saving time. Next reset: ' },
-    'repli': { en: 'Default cycle shown (Sunday 10:00 UTC): settings not received (table "reglages" missing or in error).' },
-    'reset.p3': { en: 'Time read in the app (/usage); adjustable in ' },
-    'reset.p4': { en: ' (key ' },
-    'reset.p5': { en: ', README). Each weekly bar covers one plan window, from one reset to the next. On the daily chart, dotted lines mark these resets. These windows count only this PC (Claude Code and, on Windows, local Cowork, logs up to the end of October 2026), whereas the plan also counts claude.ai, the phone and remote Cowork.' },
-    'pentes.h2': { en: 'Is the weekly cap going down?' },
-    'pentes.tag': { en: 'in dollars only' },
-    'pentes.p1': { en: 'Price of 100 % weekly, measured between two readings of the % for the same week: cost used between the two ÷ change in %. It is the most reliable measure, because what was used outside these logs before the first reading (claude.ai, phone, other PC) is not counted.' },
-    'pentes.p2': { en: 'The readings come from the app itself (limit events recorded in the Claude Code logs and, until the end of October 2026, local Cowork) and from readings added by hand. Solid dot: interval of 12 h or less, the most reliable. Hollow dot: longer interval, where usage not measured during the interval can skew the figure. When the % rises by at least 1 point over more than an hour with almost no spending on this PC (remote Cowork, claude.ai, phone), no slope spans that period. Dotted hollow dot: more than an hour without a reading while this PC was spending more than $5 (reading stopped, e.g. sonar closed); usage outside this PC during that silence would go unnoticed, so the figure is at best a lower bound, to be taken with caution.' },
-    'leg.12h': { en: 'interval of 12 h or less' },
-    'leg.long': { en: 'longer interval' },
-    'leg.manquants': { en: 'missing readings' },
-    'plafond.h2': { en: 'Weekly cap, week by week' },
-    'plafond.jet0': { en: '' },
-    'plafond.jet0.jet': { en: 'Tokens view: bar and dot in output tokens (replies and reasoning); the table keeps both units.' },
-    'plafond.p1': { en: ' Bar: what Claude Code and, on Windows, local Cowork (logs up to the end of October 2026 only) used during the week. Solid dot: cumulative cost at the moment of the message "You’ve hit your weekly limit". Hollow dot: projection from the last reading of the week’s % (cost ÷ %). Points spotted as used outside this PC (same rule as for the slopes) are removed from the % before the calculation: the tooltip gives the number. No dot when the cap is too uncertain (see below the table). Unspotted usage outside the logs, for example before the first reading of the week, still makes the cap look lower than it is. A week without a dot has not reached 100 % or has no reading.' },
-    'leg.conso': { en: 'used (Claude Code and local Cowork)' },
-    'leg.atteint': { en: 'cap reached' },
-    'leg.projete': { en: 'projected cap' },
-    'leg.changement': { en: 'plan change' },
-    'leg.indicatif': { en: 'indicative cap (two plans)' },
-    'th.semaine': { en: 'Week from' },
-    'lbl.100': { en: '100 % weekly' },
-    'lbl.consomme': { en: 'Used' },
-    'lbl.horsPC': { en: 'Off PC (spotted)' },
-    'th.plafond.usd': { en: 'Cap in $' },
-    'th.plafond.jet': { en: 'Cap in output tokens' },
-    'note.a': { en: '"Off PC (spotted)": share of the weekly % taken somewhere other than this PC, for example Cowork when it runs on Anthropic’s side without leaving a log here, claude.ai or the phone. It is a deduction, not a measure: no counter of remote Cowork can be read here. Rule: between two readings more than an hour apart, a rise of at least 1 point with less than $0.50 spent on this PC per point of rise is counted as off PC (rise − local cost ÷ $2.44, so at least 0.8 point counted as off PC per point of rise). The % being rounded down to the whole number, each period is worth ±1 point: when such periods are spotted, the status gives the cap as a ' },
-    'note.fourchette': { en: 'range' },
-    'note.b': { en: ' (share paid on this PC ± 1 point per period). If the range exceeds 25 % of the cap, there is no cap ("uncertain cap"); likewise if the share paid on this PC is under 10 %. What the rule does not see: usage outside this PC at the same time as Claude Code (it makes the point look cheaper) and usage before the first reading.' },
-    'note.c': { en: 'Remaining biases: claude.ai, the phone and other PCs are not in these logs; the "$ API-equivalent" is not necessarily Anthropic’s weighting.' },
-    'plafond5h.h2': { en: 'Cap of the 5-hour windows' },
-    'plafond5h.jet0': { en: '' },
-    'plafond5h.jet0.jet': { en: 'Tokens view: output tokens (replies and reasoning) at the same moment; the tooltip keeps the dollars.' },
-    'plafond5h.p': { en: ' Cost accumulated in the window at the moment of the message "You’ve hit your session limit" (solid dot), or projected from a reading of the % (hollow dot). Same biases as above.' },
     'tiles.aria': { en: 'Key figures' },
-    'tile.cout': { en: 'API-equivalent, since the start of the data' }, 'tile.cout.jet': { en: 'Tokens, since the start of the data' },
-    'tile.cout.sub': { en: 'what the same usage would cost paid at the API' }, 'tile.cout.sub.jet': { en: 'cache included, read again at each message' },
-    'tile.appels': { en: 'Claude replies, since the start of the data' },
-    'tile.appels.sub': { en: 'model calls, subagents included' },
-    'tile.opus': { en: 'Share of Opus in the cost, since the start of the data' }, 'tile.opus.jet': { en: 'Share of Opus in the tokens, since the start of the data' },
-    'tile.opus.sub': { en: 'all Opus models' },
-    'tile.gros': { en: 'Calls with more than 150k of context, since the start of the data' },
-    'tile.gros.sub': { en: 'benchmark: under 50 %' },
-    'semaines.h2': { en: 'Cost per plan week' }, 'semaines.h2.jet': { en: 'Tokens per plan week' },
-    'semaines.p': { en: 'API-equivalent in dollars, per model. The last bar, lighter, is the week in progress.' },
-    'semaines.p.jet': { en: 'Tokens used, per model. The last bar, lighter, is the week in progress.' },
-    'jours.h2': { en: 'Cost per day' }, 'jours.h2.jet': { en: 'Tokens per day' },
-    'jours.p': { en: 'API-equivalent in dollars, calendar day in Paris time.' },
-    'jours.p.jet': { en: 'Tokens used, calendar day in Paris time.' },
-    'jours.leg': { en: 'plan reset (' },
-    'types.h2': { en: 'Where the tokens go' },
-    'types.p': { en: 'Cache reads make up almost all the volume, but weigh much less in the cost: each message sends back the whole context, read again at a reduced price.' },
-    'leg.partJetons': { en: 'share of tokens' },
-    'leg.partCout': { en: 'share of cost' },
-    'ctx.h2': { en: 'Context size per call' },
-    'ctx.p1': { en: 'Number of calls by context sent (cache included), ' },
-    'per.7': { en: 'over the last 7 days of data' },
-    'per.30': { en: 'over the last 30 days of data' },
-    'per.tout': { en: 'since the start of the data' },
-    'ctx.p2': { en: '. Above 150k, each message is costly.' },
-    'ctx.sur': { en: 'Over this period: ' },
-    'ctx.des': { en: ' of calls above 150k ' },
-    'pastille.ok': { en: 'goal reached (under 50 %)' },
-    'pastille.ko': { en: 'goal (under 50 %) not reached' },
-    'projets.h2': { en: 'By work folder' },
-    'mesure.usd': { en: 'API-equivalent in dollars' }, 'mesure.usd.jet': { en: 'Tokens used' },
-    'projets.fin': { en: ' (days in Paris time).' },
-    'modeles.h2': { en: 'By model' },
-    'rec.h2': { en: 'Cache rebuilds' },
-    'rec.p1': { en: 'Replies that had to write most of their context to the cache again (less than half read back), by cause, ' },
-    'rec.p2': { en: '. Main conversation and subagents kept apart: each has its own cache, whose lifetime (often 1 h for the first, 5 min for the second) is read from the logs or forced by the cache key. After a compaction, what gets written is the summary: a normal cost, counted apart from the losses. “Instructions or tools changed”: the shape of the request changed, most often because tools were loaded during the session (recorded since 10/20/2026). Compactions recorded since 11/24/2026 and in the logs still present. Under ~100k of context, reading back the base alone (instructions and tools) is already more than half: a loss there goes unseen.' },
-    'sess.h2': { en: 'The 30 costliest sessions' },
-    'sess.7': { en: 'Sessions started in the last 7 days of data.' },
-    'sess.30': { en: 'Sessions started in the last 30 days of data.' },
-    'sess.tout': { en: 'All sessions since the start of the data.' },
-    'sess.desc': { en: 'Short session ID, folder, start (UTC time), highest context reached in the main conversation. Click a header to sort; a second click reverses the order.' },
-    'sess.jetnote': { en: '' }, 'sess.jetnote.jet': { en: 'The 30 kept are still the costliest in dollars; the last column gives their tokens, subagents included.' },
-    'th.session': { en: 'Session' }, 'th.dossier': { en: 'Folder' }, 'th.debut': { en: 'Start' },
-    'th.modele': { en: 'Main model' }, 'th.appels': { en: 'Calls' }, 'th.ctxmax': { en: 'Max context' },
-    'th.cout': { en: 'Cost' }, 'th.cout.jet': { en: 'Tokens' },
-    'methode.h2': { en: 'How these figures are made' },
-    'meth.1': { en: 'Source: the Claude Code session logs (Claude Code’s projects folder) and, on Windows, Cowork (local Claude Desktop sessions, written until the end of October 2026, read for history) on this PC; Cowork sessions from a Mac or Linux are not read. Only the token counters and the limit readings are read, never the content of the exchanges.' },
-    'meth.2': { en: 'A reply often takes several lines of the log, and a resumed session copies its history: each reply is counted only once, by its identifier.' },
-    'meth.3': { en: 'Out of scope: claude.ai conversations and the mobile app (stored at Anthropic), sessions from other PCs (addable with --journaux).' },
-    'meth.4': { en: 'A day without a bar has no reply in this PC’s logs. An orange band, if there is one, marks a period known to be missing from the logs.' },
-    'meth.5': { en: 'Claude Code deletes by default the sessions unchanged for 30 days (setting cleanupPeriodDays). An archive of the counters keeps each reply already counted, even if its log disappears.' },
-    'meth.6': { en: '"API-equivalent": public prices per million tokens, 1-hour cache write counted at twice the input price. The plan is not billed this way: it is an order of magnitude for comparing weeks, not the percentage shown by /usage.' },
-    'meth.7': { en: '"Tokens" view (button at the top): sum of fresh input, cache write and read, and output. The plan follows a weighted cost, closer to the dollars view: the tokens view mainly shows the weight of re-read context. The choice is kept in this browser only.' },
-    'meth.8': { en: 'Update: rerun node agreger.mjs then node exporter.mjs, then reload the files in the export folder (see the conso-tokens repository README).' },
 
     // Textes du JS (tr) : { fr, en }
     'mot.a': { fr: 'à', en: 'at' },
@@ -545,29 +446,23 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
   // Points hors PC repérés (#32) : horsEstime et pctFin peuvent arriver en texte (« null ») dans un dataset
   CC.horsPC = r => libelles.vide(r.horsEstime) || libelles.vide(r.pctFin) ? ''
     : `≈ ${CC.dec(r.horsEstime)} ${tr('tip.pts')} ${tr('tip.sur')} ${r.pctFin} %`;
-  // Drawings qui dépendent de l'unité ou de la langue : gardés pour être redessinés au changement
-  // Un même nom peut avoir plusieurs éléments (ex. cycleJour dans le titre et dans la légende) : une liste par nom
-  CC.vues = new Map();
-  CC.draw = (nom, fn) => dash.draw(nom, el => {
-    const liste = CC.vues.get(nom) ?? [];
-    const entree = liste.find(([e]) => e === el);
-    if (entree) entree[1] = fn; else liste.push([el, fn]);
-    CC.vues.set(nom, liste);
-    fn(el);
-  });
-  CC.redessiner = () => { for (const liste of CC.vues.values()) for (const [el, fn] of liste) fn(el); };
-  // Textes fixes (data-t, data-t-aria) et variantes jetons (data-jet) : le français d'origine est gardé au premier passage
+  // Drawings qui dépendent de l'unité ou de la langue : leurs noms sont gardés pour être redessinés au changement
+  CC.vues = new Set();
+  CC.draw = (nom, fn) => dash.draw(nom, el => { CC.vues.add(nom); fn(el); });
+  // Redessin par la plateforme : un appel direct de fn(el) écrirait hors dessin, ce qu'elle refuse (#34)
+  CC.redessiner = () => { for (const nom of CC.vues) dash.draw(nom); };
+  // Textes fixes : chacun porte toutes ses langues dans le HTML (<span lang>) et ses variantes dollars / jetons
+  // (cc-usd / cc-jet) ; le CSS n'affiche que celles que disent les classes de .cc. La plateforme n'autorise hors d'un
+  // dessin que les classes, styles et aria-* (#34) : aucun texte n'est écrit ici.
+  // aria-label : son français est gardé à part (WeakMap), pas dans data-*
+  CC.racine = document.querySelector('.cc');
+  CC.frAria = new WeakMap();
   CC.libelles = () => {
-    // Le texte du HTML est le français ; une langue qui a une entrée dans DICO le remplace, sinon le français reste
-    const lang = CC.langue;
-    document.querySelectorAll('[data-t]').forEach(el => {
-      if (el.dataset.fr === undefined) el.dataset.fr = el.textContent;
-      const cle = el.dataset.t, jet = CC.enJetons() && el.dataset.jet !== undefined;
-      el.textContent = DICO[jet ? cle + '.jet' : cle][lang] ?? (jet ? el.dataset.jet : el.dataset.fr);
-    });
+    for (const code of Object.keys(LANGUES)) CC.racine.classList.toggle(`cc-lang-${code}`, code === CC.langue);
+    CC.racine.classList.toggle('cc-jetons', CC.enJetons());
     document.querySelectorAll('[data-t-aria]').forEach(el => {
-      if (el.dataset.frAria === undefined) el.dataset.frAria = el.getAttribute('aria-label');
-      el.setAttribute('aria-label', DICO[el.dataset.tAria][lang] ?? el.dataset.frAria);
+      if (!CC.frAria.has(el)) CC.frAria.set(el, el.getAttribute('aria-label'));
+      el.setAttribute('aria-label', DICO[el.dataset.tAria][CC.langue] ?? CC.frAria.get(el));
     });
   };
   CC.choisir = u => {
@@ -582,7 +477,6 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
   // Applique une langue à la page sans la mémoriser (au chargement, le défaut ne doit pas devenir un choix)
   CC.appliquerLangue = l => {
     CC.langue = l; libelles.langue = l; libelles.formats = LANGUES[l];
-    document.documentElement.lang = l;
     document.querySelectorAll('[data-langue]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.langue === l)));
     CC.libelles();
     CC.redessiner();
@@ -592,13 +486,18 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     try { localStorage.setItem('cc-langue', l); } catch (e) {}
     CC.appliquerLangue(l);
   };
-  // Un bouton par langue de LANGUES (rien de figé dans le HTML)
-  for (const code of Object.keys(LANGUES)) {
-    const b = document.createElement('button');
-    b.setAttribute('type', 'button'); b.dataset.langue = code; b.textContent = code.toUpperCase();
-    b.addEventListener('click', () => CC.choisirLangue(code));
-    document.getElementById('langues').append(b);
-  }
+  // Un bouton par langue de LANGUES (rien de figé dans le HTML), créés une fois par le dessin « langues » (#34) :
+  // les recréer à chaque changement ferait perdre le focus clavier ; aria-pressed suit par CC.appliquerLangue
+  CC.draw('langues', el => {
+    if (el.querySelector('[data-langue]')) return;
+    el.replaceChildren(...Object.keys(LANGUES).map(code => {
+      const b = document.createElement('button');
+      b.setAttribute('type', 'button'); b.dataset.langue = code; b.textContent = code.toUpperCase();
+      b.setAttribute('aria-pressed', String(code === CC.langue));
+      b.addEventListener('click', () => CC.choisirLangue(code));
+      return b;
+    }));
+  });
   CC.choisir(CC.unite);
   CC.appliquerLangue(CC.langue);
 
@@ -630,11 +529,14 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
 
   // Tri de la table des sessions par clic sur un en-tête (data-tri = sens du 1er clic) ; défaut : coût décroissant
   CC.tri = { champ: 'cout', sens: -1 };
+  // Colonnes « coût » et « jetons » : une seule visible selon l'unité (chacune garde un repère data-field juste, #49),
+  // elles partagent le tri « cout » (en vue jetons, il trie les jetons)
+  CC.cleTri = f => f === 'jetons' ? 'cout' : f;
   CC.trier = th => {
-    const champ = th.dataset.field;
+    const champ = CC.cleTri(th.dataset.field);
     CC.tri = CC.tri.champ === champ ? { champ, sens: -CC.tri.sens } : { champ, sens: th.dataset.tri === 'asc' ? 1 : -1 };
     document.querySelectorAll('th[data-tri]').forEach(t => t.setAttribute('aria-sort',
-      t.dataset.field !== CC.tri.champ ? 'none' : CC.tri.sens > 0 ? 'ascending' : 'descending'));
+      CC.cleTri(t.dataset.field) !== CC.tri.champ ? 'none' : CC.tri.sens > 0 ? 'ascending' : 'descending'));
     if (CC.vues.has('tabSessions')) dash.draw('tabSessions');
   };
   document.querySelectorAll('th[data-tri]').forEach(th => {
@@ -737,19 +639,45 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
   // Barres horizontales : une ligne par élément, libellé à gauche, valeur au bout
   CC.hbars = (el, rows, cle, val, fmt, couleur) => {
     el.replaceChildren(); el.classList.remove('dash-skeleton');
-    const W = el.clientWidth || 320, ligne = 28, H = rows.length * ligne + 4;
-    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    const W = el.clientWidth || 320, ligne = 28;
+    const svg = d3.select(el).append('svg').attr('width', '100%');
     const lab = svg.append('g').selectAll('text').data(rows).join('text').text(d => d[cle])
       .attr('y', (d, i) => i * ligne + 18).attr('fill', 'var(--color-fg)').style('font-size', 'var(--cds-font-size-caption)');
     let gauche = 0; lab.each(function () { gauche = Math.max(gauche, this.getComputedTextLength()); });
-    gauche += 10;
     const vals = svg.append('g').selectAll('text').data(rows).join('text').text(d => fmt(d[val]))
       .attr('fill', 'var(--color-fg-muted)').style('font-size', 'var(--cds-font-size-caption)');
     let droite = 0; vals.each(function () { droite = Math.max(droite, this.getComputedTextLength()); });
+    // Libellés trop longs pour laisser 80 px aux barres : chacun passe au-dessus de sa barre au lieu d'être coupé (#49)
+    const dessus = gauche + 10 + droite + 80 > W;
+    gauche = dessus ? 0 : gauche + 10;
+    // Au-dessus, un libellé plus large que le graphe est coupé en lignes de 14 px aux espaces (#49) : nl = lignes par barre
+    const nl = rows.map(() => 1);
+    if (dessus) lab.each(function (d, i) {
+      if (this.getComputedTextLength() <= W) return;
+      const t = d3.select(this).text(null), mes = t.append('tspan');
+      const larg = s => mes.text(s).node().getComputedTextLength();
+      const lignes = [''];
+      for (const mot of String(d[cle]).split(' ')) {
+        const k = lignes.length - 1, essai = lignes[k] ? lignes[k] + ' ' + mot : mot;
+        if (larg(essai) <= W) { lignes[k] = essai; continue; }
+        if (lignes[k]) lignes.push('');
+        // Mot seul plus large que le graphe (chemin, nom sans espace) : coupé entre deux caractères
+        for (const c of mot) { const j = lignes.length - 1; if (lignes[j] && larg(lignes[j] + c) > W) lignes.push(c); else lignes[j] += c; }
+      }
+      mes.remove();
+      lignes.forEach((l, j) => t.append('tspan').attr('x', 0).attr('dy', j ? 14 : null).text(l));
+      nl[i] = lignes.length;
+    });
+    // Haut de chaque rangée : 28 px à côté, 44 px au-dessus (+ 14 par ligne de libellé en plus)
+    const debut = [0];
+    rows.forEach((d, i) => debut.push(debut[i] + (dessus ? 44 + (nl[i] - 1) * 14 : ligne)));
+    const yBarre = i => debut[i] + (dessus ? 22 + (nl[i] - 1) * 14 : 6);
+    svg.attr('viewBox', `0 0 ${W} ${debut[rows.length] + 4}`);
+    lab.attr('y', (d, i) => debut[i] + (dessus ? 14 : 18));
     const x = d3.scaleLinear([0, d3.max(rows, d => d[val]) || 1], [0, Math.max(10, W - gauche - droite - 10)]);
-    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', gauche).attr('y', (d, i) => i * ligne + 6)
+    svg.append('g').selectAll('rect').data(rows).join('rect').attr('x', gauche).attr('y', (d, i) => yBarre(i))
       .attr('width', d => Math.max(1, x(d[val]))).attr('height', 16).attr('rx', 3).attr('fill', couleur);
-    vals.attr('x', d => gauche + x(d[val]) + 6).attr('y', (d, i) => i * ligne + 18);
+    vals.attr('x', d => gauche + x(d[val]) + 6).attr('y', (d, i) => yBarre(i) + 12);
   };
 
   dash.onData(() => {
@@ -820,17 +748,20 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     el.parentElement?.querySelectorAll('[data-obj]').forEach(s => { s.hidden = s.dataset.obj !== etat; });
   });
 
-  const texte = (nom, src, f) => CC.draw(nom, el => {
-    const g = dash.data(src);
-    el.textContent = g.status === 'ok' && g.data.length ? f(g.data[0]) : '—';
+  // champ() = champ affiché (il change avec l'unité) ; le repère data-field le suit, écrit par le dessin sur son propre
+  // élément : un repère « cout » sur une valeur en jetons est signalé faux par la vérification (#49)
+  const texte = (nom, src, champ, f) => CC.draw(nom, el => {
+    const g = dash.data(src), c = champ();
+    el.dataset.field = c;
+    el.textContent = g.status === 'ok' && g.data.length ? f(g.data[0][c]) : '—';
   });
-  texte('semDebut', 'semCourante', r => CC.jourLong(r.debut));
-  texte('semCout', 'semCourante', r => CC.fmt(r[CC.champ()]));
-  texte('semPrec', 'semCourante', r => CC.fmt(CC.enJetons() ? r.precJetons : r.prec));
-  texte('tCout', 'totaux', r => CC.fmt(r[CC.champ()]));
-  texte('tAppels', 'totaux', r => CC.int(r.appels));
-  texte('tOpus', 'partOpus', r => CC.pct(CC.enJetons() ? r.partJetons : r.part));
-  texte('tGros', 'grosContexte', r => CC.pct(r.part));
+  texte('semDebut', 'semCourante', () => 'debut', CC.jourLong);
+  texte('semCout', 'semCourante', CC.champ, CC.fmt);
+  texte('semPrec', 'semCourante', () => CC.enJetons() ? 'precJetons' : 'prec', CC.fmt);
+  texte('tCout', 'totaux', CC.champ, CC.fmt);
+  texte('tAppels', 'totaux', () => 'appels', CC.int);
+  texte('tOpus', 'partOpus', () => CC.enJetons() ? 'partJetons' : 'part', CC.pct);
+  texte('tGros', 'grosContexte', () => 'part', CC.pct);
   CC.draw('prochain', el => {
     const r = CC.prochainReset();
     el.textContent = r ? `${CC.jourLong(CC.jourParis(r))} ${tr('mot.a')} ${CC.heureParis(r)} ${tr('prochain.heure')}` : '—';
@@ -852,6 +783,14 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
 </script>
 
 <script>
+  // Légende des semaines : son propre dessin, car un dessin n'écrit que dans son élément (#34)
+  CC.draw('legSemaines', el => {
+    const g = dash.data('semaines');
+    el.replaceChildren(...(g.status === 'ok' ? CC.series(g.data) : []).map(([, n, ci]) => {
+      const s = document.createElement('span'), p = document.createElement('i');
+      p.style.background = CC.couleur(ci); s.append(p, n); return s;
+    }));
+  });
   // Semaines : barres empilées par modèle
   CC.draw('chSemaines', el => {
     const g = dash.data('semaines');
@@ -859,11 +798,10 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     el.replaceChildren(); el.classList.remove('dash-skeleton');
     // cout = valeur tracée (dollars ou jetons selon l'unité), usd = coût en dollars pour l'infobulle
     const rows = g.data.map(r => ({ ...r, usd: Number(r.cout), cout: Number(r[CC.champ()]) }));
-    const m = { t: 22, r: 8, b: 26, l: 48 }, W = CC.largeur(el, rows.length, 28, m), H = 240;
+    // Marge droite de 32 px : « en cours » et la dernière date, centrés sur la dernière barre, débordaient (#49)
+    const m = { t: 22, r: 32, b: 26, l: 48 }, W = CC.largeur(el, rows.length, 28, m), H = 240;
     const enCours = r => new Date(r.debut + 'T12:00:00Z').getTime() + 7 * 864e5 > Date.now();
     const SERIES = CC.series(g.data);
-    const leg = document.getElementById('legSemaines');
-    if (leg) leg.replaceChildren(...SERIES.map(([, n, ci]) => { const s = document.createElement('span'), p = document.createElement('i'); p.style.background = CC.couleur(ci); s.append(p, n); return s; }));
     const pile = d3.stack().keys(SERIES.map(s => CC.serie(s[0]))).value((d, k) => Number(d[k]) || 0)(rows);
     const x = d3.scaleBand(rows.map(r => r.debut), [m.l, W - m.r]).padding(0.25);
     const y = d3.scaleLinear([0, d3.max(rows, r => r.cout) * 1.1 || 1], [H - m.b, m.t]).nice();
@@ -928,12 +866,9 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     const dessines = rows.flatMap(r => precisDe(r.jour).map(p => ({ jour: r.jour, t: p.t })));
     svg.append('g').selectAll('line').data(dessines).join('line')
       .attr('x1', posReset).attr('x2', posReset).attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--color-fg)').attr('stroke-width', 1.5);
-    // Entrée de légende seulement si un trait est dessiné (jamais une légende sans dessin)
-    const legende = document.getElementById('legJours');
-    if (legende) {
-      legende.querySelectorAll('.cc-reset-precis').forEach(n => n.remove());
-      if (dessines.length) legende.insertAdjacentHTML('beforeend', '<span class="cc-reset-precis"><i class="cc-rule-plein"></i>' + tr('reset.decl') + '</span>');
-    }
+    // Entrée de légende seulement si un trait est dessiné (jamais une légende sans dessin) : elle est dans le HTML,
+    // on ne fait que la montrer ou la cacher (hidden : permis hors du dessin de la légende, #34)
+    document.querySelectorAll('#legJours .cc-reset-precis').forEach(n => { n.hidden = !dessines.length; });
     // Jours sans journaux (effacés) : bande pleine hauteur, pour ne pas les confondre avec des jours calmes
     svg.append('g').selectAll('rect').data(rows.filter(r => r.manque)).join('rect').attr('x', r => x(r.jour) - x.step() * 0.1).attr('width', x.step())
       .attr('y', m.t).attr('height', H - m.t - m.b).attr('fill', 'var(--color-warn)').attr('opacity', 0.25);
@@ -1042,7 +977,7 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
   });
   CC.draw('recPart', el => {
     const somme = CC.recSomme();
-    el.dataset.where = 'periode=' + CC.periode;
+    // Pas de data-where : la phrase cite plusieurs nombres tirés de toutes les lignes, aucune ligne seule (#49)
     if (!somme) { el.textContent = '—'; return; }
     const champ = CC.champ();
     // Pertes = toutes les causes sauf le compactage, dont l'écriture (le résumé) serait payée de toute façon : à part
@@ -1209,7 +1144,7 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     top.sort((a, b) => cmp(a, b) * CC.tri.sens);
     for (const r of top) {
       const tr_ = document.createElement('tr'); tr_.dataset.key = r.session;
-      const cel = [[r.session], [r.projet], [r.debut, 'cc-hide-narrow'], [r.modele, 'cc-hide-narrow'], [CC.int(r.appels), 'cc-num'], [CC.compact(r.ctxMax), 'cc-num'], [CC.enJetons() ? (r.jetons == null ? '' : CC.compact(r.jetons)) : CC.usd(r.cout), 'cc-num']];
+      const cel = [[r.session], [r.projet], [r.debut, 'cc-hide-narrow'], [r.modele, 'cc-hide-narrow'], [CC.int(r.appels), 'cc-num'], [CC.compact(r.ctxMax), 'cc-num'], [CC.usd(r.cout), 'cc-num cc-usd'], [r.jetons == null ? '' : CC.compact(r.jetons), 'cc-num cc-jet']];
       for (const [v, c] of cel) { const td = document.createElement('td'); td.textContent = v; if (c) td.className = c; tr_.append(td); }
       tb.append(tr_);
     }

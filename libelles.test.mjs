@@ -67,14 +67,22 @@ const EN = [
   'projected (50 %); indicative cap: mixes two plans (inconnu → Pro)',
 ];
 
-// Clés lues dans la page : textes du HTML (data-t, data-t-aria), variantes jetons (data-jet), appels tr('…') littéraux
+// Clés lues dans la page : aria-label du HTML (data-t-aria), appels tr('…') littéraux
 const cles = (re, texte = html) => [...texte.matchAll(re)].map(m => m[1]);
-const clesHtml = [...new Set([...cles(/ data-t="([^"]+)"/g), ...cles(/data-t-aria="([^"]+)"/g)])];
+const clesHtml = [...new Set(cles(/data-t-aria="([^"]+)"/g))];
 const clesJs = [...new Set(cles(/\btr\('([^']+)'\)/g))];
-// Variante jetons : seulement pour un élément qui porte data-jet (une clé « cle.jet » sans data-jet serait morte)
-const clesJet = [...new Set((html.match(/<\w+[^>]*data-jet="[^"]*"[^>]*>/g) ?? []).map(b => b.match(/data-t="([^"]+)"/)?.[1]).filter(Boolean))];
+// Textes fixes du HTML (#34) : suite de <span lang="…"> (variantes dollars / jetons : class cc-usd / cc-jet), une par
+// langue et par variante. Chaque texte = liste de { variante, code, texte }
+const corps = html.replace(/<style[\s\S]*?<\/style>/, '').replace(/<script[\s\S]*?<\/script>/g, '');
+const UN = /<span(?: class="cc-(usd|jet)")? lang="(\w+)">([^<]*)<\/span>/g;
+const textesFixes = [...corps.matchAll(/>((?:<span(?: class="cc-(?:usd|jet)")? lang="\w+">[^<]*<\/span>)+)</g)]
+  .map(m => [...m[1].matchAll(UN)].map(s => ({ variante: s[1] ?? '', code: s[2], texte: s[3] })));
+// Langues absentes d'un texte fixe (pour chaque variante qu'il a)
+const textesManquants = code => textesFixes.flatMap(t => [...new Set(t.map(s => s.variante))]
+  .filter(v => !t.some(s => s.variante === v && s.code === code))
+  .map(v => `${code} : texte fixe « ${t.find(s => s.variante === v)?.texte} »${v ? ' (' + v + ')' : ''}`));
 
-// Ce qui manque à une langue : phrases du formateur, types et tranches, textes du HTML et du JS (DICO).
+// Ce qui manque à une langue : phrases du formateur, types et tranches, textes fixes du HTML, aria-label et tr() (DICO).
 // Renvoie la liste des manques ; liste vide = langue complète.
 function manquants(langues, phrases, dico) {
   const probs = [];
@@ -87,7 +95,8 @@ function manquants(langues, phrases, dico) {
     for (const f of ['monnaie', 'heureInfo', 'heureUTC']) if (typeof L[f] !== 'function') probs.push(`${code} : ${f} absent de LANGUES`);
     for (const k of ref) if (p[k] === undefined) probs.push(`${code} : phrase « ${k} »`);
     for (const t of ['types', 'tranches']) for (const k of Object.keys(phrases.fr[t])) if (p[t]?.[k] === undefined) probs.push(`${code} : ${t}.${k}`);
-    if (code !== 'fr') for (const k of [...clesHtml, ...clesJet.map(c => c + '.jet')]) if (dico[k]?.[code] === undefined) probs.push(`${code} : « ${k} » (DICO)`);
+    if (code !== 'fr') for (const k of clesHtml) if (dico[k]?.[code] === undefined) probs.push(`${code} : « ${k} » (DICO)`);
+    probs.push(...textesManquants(code));
     for (const k of clesJs) if (dico[k]?.[code] === undefined) probs.push(`${code} : tr « ${k} » (DICO)`);
   }
   return probs;
@@ -180,6 +189,12 @@ test('complétude : une fausse langue xx (copie, jamais dans la page) est signal
   assert.ok(probs.length > 0, 'la langue incomplète doit être signalée');
   assert.ok(probs.every(p => p.startsWith('xx :')), probs.slice(0, 3).join(' | '));
   assert.ok(probs.some(p => p.includes('aucune phrase')), 'xx sans PHRASES');
+  // Textes fixes sans span xx : chaque texte est signalé, une fois par variante (dollars et jetons à part)
+  const variantes = textesFixes.reduce((n, t) => n + new Set(t.map(s => s.variante)).size, 0);
+  const sansXx = textesManquants('xx');
+  assert.equal(sansXx.length, variantes);
+  for (const m of ['xx : texte fixe « Conso Claude Code »', 'xx : texte fixe « Coût par jour » (usd)', 'xx : texte fixe « Jetons par jour » (jet)'])
+    assert.ok(sansXx.includes(m), m);
 });
 
 test('défaut : la langue de repli est une langue de LANGUES', () => {
@@ -205,10 +220,9 @@ test('page : plus aucune lecture directe de statut, type ou tranche hors du form
     assert.ok(!hors.includes(lib), lib);
 });
 
-test('dictionnaire : un texte du HTML n\'a pas de français ; chaque langue hors fr a sa clé ; tr() a fr et en', () => {
+test('dictionnaire : un aria-label du HTML n\'a pas de français ; chaque langue hors fr a sa clé ; tr() a fr et en', () => {
   for (const k of clesHtml) assert.equal(DICO[k]?.fr, undefined, `${k} : une entrée du HTML n'a pas de fr`);
-  for (const k of clesJet.map(c => c + '.jet')) assert.equal(DICO[k]?.fr, undefined, `${k} : une entrée .jet n'a pas de fr`);
-  for (const k of [...clesHtml, ...clesJet.map(c => c + '.jet')]) {
+  for (const k of clesHtml) {
     assert.ok(DICO[k], `${k} : pas d'entrée`);
     for (const code of Object.keys(LANGUES)) if (code !== 'fr') assert.ok(DICO[k][code] !== undefined, `${k} : pas de ${code}`);
   }
@@ -218,7 +232,7 @@ test('dictionnaire : un texte du HTML n\'a pas de français ; chaque langue hors
 });
 
 test('dictionnaire : aucune clé morte (chaque entrée est utilisée)', () => {
-  const usees = new Set([...clesHtml, ...clesJs, ...clesJet.map(c => c + '.jet')]);
+  const usees = new Set([...clesHtml, ...clesJs]);
   assert.deepEqual(Object.keys(DICO).filter(k => !usees.has(k)), [], 'entrées mortes');
 });
 
@@ -228,13 +242,29 @@ test('anglais : aucune lettre accentuée française ni guillemets français', ()
     assert.doesNotMatch(v.en, /[éèàùçêôî«»]/, k);
   }
   for (const [k, v] of Object.entries(PHRASES.en.types)) assert.doesNotMatch(v, /[éèàùçêôî«»]/, k);
+  for (const t of textesFixes) for (const s of t) if (s.code === 'en') assert.doesNotMatch(s.texte, /[éèàùçêôî«»]/, s.texte);
 });
 
-test('data-t : texte seul (aucun enfant, donc aucun data-draw ou data-source effacé)', () => {
-  const corps = html.replace(/<style[\s\S]*?<\/style>/, '').replace(/<script[\s\S]*?<\/script>/g, '');
-  for (const m of corps.matchAll(/<(\w+)[^>]*\sdata-t="[^"]*"[^>]*>([\s\S]*?)<\/\1>/g)) {
-    assert.doesNotMatch(m[2], /</, `data-t sur un élément qui contient un enfant : ${m[2].slice(0, 60)}`);
+// #34 : la plateforme refuse qu'un script écrive du texte hors d'un dessin ; les textes fixes portent donc toutes
+// leurs langues et la page ne bascule que des classes (cc-lang-xx, cc-jetons) sur .cc
+test('textes fixes (#34) : chaque texte a chaque langue une fois par variante, et le CSS cache les autres', () => {
+  assert.ok(textesFixes.length > 100, `${textesFixes.length} textes fixes trouvés`);
+  const codes = Object.keys(LANGUES).sort();
+  for (const t of textesFixes) {
+    const variantes = [...new Set(t.map(s => s.variante))].sort();
+    assert.ok(['', 'jet,usd'].includes(variantes.join()), `variantes ${variantes} : ${t[0].texte}`);
+    for (const v of variantes) assert.deepEqual(t.filter(s => s.variante === v).map(s => s.code).sort(), codes, t[0].texte);
+    for (const s of t) assert.notEqual(s.texte.trim(), '', `texte vide (${s.code}) à côté de « ${t[0].texte} »`);
   }
+  for (const code of codes) assert.ok(html.includes(`.cc:not(.cc-lang-${code}) [lang="${code}"]`), `CSS : ${code} jamais caché`);
+  assert.ok(html.includes('.cc:not(.cc-jetons) .cc-jet, .cc.cc-jetons .cc-usd { display: none; }'), 'CSS des variantes');
+  assert.doesNotMatch(corps, / data-t="| data-jet="|data-draw="t"/, 'ancienne forme (data-t, data-jet, dessin « t »)');
+  // Sessions : une colonne par unité, chacune avec son repère (data-field) ; une seule visible (#49)
+  assert.match(corps, /<th data-field="cout"[^>]* class="cc-num cc-usd">/);
+  assert.match(corps, /<th data-field="jetons"[^>]* class="cc-num cc-jet">/);
+  assert.ok(html.includes("'cc-num cc-usd'], [r.jetons == null ? '' : CC.compact(r.jetons), 'cc-num cc-jet']"), 'cellules coût / jetons');
+  // Aucun lang= ailleurs que sur ces spans : la règle CSS cacherait l'élément entier
+  assert.equal((corps.match(/ lang="/g) ?? []).length, textesFixes.flat().length, 'lang= hors des textes fixes');
 });
 
 // Plateforme (artefact Dashboard) : elle perd les barres obliques inverses des scripts (un \' devient une chaîne non
