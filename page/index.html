@@ -140,7 +140,7 @@
 
   <div class="cc-grid">
     <section class="cc-card" id="types">
-      <h2 data-t="types.h2">Où partent les jetons</h2>
+      <div class="cc-titre"><h2 data-t="types.h2">Où partent les jetons</h2><span class="cc-seg" role="group" data-t-aria="periode.aria" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false" data-t="btn.7j">7 j</button><button type="button" data-periode="30" aria-pressed="true" data-t="btn.30j">30 j</button><button type="button" data-periode="tout" aria-pressed="false" data-t="btn.tout">tout</button></span></div>
       <p class="cc-muted" data-t="types.p">La relecture du cache fait presque tout le volume, mais pèse beaucoup moins dans le coût : chaque message renvoie tout le contexte, relu à prix réduit.</p>
       <div class="cc-legend"><span><i class="cc-sw" data-i="4"></i><span data-t="leg.partJetons">part des jetons</span></span><span><i class="cc-sw" data-i="0"></i><span data-t="leg.partCout">part du coût</span></span></div>
       <div class="cc-split dash-skeleton" data-draw="chTypes" data-source="types"></div>
@@ -288,6 +288,7 @@
       TRANCHES: Object.keys(PHRASES.fr.tranches),
       GROS: ['150-250k', '250k+'], // au-delà de 150k de contexte
       type: v => libDe('types', v),
+      codeType: v => codeDe('types', v),
       tranche: v => libDe('tranches', v),
       codeTranche: v => codeDe('tranches', v),
       CAUSES: Object.keys(PHRASES.fr.causes), // même liste que CAUSES de lib/agregats.mjs (vérifié par un test)
@@ -622,7 +623,7 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     document.querySelectorAll('[data-periode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.periode === p)));
     document.querySelectorAll('[data-per]').forEach(el => { el.hidden = el.dataset.per !== p; });
     // Redessin par la plateforme (dash.draw(nom) relance le drawing), pas par un appel direct
-    for (const nom of ['chProjets', 'chModeles', 'chContexte', 'ctxPart', 'ctxObj', 'chReconstr', 'recPart', 'tabSessions']) if (CC.vues.has(nom)) dash.draw(nom);
+    for (const nom of ['chTypes', 'chProjets', 'chModeles', 'chContexte', 'ctxPart', 'ctxObj', 'chReconstr', 'recPart', 'tabSessions']) if (CC.vues.has(nom)) dash.draw(nom);
   };
   document.querySelectorAll('[data-periode]').forEach(b => b.addEventListener('click', () => CC.choisirPeriode(b.dataset.periode)));
   CC.choisirPeriode(CC.periode);
@@ -956,7 +957,14 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     el.replaceChildren();
     if (g.status !== 'ok') return;
     el.classList.remove('dash-skeleton');
-    const rows = g.data.map(r => ({ ...r, jetons: Number(r.jetons), cout: Number(r.cout) }));
+    // Une ligne par jour et par type (#15) : somme par type sur la période choisie, dans l’ordre de l’export.
+    // Un export d’avant #15 (une ligne par type, sans jour) passe tel quel : CC.dansPeriode ne filtre pas sans jour.
+    const somme = new Map();
+    for (const r of CC.dansPeriode(g.data)) {
+      const code = libelles.codeType(r.type), t = somme.get(code) ?? { type: code, jetons: 0, cout: 0 };
+      t.jetons += Number(r.jetons); t.cout += Number(r.cout); somme.set(code, t);
+    }
+    const rows = [...somme.values()];
     const tj = d3.sum(rows, r => r.jetons) || 1, tc = d3.sum(rows, r => r.cout) || 1;
     for (const r of rows) {
       const bloc = document.createElement('div'); bloc.className = 'cc-split-row';

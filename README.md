@@ -28,6 +28,9 @@ weekly cap. Without sonar, only the readings written into the Claude Code logs a
   (reached, projected, or too uncertain), with usage made outside this PC (claude.ai, phone, remote Cowork) spotted and
   removed when the percentage rises while nothing is spent here.
 - Context size per call (share of calls above 150k tokens).
+- Where the tokens go: share of cache reads, cache writes, output and fresh input, in volume and in cost.
+- The folder, model, context, token-type, cache-rebuild and session views follow one period switch: 7 days, 30 days
+  or all.
 - Advisor tokens (Fable, Mythos…) counted under the advisor's own model, next to the answer's main model.
 - Consistency checks run after every export: one line, `CONTRÔLES : OK`, or a precise list of what is wrong.
 
@@ -193,6 +196,9 @@ chart library and data loader that claude.ai provides, so **opening it directly 
 **Upgrading to 0.3.0 or later**: the exports now hold codes and numbers instead of French sentences (the page writes
 the sentences). Republish the page from the new `page/index.html`, then run a new export and reload the 14 datasets.
 The new page still reads old exports, but an old page cannot read the new ones: update the page first.
+
+**After 0.3.2**: the `types` dataset has one row per day and per token type (for the period switch). Same order:
+republish the page first, then reload the datasets; an older page would list every day and type separately.
 
 With the `conso-tokens` command, `conso-tokens page` prints where the page and the `export/` folder are.
 

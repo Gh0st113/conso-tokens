@@ -132,6 +132,9 @@ test('repli : la page neuve sur un ancien export affiche la même chose (frança
   assert.equal(L.atteint({ statut: 'projeté (60 %)' }), false);
   assert.equal(L.type('Lecture du cache'), 'Lecture du cache');
   assert.equal(L.codeTranche('150k à 250k'), '150-250k');
+  // Regroupement de la carte des types (#15) : le code reste le code, un libellé (ancien export) remonte au code
+  assert.equal(L.codeType('cacheRead'), 'cacheRead');
+  assert.equal(L.codeType('Lecture du cache'), 'cacheRead');
   assert.equal(L.tranche('plus de 250k'), 'plus de 250k');
 });
 
@@ -149,6 +152,7 @@ test('anglais : mêmes cas, phrases anglaises (valeurs natives et relues en text
     // Repli d'un ancien export : la phrase française s'affiche telle quelle, sans erreur
     assert.equal(L.statutHebdo({ statut: 'atteint, dont 3 pts hors de ce PC' }), 'atteint, dont 3 pts hors de ce PC');
     assert.equal(L.codeTranche('150k to 250k'), '150-250k');
+    assert.equal(L.codeType('Cache read'), 'cacheRead');
   } finally { regler('fr'); }
 });
 

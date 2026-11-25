@@ -28,6 +28,10 @@ estimer le plafond hebdo. Sans sonar, seuls les relevés écrits dans les journa
   (atteint, projeté ou trop incertain), avec l'usage fait hors de ce PC (claude.ai, téléphone, Cowork distant) repéré et
   retiré quand le pourcentage monte sans dépense ici.
 - Taille du contexte à chaque appel (part des appels au-delà de 150k jetons).
+- Où partent les jetons : part de la lecture du cache, de l'écriture en cache, de la sortie et de l'entrée neuve, en
+  volume et en coût.
+- Les vues par dossier, par modèle, du contexte, des types de jetons, des reconstructions du cache et des sessions
+  suivent un même choix de période : 7 jours, 30 jours ou tout.
 - Jetons du conseiller (advisor : Fable, Mythos…) comptés sous son propre modèle, à côté du modèle principal de la réponse.
 - Contrôles de cohérence après chaque export : une ligne, `CONTRÔLES : OK`, ou la liste précise de ce qui cloche.
 
@@ -201,6 +205,10 @@ navigateur n'affiche rien**.
 page qui écrit les phrases). Republier la page avec le nouveau `page/index.html`, puis relancer un export et recharger
 les 14 données. La page neuve lit encore les anciens exports, mais une ancienne page ne lit pas les nouveaux : mettre
 la page à jour d'abord.
+
+**Après la 0.3.2** : la donnée `types` a une ligne par jour et par type de jetons (pour le choix de période). Même
+ordre : republier la page d'abord, puis recharger les données ; une ancienne page listerait chaque jour et chaque
+type à part.
 
 Avec la commande `conso-tokens`, `conso-tokens page` affiche où sont la page et le dossier `export/`.
 
