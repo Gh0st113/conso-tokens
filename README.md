@@ -192,6 +192,9 @@ chart library and data loader that claude.ai provides, so **opening it directly 
    datasets, each named after its file"* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`, `contexte`,
    `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `reconstructions`, `forfaits`).
 3. After each new export: *"Reload the 14 datasets of my dashboard from `data/export/`"*.
+4. After an update of `page/index.html`: *"Republish `page/index.html` on my dashboard and check it"*. Open the
+   dashboard when asked and show each view once (FR, EN, dollars, tokens): claude.ai checks the page while it is open
+   (texts, labels, values shown), and Claude reads the result (`passed`, or the list of faults).
 
 **Upgrading to 0.3.0 or later**: the exports now hold codes and numbers instead of French sentences (the page writes
 the sentences). Republish the page from the new `page/index.html`, then run a new export and reload the 14 datasets.
@@ -211,8 +214,12 @@ from one table. To add a language (the example below is `zh`, a scenario only: n
 
 1. In `page/index.html`, `<script id="dico">`: add an entry to `LANGUES`, e.g. the example entry below. The button appears by itself.
 2. Same file, `<script id="libelles">`: add the same key to `PHRASES` (same keys as `fr`: `types`, `tranches`, and every phrase function).
-3. Same `#dico` script: add a `zh` key to each `DICO` entry (texts of the HTML and `tr()` texts; a text of the HTML has no `fr` key).
-4. Run `node --test`: it names what is missing (`zh : phrase « coupee »`, `zh : « titre » (DICO)`, …). A language left incomplete fails the tests; the browser falls back to French for a missing text.
+3. Same `#dico` script: add a `zh` key to each `DICO` entry (`tr()` texts and `aria-label`s).
+4. Fixed texts of the HTML carry every language themselves: next to each `<span lang="en">…</span>`, add a
+   `<span lang="zh">…</span>` (same class when it has one: `cc-usd` / `cc-jet` are the dollars / tokens variants), and in the
+   `<style>` add `.cc:not(.cc-lang-zh) [lang="zh"]` to the rule that hides the other languages. The platform does not let a
+   script write text outside a drawing (#34): the page only switches classes on `.cc`.
+5. Run `node --test`: it names what is missing (`zh : phrase « coupee »`, `zh : texte fixe « Conso Claude Code »`, …). A language left incomplete fails the tests.
 
 Example entry (`zh`, an illustration only):
 

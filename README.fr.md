@@ -200,6 +200,10 @@ navigateur n'affiche rien**.
    `data/export/`, chacun nommé comme son fichier »* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`,
    `contexte`, `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `reconstructions`, `forfaits`).
 3. Après chaque nouvel export : *« Recharge les 14 données de mon tableau depuis `data/export/` »*.
+4. Après une mise à jour de `page/index.html` : *« Republie `page/index.html` sur mon tableau et vérifie-le »*. Ouvrir
+   le tableau quand c'est demandé et afficher une fois chaque vue (FR, EN, dollars, jetons) : claude.ai vérifie la
+   page pendant qu'elle est ouverte (textes, libellés, valeurs affichées), et Claude lit le résultat (`passed`, ou la
+   liste des défauts).
 
 **Passage à la 0.3.0 ou plus** : les exports portent désormais des codes et des nombres au lieu de phrases (c'est la
 page qui écrit les phrases). Republier la page avec le nouveau `page/index.html`, puis relancer un export et recharger
@@ -222,8 +226,12 @@ traduit ici) :
 
 1. Dans `page/index.html`, `<script id="dico">` : ajoutez une entrée à `LANGUES`, par exemple l'entrée donnée plus bas. Le bouton apparaît tout seul.
 2. Même fichier, `<script id="libelles">` : ajoutez la même clé à `PHRASES` (mêmes clés que `fr` : `types`, `tranches`, et chaque fonction de phrase).
-3. Même script `#dico` : ajoutez une clé `zh` à chaque entrée de `DICO` (textes du HTML et textes de `tr()` ; un texte du HTML n'a pas de clé `fr`).
-4. Lancez `node --test` : il dit ce qui manque (`zh : phrase « coupee »`, `zh : « titre » (DICO)`, …). Une langue incomplète fait échouer les tests ; dans le navigateur, un texte manquant reste en français.
+3. Même script `#dico` : ajoutez une clé `zh` à chaque entrée de `DICO` (textes de `tr()` et `aria-label`).
+4. Les textes fixes du HTML portent eux-mêmes toutes leurs langues : à côté de chaque `<span lang="en">…</span>`, ajoutez
+   un `<span lang="zh">…</span>` (même classe s'il en a une : `cc-usd` / `cc-jet` sont les variantes dollars / jetons), et
+   dans le `<style>`, ajoutez `.cc:not(.cc-lang-zh) [lang="zh"]` à la règle qui cache les autres langues. La plateforme
+   n'autorise pas un script à écrire du texte hors d'un dessin (#34) : la page ne fait que basculer des classes sur `.cc`.
+5. Lancez `node --test` : il dit ce qui manque (`zh : phrase « coupee »`, `zh : texte fixe « Conso Claude Code »`, …). Une langue incomplète fait échouer les tests.
 
 Exemple d'entrée (`zh`, une illustration seulement) :
 
