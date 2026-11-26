@@ -7,13 +7,14 @@ per day, per working folder, per model and per session, plus an estimate of your
 from the usage percentage the app shows.
 
 It reads only the token counters and timestamps of the Claude Code logs (and, on Windows, the Cowork local ones if present) on your machine, **never the content of your
-conversations**, and everything stays on your machine (except what you choose to publish).
+conversations** (one exception: the limit banner of the app's own `<synthetic>` messages, to date limit hits), and everything stays on your machine (except what you choose to publish).
 
 Companion project: [**sonar**](https://github.com/Gh0st113/sonar), a mod for the Code tab of Claude Desktop. Its
 quota log (`~/.claude/sonar/quota-log.jsonl`) gives this dashboard the usage percentage readings it needs to estimate the
-weekly cap. Without sonar, only the readings written into the Claude Code logs are used, and until late October 2026 those of Cowork local (fewer of them).
+weekly cap. Without sonar, the readings come from the Claude Code logs (and, until late October 2026, from Cowork local: fewer of them), plus
+those you write yourself in `readings.json` (see Manual readings below).
 
-> The code, comments and console output are in French. The dashboard page exists in French and in English: an FR / EN button switches it, and by default it follows the browser language.
+> The code, comments and console output are in French (except the help of `conso-tokens help`). The dashboard page exists in French and in English: an FR / EN button switches it, and by default it follows the browser language.
 
 ![Summary tiles and cost per plan week, stacked by model](docs/apercu-semaines-en.png)
 
@@ -24,15 +25,17 @@ weekly cap. Without sonar, only the readings written into the Claude Code logs a
 - Cost per plan week, stacked by model (the legend follows whatever models appear in your logs).
 - Cost per day, per folder, per model, top 30 sessions; a "dollars / tokens" switch on most cost charts (the slope chart stays
   in dollars, the weekly cap table shows both units, the context chart counts calls).
-- Weekly cap: price of 100 % of the weekly limit, measured between two readings of the same week, and per week
+- Weekly cap: price of 100 % of the weekly limit, measured between two readings of the same week at least 8 points apart, and per week
   (reached, projected, or too uncertain), with usage made outside this PC (claude.ai, phone, remote Cowork) spotted and
   removed when the percentage rises while nothing is spent here.
+- 5-hour cap: price of 100 % of a 5-hour window, when it was reached or projected from a reading of 50 % or more.
 - Context size per call (share of calls above 150k tokens).
 - Where the tokens go: share of cache reads, cache writes, output and fresh input, in volume and in cost.
 - The folder, model, context, token-type, cache-rebuild and session views follow one period switch: 7 days, 30 days
   or all.
 - Advisor tokens (Fable, Mythos…) counted under the advisor's own model, next to the answer's main model.
-- Consistency checks run after every export: one line, `CONTRÔLES : OK`, or a precise list of what is wrong.
+- Consistency checks run after every export: one line, `CONTRÔLES : OK`, or a precise list of what is wrong
+  (and, in a clone, a `DÉPÔT` line if a file of the repository changed).
 
 ![Weekly cap, week by week, with the table of reached and projected caps](docs/apercu-plafond-en.png)
 
@@ -41,7 +44,7 @@ weekly cap. Without sonar, only the readings written into the Claude Code logs a
 ## Requirements
 
 - Node.js 20 or later, no dependency to install.
-- Claude Code logs in `~/.claude/projects` (on Windows, Cowork local sessions are read **if present**; since late October 2026 Cowork no longer writes them on the PC, so its usage is deduced as outside this PC; not on macOS or Linux).
+- Claude Code logs in `~/.claude/projects` (on Windows, Cowork local sessions are read **if present**; since late October 2026 Cowork no longer writes them on the PC, so its usage is counted as outside this PC, deduced; Cowork is not read on macOS or Linux).
 
 ## Install
 
@@ -67,12 +70,12 @@ From a clone:
 git clone https://github.com/Gh0st113/conso-tokens
 cd conso-tokens
 node agreger.mjs        # reads the logs → data/donnees.json (and a counter archive)
-node exporter.mjs       # → data/export/*.json (14 tables) + the CONTRÔLES line
+node exporter.mjs       # → data/export/*.json (14 tables + _tables.json, their list) + the CONTRÔLES line
 node --test             # tests
 ```
 
 Paths above are for the default data folder `data/` (ignored by git). A clone that already has a `donnees/` folder keeps
-using it, with no change; with `dataDir` set, look there instead.
+using it, with no change; with `dataDir` set, use that folder instead.
 
 ### As a command (`conso-tokens`)
 
@@ -84,10 +87,13 @@ clone, `npm link` (run once in the clone) puts `conso-tokens` in your PATH inste
 conso-tokens update     # aggregate then export (export is skipped if aggregate fails)
 conso-tokens aggregate  # same options as node agreger.mjs (--logs, --output, --quota-log, …)
 conso-tokens export
-conso-tokens prices     # node maj-tarifs.mjs
+conso-tokens prices     # node maj-tarifs.mjs (--page <file>: read a saved copy of the Pricing page)
 conso-tokens page       # path of the dashboard page and of the export/ folder
-conso-tokens help       # the list of commands
+conso-tokens help       # the list of commands (also --help, -h)
+conso-tokens --version  # the installed version (also -v)
 ```
+
+`update` refuses `--output` (the export would read the old `donnees.json`): use `aggregate --output` instead.
 
 The old French names still work: `maj`, `agreger`, `exporter`, `tarifs`, `aide`, and the options `--journaux`, `--sortie`,
 `--journal-quota`; so do the old keys of `config.local.json` (see below). Nothing has to be renamed.
@@ -95,11 +101,11 @@ The old French names still work: `maj`, `agreger`, `exporter`, `tarifs`, `aide`,
 **Where settings and data go.** Run from a clone (a folder holding `.git`, `config.local.json` or `donnees/`), nothing
 changes: everything stays in the clone. Installed as a package, `config.local.json`, `data/` and an updated
 `tarifs.json` go to `~/.conso-tokens/` instead, so that an update of the package never touches them. The environment
-variable `CONSO_TOKENS_DIR` replaces that folder in both cases. If the folder holds both `data/` and `donnees/` and no
+variable `CONSO_TOKENS_DIR` (an absolute path, or one starting with `~/`) replaces that folder in both cases. If the folder holds both `data/` and `donnees/` and no
 `dataDir` (or `dossierDonnees`) is set, the data commands (`update`, `aggregate`, `export`) stop before writing anything: keep one of the two.
 
 **Moving from a clone to the package**: **before** the first `conso-tokens update`, copy the clone's `config.local.json`
-into `~/.conso-tokens/`. If its data were in the clone's `data/` (or `donnees/`) folder, or at a relative `dataDir`,
+into `~/.conso-tokens/`. If the data were in the clone's `data/` (or `donnees/`) folder, or at a relative `dataDir`,
 copy that data folder too (to `~/.conso-tokens/data/`, or to the same relative place); an absolute or `~/…` `dataDir`
 keeps pointing at the same data. If you ran `node maj-tarifs.mjs` in the clone, copy its
 `tarifs.json` too: it keeps the price of models since removed from the Pricing page. The counter archive in `data/` (or `donnees/`) keeps answers whose logs
@@ -110,20 +116,21 @@ that npm creates: type `conso-tokens.cmd` instead (and `npm.cmd link`).
 
 `node --test` runs the tests of the calculations and of the page's wording (on small hand-written examples) and
 of the price parser, then checks your own exported data: those data tests are skipped until
-the two commands above have run, and each one that needs more history than you have (several weeks, a few slopes) is
-skipped too. A failing data test means your export looks inconsistent: read its message.
+`agreger.mjs` and `exporter.mjs` have run, and each one that needs more history than you have (several weeks, a few slopes) is
+skipped too. A failing data test means your export looks inconsistent, or has a point to check (an `À VÉRIFIER` line):
+read its message.
 
 Optional cross-check, from a clone only (not in the npm package): `node comparer-ccusage.mjs` (after `agreger.mjs`) runs [ccusage](https://github.com/ryoppippi/ccusage)
 (pinned version, downloaded by `npx` the first time, so it needs the network) on the same logs and prints `CCUSAGE : OK`
-or each day whose token counts differ. It writes nothing. ccusage counting less on old days is expected (deleted logs
+or each day whose token counts or cost differ. It writes nothing. ccusage counting less on old days is expected (deleted logs
 kept in the archive, `--logs`, Cowork local), and so is a little less cache write on answers that used an advisor (the pinned
 version predates ccusage's fix); ccusage counting more means answers this dashboard does not count.
 
 Optional settings: copy `config.exemple.json` to `config.local.json` (ignored by git):
 
-| Key | Meaning (old name, still accepted) |
+| Key (old name, still accepted) | Meaning |
 |---|---|
-| `dataDir` (`dossierDonnees`) | where data goes (default `data/` next to `config.local.json`, or `donnees/` if only that one exists; `~/…` accepted, a relative path starts from the folder of `config.local.json`). Keeping it outside the repository is safer |
+| `dataDir` (`dossierDonnees`) | where data goes (default `data/` next to `config.local.json`, or `donnees/` if only that one exists; `~/…` accepted, a relative path starts from the folder of `config.local.json`). Inside the repository only `data/` and `donnees/` are accepted, and nothing inside the installed package: anything else stops the script |
 | `projectPattern` (`motifProjet`) | regular expression whose group 1 turns a log folder key into a short folder name |
 | `renameProjects` (`renommerProjets`) | `[[regex, name], …]` tried first, e.g. to show a sensitive folder under a neutral name |
 | `weeklyReset` (`remiseAZero`) | day and UTC hour of the weekly reset: `{ "day": "monday", "hourUTC": "08:00" }` (day name in French or English, `HH:MM`). Default: Sunday 10:00 UTC. A change re-cuts the whole history: the keys of `resets` must then be week starts of the new cycle |
@@ -133,8 +140,8 @@ Optional settings: copy `config.exemple.json` to `config.local.json` (ignored by
 | `cache` | cache rebuilds, for the main conversation (`main`) and subagents (`subagents`): `{ "main": { "ttl": "auto", "minWrite": 20000 }, "subagents": { "ttl": "auto", "minWrite": 10000 } }` (the defaults). `ttl`: `auto` reads the cache lifetime from the logs, call by call (5 min wins when a call writes both), `5m` or `1h` forces it; `minWrite`: tokens written to the cache from which a lost cache counts as a rebuild. A rebuild is a reply that reads back less than half of the previous reply's context in its thread; cause, in this order: compaction of the thread (the summary is written: unavoidable, shown apart from the losses), pause longer than the cache, model change, instructions or tools changed (an `api-request-shape` line with a different hash, most often tools loaded during the session), other |
 
 Each setting can be written under its English name or its old French name, not both: giving both stops the script with
-a message naming them. Inside `weeklyReset`, `day` and `hourUTC` (or `jour` and `heureUTC`) can be mixed, but not both
-of the same field.
+a message naming them (`cache`, newer, has only its English name). Inside `weeklyReset`, `day` and `hourUTC` (or `jour`
+and `heureUTC`) can be mixed, but not both names for the same field.
 
 **Limit resets** (`resets`). The old form (an object `{ "YYYY-MM-DD": "when" }`) marks the whole week as "reset used", with no cap: that is the original behaviour. The new form gives the exact time, in UTC, with the `Z`:
 
@@ -146,9 +153,10 @@ of the same field.
 - `type` (required): `"weekly"` (or the old `"hebdo"`); only this type is accepted for now.
 - `note` (optional): free text shown on the page.
 
-An invalid value stops the script with a `config.local.json : resets…` message. With the new form, **the week is cut** into segments, one per reset: the cap and the output of the week are computed on the retained segment (the one with the largest local %, the most recent on a tie), with its own cost; slopes never join two segments; the status of the week mentions the cut. Assumption: a reset on demand does not move the end of the week (one case observed).
+With the new form, an invalid value stops the script with a `config.local.json : resets…` message (the old form is not
+checked: a key that is not a week start of the cycle is ignored, with no message). With the new form, **the week is cut** into segments, one per reset: the cap and the output of the week are computed on the retained segment (the one with the largest local %, the most recent on a tie), with its own cost; slopes never join two segments; the status of the week mentions the cut. Assumption: a reset on demand does not move the end of the week (one case observed).
 
-**Detection**: if the weekly % drops by 3 points or more without a declared reset, and the next reading confirms the drop, `CONTRÔLES` reports `reset probable … non déclaré dans « resets »` (the French wording is kept on purpose: the check output is in French). An isolated drop (a single reading) is not reported. Nothing is corrected automatically. The highest % is taken within the segment only: a declared reset starts a new maximum for the readings that follow it.
+**Detection**: if the weekly % drops by 3 points or more without a declared reset, outside plan-change weeks, and the next reading confirms the drop, `CONTRÔLES` reports `reset probable … non déclaré dans « resets »` (the French wording is kept on purpose: the check output is in French). An isolated drop (a single reading) is not reported. Nothing is corrected automatically. The highest % is taken within the segment only: a declared reset resets the maximum for the readings that follow it.
 
 **Plan changes** (`plans`, old name `forfaits`). The plan (Pro, Max 5x…) is **not detected automatically**: the logs do not contain it, and no credentials file is read. Declare each change yourself, with the first day of the new plan; the whole week containing that day is the new plan:
 
@@ -157,7 +165,7 @@ An invalid value stops the script with a `config.local.json : resets…` message
 ```
 
 - The week of a date uses the reset time of that day: with the default Sunday 10:00 UTC cycle, a reset day belongs to the **new** week, whatever the hour of the cycle.
-- The label is free text: 1 to 40 characters, letters, digits, spaces and `. + -` (no parenthesis nor `%`, which would make the status sentence ambiguous). Edge spaces are ignored and `Pro` / `pro` are the same plan. The label **is published on the page**: never put a personal name (employer, client…) in it.
+- The label is free text: 1 to 40 characters, letters, digits, spaces and `. + -` (no parentheses or `%`, which would make the status sentence ambiguous). Leading and trailing spaces are ignored and `Pro` / `pro` are the same plan. The label **is published on the page**: never put a personal name (employer, client…) in it.
 - A **change** (a label different from the previous entry) makes its week a *change week*. Its cap is computed as usual but marked `plafond indicatif : mêle deux forfaits (A → B)`: the week mixes two limits, so the figure is shown but **never compared** with the other weeks (neither in the plausibility band nor in the cap line of the page). To get a clean cap for that week, declare the reset hour of the change as a precise reset in `resets`: the week is then cut, and the indicative mark stays.
 - Weeks before the first entry have no plan: they form a group of their own in the plausibility band. Without the key, nothing changes.
 - **Team** plans: the limit depends on the seat (Standard or Premium), so write it in the label (`"Team Premium"`). **Enterprise** (usage at API prices) and any plan without a weekly % limit: without a % reading, no cap is estimated; the table shows the amount consumed, as before.
@@ -172,24 +180,24 @@ Logs from another PC: `node agreger.mjs --logs <path to its .claude/projects>` (
 [{ "ts": "2026-01-07T18:30:00Z", "hebdo": 42, "hebdoReset": "2026-01-11T10:00:00Z", "cinqH": 15, "cinqHReset": "2026-01-07T21:00:00Z" }]
 ```
 
-A percentage under 10 is ignored (too noisy); the other one of the same reading is still used. A file that cannot be read is reported and skipped.
+A percentage under 10 is ignored (too noisy); the other percentage of the same reading is still used. A file that cannot be read is reported and skipped.
 
 **Prices**: `tarifs.json` lists every model of the official [pricing page](https://platform.claude.com/docs/en/about-claude/pricing).
-When a model comes out or changes price, run `node maj-tarifs.mjs`: it rereads the page and refuses to write anything if
+When a model comes out or changes price, run `node maj-tarifs.mjs`: it rereads the page and never touches `tarifs.json` if
 the page looks different from what it expects.
 
 Claude Code deletes sessions untouched for 30 days by default (`cleanupPeriodDays`). The counter archive keeps every
-answer already counted, but runs are only as complete as the logs were when they happened: raise that setting if you
+answer already counted, but an answer is counted only if its log still existed at the time of a run: raise that setting if you
 want a long history.
 
 ## Displaying the dashboard
 
 `page/index.html` is the page of a **claude.ai Dashboard artifact**, not a standalone web page: it relies on the
-chart library and data loader that claude.ai provides, so **opening it directly in a browser shows nothing**.
+chart library and data loader that claude.ai provides, so **opening it directly in a browser shows the layout and texts, but no data and no chart**.
 
 1. In the Claude desktop app, open the **Code** tab in this folder.
-2. Ask: *"Create a private Dashboard artifact from `page/index.html`, with the 14 files of `data/export/` as its
-   datasets, each named after its file"* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`, `contexte`,
+2. Ask: *"Create a private Dashboard artifact from `page/index.html`, with the 14 tables of `data/export/` as its
+   datasets, each named after its file"* (not `_tables.json`, which only lists them) (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`, `contexte`,
    `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `reconstructions`, `forfaits`).
 3. After each new export: *"Reload the 14 datasets of my dashboard from `data/export/`"*. Each reload stores 14 new
    files in the artifact and leaves the previous ones unused (an artifact holds at most 5,000 files). To tidy up now and
@@ -202,7 +210,7 @@ chart library and data loader that claude.ai provides, so **opening it directly 
 the sentences). Republish the page from the new `page/index.html`, then run a new export and reload the 14 datasets.
 The new page still reads old exports, but an old page cannot read the new ones: update the page first.
 
-**After 0.3.2**: the `types` dataset has one row per day and per token type (for the period switch). Same order:
+**After 0.3.2**: the `types` dataset has one row per day with usage and per token type (for the period switch). Same order:
 republish the page first, then reload the datasets; an older page would list every day and type separately.
 
 With the `conso-tokens` command, `conso-tokens page` prints where the page and the `export/` folder are.
@@ -215,7 +223,7 @@ The page has two languages, French (the reference, the text of the HTML) and Eng
 from one table. To add a language (the example below is `zh`, a scenario only: nothing is translated here):
 
 1. In `page/index.html`, `<script id="dico">`: add an entry to `LANGUES`, e.g. the example entry below. The button appears by itself.
-2. Same file, `<script id="libelles">`: add the same key to `PHRASES` (same keys as `fr`: `types`, `tranches`, and every phrase function).
+2. Same file, `<script id="libelles">`: add the same key to `PHRASES` (same keys as `fr`: the tables `types`, `tranches`, `causes`, `fils`, and every phrase function).
 3. Same `#dico` script: add a `zh` key to each `DICO` entry (`tr()` texts and `aria-label`s).
 4. Fixed texts of the HTML carry every language themselves: next to each `<span lang="en">…</span>`, add a
    `<span lang="zh">…</span>` (same class when it has one: `cc-usd` / `cc-jet` are the dollars / tokens variants), and in the
@@ -229,8 +237,9 @@ Example entry (`zh`, an illustration only):
 zh: { locale: 'zh-CN', decimal: '.', sep: ': ', monnaie: n => '$' + n, heureInfo: s => s, heureUTC: (h, m) => `${h}:${m} UTC` }
 ```
 
-Nothing else changes in the logic: it reads the tables. The test « page : aucune langue en dur… » in `libelles.test.mjs`
-fixes the list of languages (`['en', 'fr']`): it must list the new code too. The default language is the browser's one if it is in `LANGUES` (its
+Nothing else changes in the logic: it reads the tables. The titles and descriptions of the summary tiles (`dash.calc`)
+stay in English: the platform reads them, and the FR / EN buttons do not change them. The test « page : aucune langue en dur… » in `libelles.test.mjs`
+fixes the list of languages (`['en', 'fr']`): it must list the new code too. The default language is the browser's language if it is in `LANGUES` (its
 prefix, `zh-CN` → `zh`), otherwise `en`.
 
 ## Try it with simulated data
@@ -259,6 +268,8 @@ On macOS / Linux: `HOME=../demo-home node agreger.mjs && HOME=../demo-home node 
 - Known limits of the reset detection: readings under 10 % are ignored, so a drop that leaves the % under 10 until the end of the week is not reported; a single odd reading stays in the slopes; a single abnormally **high** reading (e.g. 40, 100, 30, 28 %) can wrongly give a "probable reset" (a "to check" line, never a correction). A reset declared at the exact instant of the cycle's own reset is ignored (it cuts nothing).
 - Advisor tokens are counted since 0.3.1. Answers whose logs Claude Code had already deleted stay in the archive as
   they were counted before (no advisor, cache write split of the first step only): that cannot be recovered.
+- Subagent answers archived before late November 2026 carry no agent name: they count in the totals but cannot be
+  classified as cache rebuilds.
 - Plan changes (`plans`) are dated to the week, not to the hour: the whole week is left out of the comparisons and its cap is only indicative. An undeclared plan change is not detected: the plans are mixed, as before.
 
 ## License

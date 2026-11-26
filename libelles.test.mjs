@@ -94,7 +94,9 @@ function manquants(langues, phrases, dico) {
     for (const f of ['locale', 'decimal', 'sep']) if (typeof L[f] !== 'string') probs.push(`${code} : ${f} absent de LANGUES`);
     for (const f of ['monnaie', 'heureInfo', 'heureUTC']) if (typeof L[f] !== 'function') probs.push(`${code} : ${f} absent de LANGUES`);
     for (const k of ref) if (p[k] === undefined) probs.push(`${code} : phrase « ${k} »`);
-    for (const t of ['types', 'tranches']) for (const k of Object.keys(phrases.fr[t])) if (p[t]?.[k] === undefined) probs.push(`${code} : ${t}.${k}`);
+    // Toutes les tables de PHRASES (types, tranches, causes, fils…), pas une liste figée
+    const tablesFr = ref.filter(t => phrases.fr[t] !== null && typeof phrases.fr[t] === 'object');
+    for (const t of tablesFr) for (const k of Object.keys(phrases.fr[t])) if (p[t]?.[k] === undefined) probs.push(`${code} : ${t}.${k}`);
     if (code !== 'fr') for (const k of clesHtml) if (dico[k]?.[code] === undefined) probs.push(`${code} : « ${k} » (DICO)`);
     probs.push(...textesManquants(code));
     for (const k of clesJs) if (dico[k]?.[code] === undefined) probs.push(`${code} : tr « ${k} » (DICO)`);
@@ -195,6 +197,13 @@ test('complétude : une fausse langue xx (copie, jamais dans la page) est signal
   assert.equal(sansXx.length, variantes);
   for (const m of ['xx : texte fixe « Conso Claude Code »', 'xx : texte fixe « Coût par jour » (usd)', 'xx : texte fixe « Jetons par jour » (jet)'])
     assert.ok(sansXx.includes(m), m);
+});
+
+test('complétude : une sous-clé manquante d\'une table de PHRASES (ex. causes.pause) est signalée', () => {
+  const sansPause = { ...PHRASES.en, causes: { ...PHRASES.en.causes } };
+  delete sansPause.causes.pause;
+  const probs = manquants({ en: LANGUES.en }, { fr: PHRASES.fr, en: sansPause }, DICO);
+  assert.ok(probs.includes('en : causes.pause'), probs.slice(0, 3).join(' | '));
 });
 
 test('défaut : la langue de repli est une langue de LANGUES', () => {
