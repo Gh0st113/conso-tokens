@@ -191,7 +191,9 @@ chart library and data loader that claude.ai provides, so **opening it directly 
 2. Ask: *"Create a private Dashboard artifact from `page/index.html`, with the 14 files of `data/export/` as its
    datasets, each named after its file"* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`, `contexte`,
    `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `reconstructions`, `forfaits`).
-3. After each new export: *"Reload the 14 datasets of my dashboard from `data/export/`"*.
+3. After each new export: *"Reload the 14 datasets of my dashboard from `data/export/`"*. Each reload stores 14 new
+   files in the artifact and leaves the previous ones unused (an artifact holds at most 5,000 files). To tidy up now and
+   then: *"Delete the files of my dashboard's storage that no dataset points to, keeping those of the last two reloads"*.
 4. After an update of `page/index.html`: *"Republish `page/index.html` on my dashboard and check it"*. Open the
    dashboard when asked and show each view once (FR, EN, dollars, tokens): claude.ai checks the page while it is open
    (texts, labels, values shown), and Claude reads the result (`passed`, or the list of faults).

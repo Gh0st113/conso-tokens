@@ -199,7 +199,10 @@ navigateur n'affiche rien**.
 2. Demander : *« Crée un artefact Dashboard privé à partir de `page/index.html`, avec comme données les 14 fichiers de
    `data/export/`, chacun nommé comme son fichier »* (`semaines`, `jours`, `projets`, `modeles`, `sessions`, `types`,
    `contexte`, `plafondsHebdo`, `plafonds5h`, `pentes`, `reglages`, `resets`, `reconstructions`, `forfaits`).
-3. Après chaque nouvel export : *« Recharge les 14 données de mon tableau depuis `data/export/` »*.
+3. Après chaque nouvel export : *« Recharge les 14 données de mon tableau depuis `data/export/` »*. Chaque rechargement
+   range 14 nouveaux fichiers dans l'artefact et laisse les précédents inutilisés (un artefact garde au plus 5 000
+   fichiers). Pour faire le ménage de temps en temps : *« Supprime les fichiers du stockage de mon tableau qu'aucune donnée
+   ne cite, en gardant ceux des deux derniers rechargements »*.
 4. Après une mise à jour de `page/index.html` : *« Republie `page/index.html` sur mon tableau et vérifie-le »*. Ouvrir
    le tableau quand c'est demandé et afficher une fois chaque vue (FR, EN, dollars, jetons) : claude.ai vérifie la
    page pendant qu'elle est ouverte (textes, libellés, valeurs affichées), et Claude lit le résultat (`passed`, ou la
