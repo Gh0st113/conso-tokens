@@ -50,8 +50,10 @@ Simulated data, in a copy of the repo without `config.local.json`:
    Reloading the dashboard after an export (the user keeps a step-by-step procedure for it outside this repo: ask for
    it before improvising): each `export/<name>.json` is uploaded as an asset of the artifact (one file per call), then
    one batch `update` of the documents `datasets/<name>` (with `if_version`) sets `source: { kind: "file", url:
-   "/_blob/…" }` and `updated.at`; `update`, never `set` (it would drop the title and description). Assets uploaded
-   but not pointed to are harmless.
+   "/_blob/…" }` and `updated.at`; `update`, never `set` (it would drop the title and description). Assets no dataset
+   points to are harmless but pile up (one per table per reload; an artifact holds at most 5,000 files). Deleting one is
+   irreversible: only with the user's agreement, never one a dataset still points to (re-read `datasets` just before),
+   and keep the previous reload's files as a fallback.
 3. **`page/index.html`** is the page of a **claude.ai Dashboard artifact**, not a standalone page. It uses the platform's
    `dash.data(name)` / `dash.draw` / `dash.onData`, and opening it in a browser shows nothing. Each table in `export/` is
    one dataset with the same name. Its `<script id="libelles">` block turns the codes into sentences in French or
