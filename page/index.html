@@ -126,7 +126,7 @@
     <div class="cc-tile"><span class="cc-muted"><span class="cc-usd" lang="fr">Équivalent API, depuis le début des données</span><span class="cc-jet" lang="fr">Jetons, depuis le début des données</span><span class="cc-usd" lang="en">API-equivalent, since the start of the data</span><span class="cc-jet" lang="en">Tokens, since the start of the data</span></span><span class="cc-big" data-draw="tCout" data-source="totaux" data-field="cout">—</span><span class="cc-muted"><span class="cc-usd" lang="fr">ce que coûterait la même conso payée à l'API</span><span class="cc-jet" lang="fr">cache compris, relu à chaque message</span><span class="cc-usd" lang="en">what the same usage would cost paid at the API</span><span class="cc-jet" lang="en">cache included, read again at each message</span></span></div>
     <div class="cc-tile"><span class="cc-muted"><span lang="fr">Réponses de Claude, depuis le début des données</span><span lang="en">Claude replies, since the start of the data</span></span><span class="cc-big" data-draw="tAppels" data-source="totaux" data-field="appels">—</span><span class="cc-muted"><span lang="fr">appels au modèle, sous-agents compris</span><span lang="en">model calls, subagents included</span></span></div>
     <div class="cc-tile"><span class="cc-muted"><span class="cc-usd" lang="fr">Part d'Opus dans le coût, depuis le début des données</span><span class="cc-jet" lang="fr">Part d'Opus dans les jetons, depuis le début des données</span><span class="cc-usd" lang="en">Share of Opus in the cost, since the start of the data</span><span class="cc-jet" lang="en">Share of Opus in the tokens, since the start of the data</span></span><span class="cc-big" data-draw="tOpus" data-source="partOpus" data-field="part">—</span><span class="cc-muted"><span lang="fr">tous les modèles Opus</span><span lang="en">all Opus models</span></span></div>
-    <div class="cc-tile"><span class="cc-muted"><span lang="fr">Appels avec plus de 150k de contexte, depuis le début des données</span><span lang="en">Calls with more than 150k of context, since the start of the data</span></span><span class="cc-big" data-draw="tGros" data-source="grosContexte" data-field="part">—</span><span class="cc-muted"><span lang="fr">repère : moins de 50 %</span><span lang="en">benchmark: under 50 %</span></span></div>
+    <div class="cc-tile"><span class="cc-muted"><span lang="fr">Appels avec plus de 150k de contexte, depuis le début des données</span><span lang="en">Calls with more than 150k of context, since the start of the data</span></span><span class="cc-big" data-draw="tGros" data-source="grosContexte" data-field="part">—</span><span class="cc-muted"><span><span lang="fr">repère : moins de </span><span lang="en">benchmark: under </span></span><span data-draw="objCtx" data-source="reglages">—</span></span></div>
   </section>
 
   <section class="cc-card" id="semaines">
@@ -153,7 +153,7 @@
     <section class="cc-card" id="contexte">
       <div class="cc-titre"><h2><span lang="fr">Taille du contexte à chaque appel</span><span lang="en">Context size per call</span></h2><span class="cc-seg" role="group" data-t-aria="periode.aria" aria-label="Période"><button type="button" data-periode="7" aria-pressed="false"><span lang="fr">7 j</span><span lang="en">7 d</span></button><button type="button" data-periode="30" aria-pressed="true"><span lang="fr">30 j</span><span lang="en">30 d</span></button><button type="button" data-periode="tout" aria-pressed="false"><span lang="fr">tout</span><span lang="en">all</span></button></span></div>
       <p class="cc-muted"><span><span lang="fr">Nombre d'appels selon le contexte envoyé (cache compris), </span><span lang="en">Number of calls by context sent (cache included), </span></span><span data-per="7" hidden><span lang="fr">sur les 7 derniers jours de données</span><span lang="en">over the last 7 days of data</span></span><span data-per="30"><span lang="fr">sur les 30 derniers jours de données</span><span lang="en">over the last 30 days of data</span></span><span data-per="tout" hidden><span lang="fr">depuis le début des données</span><span lang="en">since the start of the data</span></span><span><span lang="fr">. Au-delà de 150k, chaque message coûte cher.</span><span lang="en">. Above 150k, each message is costly.</span></span></p>
-      <p><span><span lang="fr">Sur cette période : </span><span lang="en">Over this period: </span></span><b data-draw="ctxPart" data-source="ctxPeriodes" data-field="part">—</b><span><span lang="fr"> des appels au-delà de 150k </span><span lang="en"> of calls above 150k </span></span><span class="cc-pastille cc-ok" data-obj="ok" hidden><span lang="fr">objectif atteint (moins de 50 %)</span><span lang="en">goal reached (under 50 %)</span></span><span class="cc-pastille cc-ko" data-obj="ko" hidden><span lang="fr">objectif (moins de 50 %) pas atteint</span><span lang="en">goal (under 50 %) not reached</span></span><span data-draw="ctxObj" data-source="ctxPeriodes"></span></p>
+      <p><span><span lang="fr">Sur cette période : </span><span lang="en">Over this period: </span></span><b data-draw="ctxPart" data-source="ctxPeriodes" data-field="part">—</b><span><span lang="fr"> des appels au-delà de 150k </span><span lang="en"> of calls above 150k </span></span><span class="cc-pastille cc-ok" data-obj="ok" hidden><span><span lang="fr">objectif atteint (moins de </span><span lang="en">goal reached (under </span></span><span data-draw="objCtx" data-source="reglages">—</span>)</span><span class="cc-pastille cc-ko" data-obj="ko" hidden><span><span lang="fr">objectif (moins de </span><span lang="en">goal (under </span></span><span data-draw="objCtx" data-source="reglages">—</span><span><span lang="fr">) pas atteint</span><span lang="en">) not reached</span></span></span><span data-draw="ctxObj" data-source="ctxPeriodes"></span></p>
       <div class="cc-chart cc-short dash-skeleton" data-draw="chContexte" data-source="contexte"></div>
     </section>
     <section class="cc-card" id="projets">
@@ -736,7 +736,13 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     },
   });
   // Part > 150k de la période choisie : la ligne lue change avec la période, data-where suit
-  CC.OBJECTIF_CONTEXTE = 0.5; // repère : moins de 50 % des appels au-delà de 150k
+  // Objectif : part maximale des appels au-delà de 150k, lue dans la table « reglages » (clé contextGoal de
+  // config.local.json, #16). Table absente ou ancienne (sans le champ) : 50 %, comme avant.
+  CC.objectifContexte = () => {
+    const g = dash.data('reglages'), v = g.status === 'ok' && g.data.length ? Number(g.data[0].partMaxContexte) : NaN;
+    return v > 0 && v <= 1 ? v : 0.5;
+  };
+  CC.draw('objCtx', el => { el.textContent = CC.pct(CC.objectifContexte()); });
   CC.ctxLigne = () => { const g = dash.data('ctxPeriodes'); return g.status === 'ok' ? g.data.find(r => r.periode === CC.periode) : null; };
   CC.draw('ctxPart', el => {
     const r = CC.ctxLigne();
@@ -744,7 +750,7 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     el.textContent = r && r.appels ? CC.pct(r.part) : '—';
   });
   CC.draw('ctxObj', el => {
-    const r = CC.ctxLigne(), etat = !r || !r.appels ? '' : r.part < CC.OBJECTIF_CONTEXTE ? 'ok' : 'ko';
+    const r = CC.ctxLigne(), etat = !r || !r.appels ? '' : r.part < CC.objectifContexte() ? 'ok' : 'ko';
     el.parentElement?.querySelectorAll('[data-obj]').forEach(s => { s.hidden = s.dataset.obj !== etat; });
   });
 
@@ -777,7 +783,8 @@ Object.assign(window, { LANGUES, LANGUE_PAR_DEFAUT, DICO, tr, jourSemaine });
     document.querySelectorAll('[data-repli]').forEach(p => { p.hidden = !manque; });
   });
   // Ce qui dépend du cycle est redessiné à chaque arrivée de données (« reglages » peut arriver après « jours »)
-  dash.onData(() => ['chJours', 'prochain', 'cycleJour', 'heureReset', 'cycleRepli'].forEach(n => dash.draw(n)));
+  dash.onData(() => ['chJours', 'prochain', 'cycleJour', 'heureReset', 'cycleRepli', 'objCtx', 'ctxObj']
+    .forEach(n => dash.draw(n)));
   // Plafond hebdo redessiné aussi quand la table « forfaits » arrive après « plafondsHebdo » (15/11)
   dash.onData(() => dash.draw('chPlafond'));
 </script>

@@ -29,7 +29,7 @@ plus ceux que vous notez vous-même dans `readings.json` (voir Relevés à la ma
   (atteint, projeté ou trop incertain), avec l'usage fait hors de ce PC (claude.ai, téléphone, Cowork distant) repéré et
   retiré quand le pourcentage monte sans dépense ici.
 - Plafond 5 h : prix de 100 % d'une fenêtre de 5 h, quand elle a été atteinte ou projeté depuis un relevé à 50 % ou plus.
-- Taille du contexte à chaque appel (part des appels au-delà de 150k jetons).
+- Taille du contexte à chaque appel (part des appels au-delà de 150k jetons ; objectif réglable, `contextGoal`).
 - Où partent les jetons : part de la lecture du cache, de l'écriture en cache, de la sortie et de l'entrée neuve, en
   volume et en coût.
 - Les vues par dossier, par modèle, du contexte, des types de jetons, des reconstructions du cache et des sessions
@@ -143,9 +143,10 @@ Réglages facultatifs : copier `config.exemple.json` en `config.local.json` (ign
 | `gaps` (`trous`) | périodes dont vous savez que les journaux manquent : `[["premier jour", "dernier jour", "raison"]]` |
 | `plans` (`forfaits`) | changements de forfait déclarés à la main : `{ "AAAA-MM-JJ": "forfait" }`, appliqués à toute la semaine qui contient la date (voir ci-dessous) |
 | `cache` | reconstructions du cache, pour la conversation principale (`main`) et les sous-agents (`subagents`) : `{ "main": { "ttl": "auto", "minWrite": 20000 }, "subagents": { "ttl": "auto", "minWrite": 10000 } }` (les défauts). `ttl` : `auto` lit la durée du cache dans les journaux, appel par appel (5 min l'emporte si un appel écrit les deux), `5m` ou `1h` la force ; `minWrite` : jetons écrits en cache à partir desquels un cache perdu compte comme reconstruction. Une reconstruction est une réponse qui relit moins de la moitié du contexte de la réponse précédente de son fil ; cause, dans cet ordre : compactage du fil (écriture du résumé, inévitable, montrée à part des pertes), pause plus longue que le cache, changement de modèle, consignes ou outils changés (ligne `api-request-shape` d'empreinte différente, le plus souvent des outils chargés en cours de session), autre |
+| `contextGoal` | objectif de la carte « taille du contexte » : la part maximale d'appels au-delà de 150k que vous visez, `{ "maxShare": 0.4 }` pour « moins de 40 % » (défaut `0.5`). Un pourcentage entier, de `0.01` à `1` ; le seuil de 150k est fixe |
 
 Chaque réglage s'écrit sous son nom anglais **ou** son ancien nom français, pas les deux : les donner tous les deux arrête
-le script avec un message qui les nomme (`cache`, plus récent, n'a que son nom anglais). Dans `weeklyReset`, `day` et `hourUTC` (ou `jour` et `heureUTC`) peuvent se
+le script avec un message qui les nomme (`cache` et `contextGoal`, plus récents, n'ont que leur nom anglais). Dans `weeklyReset`, `day` et `hourUTC` (ou `jour` et `heureUTC`) peuvent se
 mélanger, mais pas deux noms pour un même champ.
 
 **Resets de limite** (`resets`). L'ancienne forme (objet `{ "AAAA-MM-JJ": "quand" }`) marque la semaine entière comme « reset utilisé », sans plafond : c'est le comportement d'origine. La nouvelle forme donne l'heure exacte, en UTC, avec le `Z` :
