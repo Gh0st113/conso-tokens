@@ -24,7 +24,8 @@ const AIDE = `conso-tokens : coût de l'usage de Claude Code, d'après les journ
 Réglages et données : dans le dossier du code pour un clone, sinon dans ~/.conso-tokens ; la variable
 d'environnement CONSO_TOKENS_DIR (chemin absolu ou ~/…) remplace ce dossier. Détails : README.
 Les noms français des commandes (maj, agreger, exporter, tarifs, aide) sont aussi acceptés, de même que
-les noms français des options (--journaux pour --logs, --sortie pour --output).`;
+les noms français des options (--journaux pour --logs, --sortie pour --output, --journal-quota pour
+--quota-log).`;
 
 const lancer = (nom, args) => {
   const r = spawnSync(process.execPath, [script(nom), ...args], { stdio: 'inherit' });
