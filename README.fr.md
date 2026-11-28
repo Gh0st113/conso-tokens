@@ -158,8 +158,8 @@ mélanger, mais pas deux noms pour un même champ.
 - `type` (obligatoire) : `"weekly"` (ou l'ancien `"hebdo"`) ; seul ce type est accepté pour l'instant.
 - `note` (facultatif) : texte libre affiché dans la page.
 
-Avec la nouvelle forme, une valeur invalide arrête le script avec un message `config.local.json : resets…` (l'ancienne
-forme n'est pas vérifiée : une clé qui n'est pas un début de semaine du cycle est ignorée, sans message). Avec la nouvelle forme, **la semaine est découpée** en segments, un par reset : le plafond et la sortie de la semaine sont calculés sur le segment retenu (celui qui a le plus grand % local, à égalité le plus récent), avec son propre coût ; les pentes ne relient jamais deux segments ; le statut de la semaine indique la coupure. Hypothèse retenue : un reset à la demande ne déplace pas la fin de la semaine (un seul cas observé).
+Dans les deux formes, une valeur invalide arrête le script avec un message `config.local.json : resets…` (ancienne
+forme : chaque clé doit être un vrai jour `AAAA-MM-JJ` qui commence une semaine du cycle). Avec la nouvelle forme, **la semaine est découpée** en segments, un par reset : le plafond et la sortie de la semaine sont calculés sur le segment retenu (celui qui a le plus grand % local, à égalité le plus récent), avec son propre coût ; les pentes ne relient jamais deux segments ; le statut de la semaine indique la coupure. Hypothèse retenue : un reset à la demande ne déplace pas la fin de la semaine (un seul cas observé).
 
 **Détection** : si le % hebdo baisse de 3 points ou plus sans reset déclaré, hors semaines de changement de forfait, et que le relevé suivant confirme la baisse, `CONTRÔLES` signale `reset probable … non déclaré dans « resets »`. Une baisse isolée (un seul relevé) n'est pas signalée. Rien n'est corrigé automatiquement. Le plus haut % est pris dans le segment seulement : un reset déclaré remet le maximum à zéro pour les relevés qui le suivent.
 
