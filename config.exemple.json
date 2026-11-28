@@ -5,5 +5,6 @@
   "resets": [{ "when": "2026-01-06T19:30Z", "type": "weekly", "note": "reset utilisé le mardi soir (exemple)" }],
   "plans": { "2026-01-04": "Pro", "2026-01-13": "Max 5x" },
   "gaps": [["2026-01-10", "2026-01-12", "journaux perdus (exemple)"]],
-  "cache": { "main": { "ttl": "auto", "minWrite": 20000 }, "subagents": { "ttl": "auto", "minWrite": 10000 } }
+  "cache": { "main": { "ttl": "auto", "minWrite": 20000 }, "subagents": { "ttl": "auto", "minWrite": 10000 } },
+  "contextGoal": { "maxShare": 0.5 }
 }

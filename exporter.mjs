@@ -3,7 +3,8 @@
 // Usage : node exporter.mjs
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { DONNEES, RESETS, RESETS_PRECIS, FORFAITS, TROUS, REMISE_A_ZERO, ici, MODE } from './lib/config.mjs';
+import { DONNEES, RESETS, RESETS_PRECIS, FORFAITS, TROUS, REMISE_A_ZERO, OBJECTIF_CONTEXTE, ici, MODE }
+  from './lib/config.mjs';
 import { fabriquer } from './lib/semaine.mjs';
 import { construireTables, formatAncien } from './lib/tables.mjs';
 import { controler, rapport } from './lib/controles.mjs';
@@ -24,6 +25,7 @@ function main() {
 
   const { tables, series, inconnus } = construireTables(donnees, {
     cycle: REMISE_A_ZERO, resets: RESETS, resetsPrecis: RESETS_PRECIS, forfaits: FORFAITS, trous: TROUS, maintenant,
+    objectifContexte: OBJECTIF_CONTEXTE,
   });
   for (const [nom, rows] of Object.entries(tables)) writeFileSync(join(sortie, `${nom}.json`), JSON.stringify(rows));
   // Manifeste : noms des tables écrites à ce passage, triés ; la procédure de mise à jour s'en sert pour les pousser

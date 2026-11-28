@@ -138,9 +138,10 @@ Optional settings: copy `config.exemple.json` to `config.local.json` (ignored by
 | `gaps` (`trous`) | periods whose logs you know are missing: `[["first day", "last day", "reason"]]` |
 | `plans` (`forfaits`) | plan changes you declare by hand: `{ "YYYY-MM-DD": "plan" }`, applied to the whole week containing the date (see below) |
 | `cache` | cache rebuilds, for the main conversation (`main`) and subagents (`subagents`): `{ "main": { "ttl": "auto", "minWrite": 20000 }, "subagents": { "ttl": "auto", "minWrite": 10000 } }` (the defaults). `ttl`: `auto` reads the cache lifetime from the logs, call by call (5 min wins when a call writes both), `5m` or `1h` forces it; `minWrite`: tokens written to the cache from which a lost cache counts as a rebuild. A rebuild is a reply that reads back less than half of the previous reply's context in its thread; cause, in this order: compaction of the thread (the summary is written: unavoidable, shown apart from the losses), pause longer than the cache, model change, instructions or tools changed (an `api-request-shape` line with a different hash, most often tools loaded during the session), other |
+| `contextGoal` | goal of the "context size" card: the largest share of calls above 150k you aim for, `{ "maxShare": 0.4 }` for "under 40 %" (default `0.5`). A whole percentage from `0.01` to `1`; the 150k threshold is fixed |
 
 Each setting can be written under its English name or its old French name, not both: giving both stops the script with
-a message naming them (`cache`, newer, has only its English name). Inside `weeklyReset`, `day` and `hourUTC` (or `jour`
+a message naming them (`cache` and `contextGoal`, newer, have only their English name). Inside `weeklyReset`, `day` and `hourUTC` (or `jour`
 and `heureUTC`) can be mixed, but not both names for the same field.
 
 **Limit resets** (`resets`). The old form (an object `{ "YYYY-MM-DD": "when" }`) marks the whole week as "reset used", with no cap: that is the original behaviour. The new form gives the exact time, in UTC, with the `Z`:
