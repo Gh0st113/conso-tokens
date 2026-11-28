@@ -10,19 +10,21 @@ const script = nom => fileURLToPath(new URL(`./${nom}`, import.meta.url));
 const SCRIPTS = { agreger: 'agreger.mjs', exporter: 'exporter.mjs', tarifs: 'maj-tarifs.mjs' };
 // Noms anglais (lot 1, 17/11) → noms français, qui restent acceptés
 const NOM_ANGLAIS = { update: 'maj', aggregate: 'agreger', export: 'exporter', prices: 'tarifs', help: 'aide', '--help': 'aide', '-h': 'aide' };
-const AIDE = `conso-tokens : cost of Claude Code usage, from this PC's logs
+// Aide en français, comme toutes les autres sorties de console (issue #54)
+const AIDE = `conso-tokens : coût de l'usage de Claude Code, d'après les journaux de ce PC
 
-  conso-tokens update [--logs <folder>]  aggregate, then export (export is skipped if aggregate fails)
-  conso-tokens aggregate [options]       logs → donnees.json (--logs <folder>, --output <file>, …)
-  conso-tokens export                    donnees.json → export/ (dashboard tables) + the CONTRÔLES line
-  conso-tokens prices [--page file]      update prices from the official Pricing page
-  conso-tokens page                      path of the dashboard page and of the export/ folder
+  conso-tokens update [--logs <dossier>]   agrège, puis exporte (pas d'export si l'agrégation échoue)
+  conso-tokens aggregate [options]         journaux → donnees.json (--logs <dossier>, --output <fichier>, …)
+  conso-tokens export                      donnees.json → export/ (tables du tableau de bord) + la ligne CONTRÔLES
+  conso-tokens prices [--page <fichier>]   met à jour les tarifs depuis la page Pricing officielle
+  conso-tokens page                        chemin de la page du tableau de bord et du dossier export/
   conso-tokens --version
-  conso-tokens help                      this text (no argument = same)
+  conso-tokens help                        ce texte (sans argument : pareil)
 
-Settings and data: in the code folder for a clone, otherwise in ~/.conso-tokens; the environment variable
-CONSO_TOKENS_DIR (absolute path or ~/…) replaces that folder. Details: README.
-The old French names (maj, agreger, exporter, tarifs, aide) still work.`;
+Réglages et données : dans le dossier du code pour un clone, sinon dans ~/.conso-tokens ; la variable
+d'environnement CONSO_TOKENS_DIR (chemin absolu ou ~/…) remplace ce dossier. Détails : README.
+Les noms français des commandes (maj, agreger, exporter, tarifs, aide) sont aussi acceptés, de même que
+les noms français des options (--journaux pour --logs, --sortie pour --output).`;
 
 const lancer = (nom, args) => {
   const r = spawnSync(process.execPath, [script(nom), ...args], { stdio: 'inherit' });

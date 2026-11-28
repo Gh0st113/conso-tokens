@@ -14,7 +14,7 @@ quota log (`~/.claude/sonar/quota-log.jsonl`) gives this dashboard the usage per
 weekly cap. Without sonar, the readings come from the Claude Code logs (and, until late October 2026, from Cowork local: fewer of them), plus
 those you write yourself in `readings.json` (see Manual readings below).
 
-> The code, comments and console output are in French (except the help of `conso-tokens help`). The dashboard page exists in French and in English: an FR / EN button switches it, and by default it follows the browser language.
+> The code, comments and console output are in French (including the help text shown by `conso-tokens help`). The dashboard page exists in French and in English: an FR / EN button switches it, and by default it follows the browser language.
 
 ![Summary tiles and cost per plan week, stacked by model](docs/apercu-semaines-en.png)
 
