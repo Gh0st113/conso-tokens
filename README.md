@@ -153,8 +153,8 @@ and `heureUTC`) can be mixed, but not both names for the same field.
 - `type` (required): `"weekly"` (or the old `"hebdo"`); only this type is accepted for now.
 - `note` (optional): free text shown on the page.
 
-With the new form, an invalid value stops the script with a `config.local.json : resets…` message (the old form is not
-checked: a key that is not a week start of the cycle is ignored, with no message). With the new form, **the week is cut** into segments, one per reset: the cap and the output of the week are computed on the retained segment (the one with the largest local %, the most recent on a tie), with its own cost; slopes never join two segments; the status of the week mentions the cut. Assumption: a reset on demand does not move the end of the week (one case observed).
+In either form, an invalid value stops the script with a `config.local.json : resets…` message (old form: each key
+must be a real `YYYY-MM-DD` day that starts a week of the cycle). With the new form, **the week is cut** into segments, one per reset: the cap and the output of the week are computed on the retained segment (the one with the largest local %, the most recent on a tie), with its own cost; slopes never join two segments; the status of the week mentions the cut. Assumption: a reset on demand does not move the end of the week (one case observed).
 
 **Detection**: if the weekly % drops by 3 points or more without a declared reset, outside plan-change weeks, and the next reading confirms the drop, `CONTRÔLES` reports `reset probable … non déclaré dans « resets »` (the French wording is kept on purpose: the check output is in French). An isolated drop (a single reading) is not reported. Nothing is corrected automatically. The highest % is taken within the segment only: a declared reset resets the maximum for the readings that follow it.
 
