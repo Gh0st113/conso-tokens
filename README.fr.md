@@ -29,7 +29,7 @@ plus ceux que vous notez vous-même dans `readings.json` (voir Relevés à la ma
   (atteint, projeté ou trop incertain), avec l'usage fait hors de ce PC (claude.ai, téléphone, Cowork distant) repéré et
   retiré quand le pourcentage monte sans dépense ici.
 - Plafond 5 h : prix de 100 % d'une fenêtre de 5 h, quand elle a été atteinte ou projeté depuis un relevé à 50 % ou plus.
-- Taille du contexte à chaque appel (part des appels au-delà de 150k jetons).
+- Taille du contexte à chaque appel (part des appels au-delà de 150k jetons ; objectif réglable, `contextGoal`).
 - Où partent les jetons : part de la lecture du cache, de l'écriture en cache, de la sortie et de l'entrée neuve, en
   volume et en coût.
 - Les vues par dossier, par modèle, du contexte, des types de jetons, des reconstructions du cache et des sessions

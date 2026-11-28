@@ -29,7 +29,7 @@ those you write yourself in `readings.json` (see Manual readings below).
   (reached, projected, or too uncertain), with usage made outside this PC (claude.ai, phone, remote Cowork) spotted and
   removed when the percentage rises while nothing is spent here.
 - 5-hour cap: price of 100 % of a 5-hour window, when it was reached or projected from a reading of 50 % or more.
-- Context size per call (share of calls above 150k tokens).
+- Context size per call (share of calls above 150k tokens; adjustable goal, `contextGoal`).
 - Where the tokens go: share of cache reads, cache writes, output and fresh input, in volume and in cost.
 - The folder, model, context, token-type, cache-rebuild and session views follow one period switch: 7 days, 30 days
   or all.
