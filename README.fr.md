@@ -9,7 +9,7 @@ de votre forfait en dollars**, tirée du pourcentage d'usage qu'affiche l'appli.
 Il ne lit que les compteurs de jetons et les horodatages des journaux de Claude Code (et, sous Windows, de Cowork local si présents) de votre machine, **jamais le
 contenu de vos conversations** (une exception : le bandeau de limite des messages `<synthetic>` de l'appli elle-même, pour dater les limites atteintes), et tout reste sur votre machine (sauf ce que vous choisissez de publier).
 
-La page du tableau de bord existe en français et en anglais : un bouton FR / EN la change, et par défaut elle suit la langue du navigateur. Le code, les commentaires et les sorties de console restent en français (sauf l'aide de `conso-tokens help`).
+La page du tableau de bord existe en français et en anglais : un bouton FR / EN la change, et par défaut elle suit la langue du navigateur. Le code, les commentaires et les sorties de console restent en français (y compris l'aide affichée par `conso-tokens help`).
 
 Projet compagnon : [**sonar**](https://github.com/Gh0st113/sonar), un mod pour l'onglet Code de Claude Desktop. Son
 journal de quota (`~/.claude/sonar/quota-log.jsonl`) donne à ce tableau les relevés de pourcentage dont il a besoin pour
